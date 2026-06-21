@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+</head>
+<body>
+<div class="bg-white p-4 rounded shadow-sm">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <h3 th:if="${category != null}"
+            th:text="${category.name}">
+            Danh mục
+        </h3>
+
+        <h3 th:if="${category == null}">
+            Tất cả sản phẩm
+        </h3>
+
+        <form method="get" class="d-flex gap-2">
+
+            <input type="text"
+                   name="keyword"
+                   class="form-control"
+                   placeholder="Tìm sản phẩm"
+                   th:value="${keyword}">
+
+            <select name="sort" class="form-select">
+                <option value="">Sắp xếp</option>
+                <option value="newest" th:selected="${sort == 'newest'}">Mới nhất</option>
+                <option value="name_asc" th:selected="${sort == 'name_asc'}">Tên A-Z</option>
+                <option value="name_desc" th:selected="${sort == 'name_desc'}">Tên Z-A</option>
+            </select>
+
+            <button class="btn btn-danger">
+                Lọc
+            </button>
+
+        </form>
+
+    </div>
+
+    <div class="row">
+
+        <div class="col-lg-3 col-md-4 col-6 mb-4"
+             th:each="p : ${products}">
+
+            <a th:href="@{/product/{slug}(slug=${p.slug})}"
+               class="text-decoration-none text-dark">
+
+                <div class="card h-100 shadow-sm">
+
+                    <img th:if="${p.images != null and !p.images.isEmpty()}"
+                         th:src="${p.images[0].url}"
+                         class="card-img-top"
+                         style="height:220px; object-fit:contain; padding:15px;">
+
+                    <img th:if="${p.images == null or p.images.isEmpty()}"
+                         src="https://via.placeholder.com/300"
+                         class="card-img-top"
+                         style="height:220px; object-fit:contain; padding:15px;">
+
+                    <div class="card-body">
+
+                        <h6 class="card-title"
+                            th:text="${p.name}">
+                            Tên sản phẩm
+                        </h6>
+
+                     <p class="text-danger fw-bold fs-5"
+   th:if="${p.variants != null and !p.variants.isEmpty()}"
+   th:text="${#numbers.formatDecimal(p.variants[0].price, 0, 'COMMA', 0, 'POINT')} + ' đ'">
+    0 đ
+</p>
+
+<p class="text-muted"
+   th:if="${p.variants == null or p.variants.isEmpty()}">
+    Chưa có giá
+</p>
+
+                    </div>
+
+                </div>
+
+            </a>
+
+        </div>
+
+    </div>
+
+</div>
+</body>
+</html>

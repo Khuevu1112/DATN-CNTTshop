@@ -1,0 +1,100 @@
+<div class="container-fluid">
+
+    <div th:if="${productByCategory == null or productByCategory.isEmpty()}"
+         class="alert alert-warning text-center">
+        Chưa có sản phẩm nào để hiển thị.
+    </div>
+
+    <div th:each="entry : ${productByCategory}"
+         class="bg-white rounded shadow-sm p-4 mb-5">
+
+        <!-- TÊN DANH MỤC -->
+        <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-2">
+
+            <h3 class="m-0 text-uppercase"
+                style="color:#343a40;"
+                th:text="${entry.key.name}">
+                BÀN PHÍM CƠ
+            </h3>
+
+            <a th:href="@{/category/{slug}(slug=${entry.key.slug})}"
+               class="text-decoration-none text-danger fw-bold">
+                Xem tất cả
+            </a>
+
+        </div>
+
+        <!-- DANH SÁCH SẢN PHẨM -->
+        <div class="row">
+
+            <div class="col-lg-3 col-md-4 col-sm-6 mb-4"
+                 th:each="p : ${entry.value}">
+
+                <a th:href="@{/product/{slug}(slug=${p.slug})}"
+                   class="text-decoration-none text-dark">
+
+                    <div class="card h-100 border-0 product-card">
+
+                        <!-- ẢNH -->
+                        <img th:if="${p.images != null and !p.images.isEmpty()}"
+                             th:src="${p.images[0].url}"
+                             class="card-img-top"
+                             style="height:220px; object-fit:contain; padding:15px;">
+
+                        <img th:if="${p.images == null or p.images.isEmpty()}"
+                             src="https://via.placeholder.com/300x300?text=CNTTShop"
+                             class="card-img-top"
+                             style="height:220px; object-fit:contain; padding:15px;">
+
+                        <div class="card-body">
+
+                            <!-- TÊN -->
+                            <h6 class="card-title text-primary fw-bold"
+                                style="min-height:48px;"
+                                th:text="${p.name}">
+                                Tên sản phẩm
+                            </h6>
+
+                            <!-- GIÁ -->
+                           <div th:if="${p.variants != null and !p.variants.isEmpty()}">
+
+    <div class="text-muted text-decoration-line-through small"
+         th:if="${p.variants[0].originalPrice != null}"
+         th:text="${#numbers.formatDecimal(p.variants[0].originalPrice, 0, 'COMMA', 0, 'POINT')} + ' đ'">
+    </div>
+
+    <div class="text-danger fw-bold fs-5"
+         th:text="${#numbers.formatDecimal(p.variants[0].price, 0, 'COMMA', 0, 'POINT')} + ' đ'">
+    </div>
+
+</div>
+
+                            <div th:if="${p.variants == null or p.variants.isEmpty()}"
+                                 class="text-muted">
+                                Chưa có giá
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </a>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<style>
+.product-card {
+    transition: 0.25s;
+}
+
+.product-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+}
+</style>

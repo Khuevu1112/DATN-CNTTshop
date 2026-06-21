@@ -1,0 +1,97 @@
+<div class="bg-white p-4 rounded shadow-sm">
+
+<div class="d-flex align-items-center mb-4 gap-2">
+    <a th:href="@{/admin/orders}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i>
+    </a>
+    <h4 class="fw-bold mb-0" th:text="'Chi tiết đơn ' + ${order.maDonHang}"></h4>
+</div>
+
+<div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
+<div th:if="${error}"   class="alert alert-danger"  th:text="${error}"></div>
+
+<div class="row g-4">
+    <div class="col-md-5">
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white fw-bold">Khách hàng & Giao hàng</div>
+            <div class="card-body">
+                <p><strong>Email:</strong> <span th:text="${order.nguoiDung.email}"></span></p>
+                <p><strong>Người nhận:</strong> <span th:text="${order.diaChiGiao.tenNguoiNhan}"></span></p>
+                <p><strong>SĐT:</strong> <span th:text="${order.diaChiGiao.soDienThoai}"></span></p>
+                <p><strong>Địa chỉ:</strong> <span th:text="${order.diaChiGiao.diaChiDayDu}"></span></p>
+                <p><strong>Ngày đặt:</strong>
+                    <span th:text="${#temporals.format(order.createdAt,'dd/MM/yyyy HH:mm')}"></span></p>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white fw-bold">Cập nhật trạng thái</div>
+            <div class="card-body">
+                <form th:action="@{/admin/orders/{id}/status(id=${order.id})}" method="post">
+                    <select name="trangThai" class="form-select mb-2">
+                        <option th:each="tt : ${trangThaiList}" th:value="${tt}" th:text="${tt}"
+                                th:selected="${order.trangThai == tt}"></option>
+                    </select>
+                    <input type="text" name="ghiChu" class="form-control mb-2"
+                           placeholder="Ghi chú (không bắt buộc)">
+                    <button type="submit" class="btn btn-danger w-100">Cập nhật</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-7">
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white fw-bold">Sản phẩm đặt mua</div>
+            <div class="card-body p-0">
+                <table class="table mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Sản phẩm</th>
+                            <th class="text-center">SL</th>
+                            <th class="text-end">Đơn giá</th>
+                            <th class="text-end">Thành tiền</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="ct : ${order.chiTiet}">
+                            <td>
+                                <span th:text="${ct.tenSanPham}"></span><br>
+                                <small class="text-muted" th:text="${ct.thongTinPhienBan}"></small>
+                            </td>
+                            <td class="text-center" th:text="${ct.soLuong}"></td>
+                            <td class="text-end"
+                                th:text="${#numbers.formatDecimal(ct.donGia,0,'COMMA',0,'POINT')} + '₫'"></td>
+                            <td class="text-end fw-bold text-danger"
+                                th:text="${#numbers.formatDecimal(ct.thanhTien,0,'COMMA',0,'POINT')} + '₫'"></td>
+                        </tr>
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="3" class="text-end fw-bold">Tổng cộng:</td>
+                            <td class="text-end fw-bold text-danger fs-5"
+                                th:text="${#numbers.formatDecimal(order.tongTien,0,'COMMA',0,'POINT')} + '₫'"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white fw-bold">Lịch sử trạng thái</div>
+            <div class="card-body">
+                <ul class="list-unstyled mb-0">
+                    <li th:each="log : ${order.lichSuTrangThai}" class="mb-2 border-bottom pb-2">
+                        <span class="fw-bold" th:text="${log.trangThai}"></span>
+                        <span class="text-muted ms-2" th:text="${log.ghiChu}"></span>
+                        <br>
+                        <small class="text-muted"
+                               th:text="${#temporals.format(log.thoiGian,'dd/MM/yyyy HH:mm')}"></small>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>

@@ -1,0 +1,70 @@
+<div class="bg-white p-4 rounded shadow-sm">
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="fw-bold mb-0">
+        <i class="bi bi-list-check me-2 text-danger"></i>Quản lý đơn hàng
+    </h4>
+    <div class="d-flex gap-2 flex-wrap">
+        <a th:href="@{/admin/orders}"
+           th:classappend="${trangThaiFilter == null} ? 'btn-danger' : 'btn-outline-danger'"
+           class="btn btn-sm">Tất cả</a>
+        <a th:each="tt : ${trangThaiList}"
+           th:href="@{/admin/orders(trangThai=${tt})}"
+           th:classappend="${trangThaiFilter == tt} ? 'btn-danger' : 'btn-outline-secondary'"
+           class="btn btn-sm" th:text="${tt}"></a>
+    </div>
+</div>
+
+<div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
+
+<div th:if="${orders.isEmpty()}" class="text-center py-5 text-muted">
+    Không có đơn hàng nào
+</div>
+
+<div class="card border-0 shadow-sm" th:if="${!orders.isEmpty()}">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Mã đơn</th>
+                    <th>Khách hàng</th>
+                    <th>Người nhận</th>
+                    <th>Tổng tiền</th>
+                    <th>Trạng thái</th>
+                    <th>Ngày đặt</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="order : ${orders}">
+                    <td th:text="${order.maDonHang}"></td>
+                    <td th:text="${order.nguoiDung.email}"></td>
+                    <td>
+                        <div th:text="${order.diaChiGiao.tenNguoiNhan}"></div>
+                        <small class="text-muted" th:text="${order.diaChiGiao.soDienThoai}"></small>
+                    </td>
+                    <td class="fw-bold text-danger"
+                        th:text="${#numbers.formatDecimal(order.tongTien,0,'COMMA',0,'POINT')} + '₫'"></td>
+                    <td>
+                        <span th:switch="${order.trangThai}">
+                            <span th:case="'pending'"    class="badge bg-warning text-dark">Chờ xác nhận</span>
+                            <span th:case="'confirmed'"  class="badge bg-info text-dark">Đã xác nhận</span>
+                            <span th:case="'processing'" class="badge bg-primary">Đang xử lý</span>
+                            <span th:case="'shipped'"    class="badge bg-primary">Đang giao</span>
+                            <span th:case="'delivered'"  class="badge bg-success">Đã giao</span>
+                            <span th:case="'cancelled'"  class="badge bg-secondary">Đã hủy</span>
+                            <span th:case="'refunded'"   class="badge bg-dark">Đã hoàn tiền</span>
+                        </span>
+                    </td>
+                    <td th:text="${#temporals.format(order.createdAt,'dd/MM/yyyy HH:mm')}"></td>
+                    <td>
+                        <a th:href="@{/admin/orders/{id}(id=${order.id})}"
+                           class="btn btn-sm btn-outline-danger">Chi tiết</a>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+</div>
