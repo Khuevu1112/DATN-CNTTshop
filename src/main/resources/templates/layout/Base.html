@@ -34,6 +34,7 @@ body{background:#f5f5f5}
 .menu-avatar{width:52px;height:52px;border-radius:50%;object-fit:cover}
 .cart-btn{background:#06101c;color:white;border-radius:30px;padding:13px 22px;font-size:20px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;white-space:nowrap}
 .cart-btn:hover{color:white;background:#111827}
+.cart-badge{position:absolute;top:-8px;right:-8px;background:#081a2d;color:#fff;border:2px solid #032e5d;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;font-family:Arial, sans-serif}
 .footer{background:#212529;color:white}
 .footer a{color:#ddd;text-decoration:none}
 </style>
@@ -184,6 +185,16 @@ body{background:#f5f5f5}
 										class="bi bi-box-seam me-2"></i> Quản lý sản phẩm
 								</a></li>
 
+								<li sec:authorize="hasAnyRole('ADMIN','STAFF')"><a
+									class="dropdown-item py-2" th:href="@{/admin/orders}"> <i
+										class="bi bi-list-check me-2"></i> Quản lý đơn hàng
+								</a></li>
+
+								<li sec:authorize="hasAnyRole('ADMIN','STAFF')"><a
+									class="dropdown-item py-2" th:href="@{/admin/gio-hang}"> <i
+										class="bi bi-cart-check me-2"></i> Quản lý giỏ hàng
+								</a></li>
+
 							</th:block>
 
                         <li><hr class="dropdown-divider"></li>
@@ -199,9 +210,12 @@ body{background:#f5f5f5}
                     </ul>
                 </div>
 
-                <a th:href="@{/cart}" class="cart-btn">
+                <a th:href="@{/cart}" class="cart-btn position-relative">
                     <i class="bi bi-cart-fill me-2"></i>
                     Giỏ hàng
+                    <span th:if="${cartItemCount != null and cartItemCount > 0}"
+                          class="cart-badge"
+                          th:text="${cartItemCount}">0</span>
                 </a>
             </div>
 

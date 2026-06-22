@@ -1,5 +1,7 @@
 package com.fpoly.config;
 
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -8,6 +10,9 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.fpoly.service.CustomUserDetailsService;
 
@@ -22,42 +27,67 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
+    /** Cho phép Vue dev server (Vite :5173 và :5174) gọi API. */
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        // Bổ sung thêm cổng 5174 vào danh sách cho phép
+        config.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:5174"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(true);
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
+    }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http)
             throws Exception {
 
         http
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+
             .csrf(csrf -> csrf.disable())
 
             .authorizeHttpRequests(auth -> auth
 
-            		.requestMatchers(
-            			    "/DustNovel/login",
-            			    "/DustNovel/register",
-            			    "/DustNovel/forgot-password",
-            			    "/css/**",
-            			    "/js/**",
-            			    "/images/**"
-            			).permitAll()
+                    // ===== REST API cho Vue (tạm mở; sẽ siết bằng JWT ở bước sau) =====
+                    .requestMatchers("/api/**").permitAll()
 
-            	    .requestMatchers("/admin/users/**")
-            	    .hasRole("ADMIN")
+                    .requestMatchers(
+                            "/DustNovel/login",
+                            "/DustNovel/register",
+                            "/DustNovel/forgot-password",
+                            "/css/**",
+                            "/js/**",
+                            "/images/**"
+                    ).permitAll()
 
-            	    .requestMatchers(
-            	        "/admin/products/**",
-            	        "/admin/categories/**"
-            	    )
-            	    .hasAnyRole("ADMIN","STAFF")
+                    .requestMatchers("/admin/users/**")
+                    .hasRole("ADMIN")
 
-            	    .requestMatchers("/account/**")
-            	    .hasAnyRole("ADMIN","STAFF","CUSTOMER")
+                    .requestMatchers(
+                            "/admin/products/**",
+                            "/admin/categories/**"
+                    )
+                    .hasAnyRole("ADMIN", "STAFF")
+
+                    .requestMatchers("/account/**")
+                    .hasAnyRole("ADMIN", "STAFF", "CUSTOMER")
+
                     .requestMatchers("/cart/**", "/orders/**", "/account/addresses/**")
-                    .hasAnyRole("ADMIN","STAFF","CUSTOMER")
+                    .hasAnyRole("ADMIN", "STAFF", "CUSTOMER")
+
                     .requestMatchers("/admin/orders/**")
-                    .hasAnyRole("ADMIN","STAFF")
-            	    .anyRequest()
-            	    .authenticated()
-            	)
+                    .hasAnyRole("ADMIN", "STAFF")
+
+                    .requestMatchers("/admin/gio-hang/**")
+                    .hasAnyRole("ADMIN", "STAFF")
+
+                    .anyRequest()
+                    .authenticated()
+            )
 
             .userDetailsService(userDetailsService)
 

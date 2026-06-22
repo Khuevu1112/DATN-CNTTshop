@@ -39,6 +39,9 @@ public class Product {
     @OneToMany(mappedBy = "product")
     private List<ProductVariant> variants;
 
+    @OneToMany(mappedBy = "product")
+    private List<ProductOption> options;
+
     public Integer getId() {
         return id;
     }
@@ -117,5 +120,13 @@ public class Product {
 
     public void setVariants(List<ProductVariant> variants) {
         this.variants = variants;
+    }
+
+    public List<ProductOption> getOptions() {
+        return options;
+    }
+
+    public void setOptions(List<ProductOption> options) {
+        this.options = options;
     }
 }

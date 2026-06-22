@@ -1,6 +1,7 @@
 package com.fpoly.model;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 import jakarta.persistence.*;
 
@@ -27,6 +28,14 @@ public class ProductVariant {
     @ManyToOne
     @JoinColumn(name = "product_id")
     private Product product;
+
+    @ManyToMany
+    @JoinTable(
+        name = "VARIANT_OPTION_VALUE",
+        joinColumns = @JoinColumn(name = "variant_id"),
+        inverseJoinColumns = @JoinColumn(name = "option_value_id")
+    )
+    private List<OptionValue> optionValues;
 
     public Integer getId() {
         return id;
@@ -82,5 +91,9 @@ public class ProductVariant {
 
     public void setProduct(Product product) {
         this.product = product;
+    }
+
+    public List<OptionValue> getOptionValues() {
+        return optionValues;
     }
 }
