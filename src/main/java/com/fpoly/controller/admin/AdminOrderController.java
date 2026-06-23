@@ -1,6 +1,8 @@
 package com.fpoly.controller.admin;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -21,6 +23,8 @@ public class AdminOrderController {
     private static final List<String> TRANG_THAI_LIST = List.of(
             "pending", "confirmed", "processing", "shipped", "delivered", "cancelled", "refunded"
     );
+
+    // ===== GIỮ NGUYÊN CÁC METHOD CŨ (trang riêng /admin/orders) =====
 
     @GetMapping
     public String danhSach(@RequestParam(required = false) String trangThai, Model model) {
@@ -58,5 +62,40 @@ public class AdminOrderController {
             ra.addFlashAttribute("error", e.getMessage());
         }
         return "redirect:/admin/orders/" + id;
+    }
+
+    // ===== API JSON MỚI — DÙNG CHO DASHBOARD (giống style các API khác) =====
+
+    @GetMapping("/api/orders")
+    @ResponseBody
+    public Map<String, Object> apiDanhSach(@RequestParam(required = false) String status) {
+        List<Order> orders = (status != null && !status.isBlank())
+                ? orderService.layDonTheoTrangThai(status)
+                : orderService.layTatCaDon();
+
+        List<Object[]> rows = orders.stream()
+                .map(o -> new Object[]{
+                        o.getId(),
+                        o.getMaDonHang(),
+                        o.getNguoiDung().getEmail(),
+                        o.getTongTien(),
+                        o.getTrangThai(),
+                        o.getCreatedAt().toString().substring(0, 16).replace("T", " ")
+                })
+                .collect(Collectors.toList());
+
+        return Map.of("success", true, "data", rows);
+    }
+
+    @PostMapping("/api/orders/{id}/status")
+    @ResponseBody
+    public Map<String, Object> apiCapNhatTrangThai(@PathVariable Integer id,
+                                                     @RequestParam String status) {
+        try {
+            orderService.capNhatTrangThai(id, status, null);
+            return Map.of("success", true);
+        } catch (RuntimeException e) {
+            return Map.of("success", false, "error", e.getMessage());
+        }
     }
 }

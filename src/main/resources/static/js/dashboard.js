@@ -577,3 +577,69 @@ function exportCoupons() {
             list.map(function(c){return [c[1],c[2],c[3],c[6]||0,c[5]||'∞',c[7]?String(c[7]).substring(0,10):'',c[8]==1?'Hoạt động':'Tắt'];}));
     });
 }
+// =======================================
+// 11. ĐƠN HÀNG (theo trạng thái, hiện trong dashboard)
+// =======================================
+var currentOrdersStatus = null;
+
+function showOrdersPage(status, label, btn) {
+    document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
+    document.querySelectorAll('.nav-item').forEach(function(b){ b.classList.remove('active'); });
+    document.getElementById('page-orders').classList.add('active');
+    if (btn) btn.classList.add('active');
+    document.getElementById('page-title').textContent = label;
+    document.getElementById('orders-page-title').textContent = label;
+    currentOrdersStatus = status;
+    loadOrdersPage(status);
+}
+
+function loadOrdersPage(status) {
+    var url = status ? '/admin/orders/api/orders?status=' + status : '/admin/orders/api/orders';
+    var justUpdatedId = sessionStorage.getItem('justUpdatedOrderId');
+
+    fetch(url)
+        .then(function(r){ return r.json(); })
+        .then(function(res){
+            var list = res.data || [];
+            var tbody = document.getElementById('orders-page-tbody');
+            if (!list.length) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:#65676b;">Không có đơn hàng nào</td></tr>';
+                return;
+            }
+            tbody.innerHTML = list.map(function(o){
+                var id = o[0], code = o[1], email = o[2], total = o[3], st = o[4], date = o[5];
+                var justUpdatedTag = (justUpdatedId && String(id) === String(justUpdatedId))
+                    ? ' <span class="just-updated-tag" style="color:#42b72a;font-size:11px;font-weight:600;">• Vừa cập nhật</span>'
+                    : '';
+                return '<tr>' +
+                    '<td><strong>'+code+'</strong></td>' +
+                    '<td>'+email+'</td>' +
+                    '<td style="color:#1877f2;font-weight:600;">'+fmtVND(total)+'</td>' +
+                    '<td>'+statusBadge(st)+justUpdatedTag+'</td>' +
+                    '<td style="color:#65676b;">'+date+'</td>' +
+                    '<td><a href="/admin/orders/'+id+'" class="btn-outline-meta" style="padding:4px 10px;text-decoration:none;display:inline-block;">Chi tiết</a></td>' +
+                    '</tr>';
+            }).join('');
+
+            if (justUpdatedId) {
+                sessionStorage.removeItem('justUpdatedOrderId');
+                setTimeout(function() {
+                    var tags = document.querySelectorAll('.just-updated-tag');
+                    tags.forEach(function(tag) { tag.style.transition = 'opacity 0.5s'; tag.style.opacity = '0'; });
+                    setTimeout(function() {
+                        tags.forEach(function(tag) { tag.remove(); });
+                    }, 500);
+                }, 3000);
+            }
+        })
+        .catch(function(e){ console.error('Lỗi tải đơn hàng:', e); });
+}
+
+function exportOrdersPage() {
+    var url = currentOrdersStatus ? '/admin/orders/api/orders?status=' + currentOrdersStatus : '/admin/orders/api/orders';
+    fetch(url).then(function(r){return r.json();}).then(function(res){
+        var list = res.data || [];
+        exportCSV('don_hang', ['Mã đơn','Khách hàng','Tổng tiền','Trạng thái','Ngày'],
+            list.map(function(o){ return [o[1], o[2], o[3], o[4], o[5]]; }));
+    });
+}

@@ -203,9 +203,9 @@
 <div class="sidebar">
     <div class="sidebar-logo">C</div>
     <div class="sidebar-divider"></div>
-    <a class="sid-btn active" title="Dashboard" href="/admin/dashboard"><i class="bi bi-grid-fill"></i></a>
+    <a class="sid-btn active" id="sidDashboard" title="Dashboard" href="/admin/dashboard"><i class="bi bi-grid-fill"></i></a>
     <a class="sid-btn" title="Sản phẩm" href="/admin/products"><i class="bi bi-box-seam"></i></a>
-    <a class="sid-btn" title="Đơn hàng" href="#"><i class="bi bi-cart3"></i></a>
+    <button class="sid-btn" id="sidOrders" title="Đơn hàng" onclick="toggleOrderMenu()"><i class="bi bi-cart3"></i></button>
     <a class="sid-btn" title="Khách hàng" href="/admin/users"><i class="bi bi-people"></i></a>
     <a class="sid-btn" title="Danh mục" href="/admin/categories"><i class="bi bi-tags"></i></a>
     <div class="sidebar-divider"></div>
@@ -220,6 +220,7 @@
         <div class="leftnav-sub">Bảng điều khiển</div>
     </div>
 
+<div id="overviewMenuGroup">
     <div class="leftnav-section">Tổng quan</div>
     <button class="nav-item active" onclick="showPage('overview', this)">
         <i class="bi bi-bar-chart-line"></i> Tổng quan
@@ -227,7 +228,38 @@
     <button class="nav-item" onclick="showPage('ketqua', this)">
         <i class="bi bi-graph-up"></i> Kết quả
     </button>
+</div>
 
+<div id="orderMenuGroup" style="display:none;">
+    <hr class="section-divider">
+    <div class="leftnav-section">Đơn hàng</div>
+    <button class="nav-item" onclick="showOrdersPage(null, 'Tất cả đơn hàng', this)">
+        <i class="bi bi-list-ul"></i> Tất cả đơn hàng
+    </button>
+    <button class="nav-item" onclick="showOrdersPage('pending', 'Chờ xác nhận', this)">
+        <i class="bi bi-hourglass-split"></i> Chờ xác nhận
+    </button>
+    <button class="nav-item" onclick="showOrdersPage('confirmed', 'Đã xác nhận', this)">
+        <i class="bi bi-check2"></i> Đã xác nhận
+    </button>
+    <button class="nav-item" onclick="showOrdersPage('processing', 'Đang xử lý', this)">
+        <i class="bi bi-gear"></i> Đang xử lý
+    </button>
+    <button class="nav-item" onclick="showOrdersPage('shipped', 'Đang giao', this)">
+        <i class="bi bi-truck"></i> Đang giao
+    </button>
+    <button class="nav-item" onclick="showOrdersPage('delivered', 'Đã giao', this)">
+        <i class="bi bi-check-circle"></i> Đã giao
+    </button>
+    <button class="nav-item" onclick="showOrdersPage('cancelled', 'Đã hủy', this)">
+        <i class="bi bi-x-circle"></i> Đã hủy
+    </button>
+    <button class="nav-item" onclick="showOrdersPage('refunded', 'Hoàn tiền', this)">
+        <i class="bi bi-arrow-counterclockwise"></i> Hoàn tiền
+    </button>
+</div>
+
+    <div id="contentMenuGroup">
     <hr class="section-divider">
     <div class="leftnav-section">Nội dung</div>
     <button class="nav-item" onclick="showPage('doanhthu', this)">
@@ -236,7 +268,9 @@
     <button class="nav-item" onclick="showPage('sanpham', this)">
         <i class="bi bi-box-seam"></i> Sản phẩm hàng đầu
     </button>
+    </div>
 
+    <div id="manageMenuGroup">
     <hr class="section-divider">
     <div class="leftnav-section">Quản lý</div>
     <button class="nav-item" onclick="showPage('shipping', this)">
@@ -248,6 +282,7 @@
     <button class="nav-item" onclick="showPage('notif', this)">
         <i class="bi bi-bell"></i> Thông báo
     </button>
+    </div>
 
     <div class="leftnav-bottom">
         <div class="user-row">
@@ -344,48 +379,30 @@
         </div>
 
         <!-- ===== KẾT QUẢ ===== -->
-        <div id="page-ketqua" class="page">
-            <div class="metric-row">
-                <div class="metric-card">
-                    <div class="metric-card-label"><i class="bi bi-graph-up"></i> Lượt xem sản phẩm</div>
-                    <div class="metric-card-value" id="kq-views">—</div>
-                    <div class="metric-card-change up"><i class="bi bi-arrow-up-short"></i> 100%</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-card-label"><i class="bi bi-cart-check"></i> Tỷ lệ chuyển đổi</div>
-                    <div class="metric-card-value" id="kq-conv">—</div>
-                    <div class="metric-card-change neutral">Đơn / lượt xem</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-card-label"><i class="bi bi-star"></i> Đánh giá TB</div>
-                    <div class="metric-card-value">4.8 ⭐</div>
-                    <div class="metric-card-change up"><i class="bi bi-arrow-up-short"></i> 0.2</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-card-label"><i class="bi bi-arrow-repeat"></i> Khách quay lại</div>
-                    <div class="metric-card-value" id="kq-return">—</div>
-                    <div class="metric-card-change up"><i class="bi bi-arrow-up-short"></i></div>
-                </div>
-            </div>
-            <div class="chart-card">
-                <div class="chart-card-title">Lượt xem & Đơn hàng</div>
-                <div class="chart-card-sub" id="kq-range">7 ngày qua</div>
-                <div style="position:relative;height:240px;"><canvas id="kqChart"></canvas></div>
-            </div>
-            <div class="data-card">
-                <div class="data-card-header">
-                    <div class="data-card-title">Sản phẩm bán chạy</div>
-                    <button class="btn-outline-meta"><i class="bi bi-download"></i> Xuất</button>
-                </div>
-                <table class="meta-tbl">
-                    <thead><tr><th>Sản phẩm</th><th>Danh mục</th><th>Đã bán</th><th>Doanh thu</th><th>Trạng thái</th></tr></thead>
-                    <tbody id="top-products">
-                        <tr><td colspan="5" style="text-align:center;padding:20px;color:#65676b;">Đang tải...</td></tr>
-                    </tbody>
-                </table>
-            </div>
+<!-- ===== ĐƠN HÀNG (xem theo trạng thái) ===== -->
+<div id="page-orders" class="page">
+    <div class="data-card">
+        <div class="data-card-header">
+            <div class="data-card-title" id="orders-page-title">Tất cả đơn hàng</div>
+            <button class="btn-outline-meta" onclick="exportOrdersPage()"><i class="bi bi-download"></i> Xuất CSV</button>
         </div>
-
+        <table class="meta-tbl">
+            <thead>
+                <tr>
+                    <th>Mã đơn</th>
+                    <th>Khách hàng</th>
+                    <th>Tổng tiền</th>
+                    <th>Trạng thái</th>
+                    <th>Ngày</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="orders-page-tbody">
+                <tr><td colspan="6" style="text-align:center;padding:20px;color:#65676b;">Đang tải...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
         <!-- ===== DOANH THU ===== -->
         <div id="page-doanhthu" class="page">
             <div class="chart-card">
@@ -578,6 +595,49 @@
         </div>
     </div>
 </div>
+
+<script>
+function toggleOrderMenu() {
+    const orderMenu = document.getElementById('orderMenuGroup');
+    const overviewMenu = document.getElementById('overviewMenuGroup');
+    const contentMenu = document.getElementById('contentMenuGroup');
+    const manageMenu = document.getElementById('manageMenuGroup');
+    const sidOrders = document.getElementById('sidOrders');
+    const sidDashboard = document.getElementById('sidDashboard');
+
+    const isCurrentlyOpen = orderMenu.style.display === 'block';
+
+    if (isCurrentlyOpen) {
+        orderMenu.style.display = 'none';
+        overviewMenu.style.display = 'block';
+        contentMenu.style.display = 'block';
+        manageMenu.style.display = 'block';
+        sidOrders.classList.remove('active');
+        sidDashboard.classList.add('active');
+    } else {
+        orderMenu.style.display = 'block';
+        overviewMenu.style.display = 'none';
+        contentMenu.style.display = 'none';
+        manageMenu.style.display = 'none';
+        sidOrders.classList.add('active');
+        sidDashboard.classList.remove('active');
+    }
+}
+
+// Tự mở đúng trang đơn hàng nếu URL có ?openOrders=...
+document.addEventListener('DOMContentLoaded', function() {
+    var params = new URLSearchParams(window.location.search);
+    var status = params.get('openOrders');
+    if (status) {
+        var labels = {
+            pending:'Chờ xác nhận', confirmed:'Đã xác nhận', processing:'Đang xử lý',
+            shipped:'Đang giao', delivered:'Đã giao', cancelled:'Đã hủy', refunded:'Hoàn tiền'
+        };
+        toggleOrderMenu();
+        showOrdersPage(status, labels[status] || status, null);
+    }
+});
+</script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
