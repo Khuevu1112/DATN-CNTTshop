@@ -27,15 +27,82 @@
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-white fw-bold">Cập nhật trạng thái</div>
             <div class="card-body">
-                <form th:action="@{/admin/orders/{id}/status(id=${order.id})}" method="post">
-                    <select name="trangThai" class="form-select mb-2">
-                        <option th:each="tt : ${trangThaiList}" th:value="${tt}" th:text="${tt}"
-                                th:selected="${order.trangThai == tt}"></option>
-                    </select>
-                    <input type="text" name="ghiChu" class="form-control mb-2"
-                           placeholder="Ghi chú (không bắt buộc)">
-                    <button type="submit" class="btn btn-danger w-100">Cập nhật</button>
-                </form>
+<div th:if="${order.trangThai == 'delivered' or order.trangThai == 'cancelled'}"
+     class="alert alert-secondary mb-0">
+    <i class="bi bi-lock-fill me-2"></i>
+    Đơn hàng đã ở trạng thái cuối
+    (<span th:text="${order.trangThai == 'delivered'} ? 'Đã giao' : 'Đã hủy'"></span>),
+    không thể cập nhật trạng thái khác.
+</div>
+
+<form id="updateStatusForm" onsubmit="return submitStatusUpdate(event)"
+      th:unless="${order.trangThai == 'delivered' or order.trangThai == 'cancelled'}">
+    <input type="hidden" id="orderIdInput" th:value="${order.id}">
+    <select name="trangThai" id="trangThaiSelect" class="form-select mb-2">
+        <option th:each="tt : ${trangThaiList}"
+                th:value="${tt}"
+                th:selected="${order.trangThai == tt}"
+                th:text="${tt == 'pending'} ? 'Chờ xác nhận' :
+                          (${tt == 'confirmed'} ? 'Đã xác nhận' :
+                          (${tt == 'processing'} ? 'Đang xử lý' :
+                          (${tt == 'shipped'} ? 'Đang giao' :
+                          (${tt == 'delivered'} ? 'Đã giao' :
+                          (${tt == 'cancelled'} ? 'Đã hủy' :
+                          (${tt == 'refunded'} ? 'Hoàn tiền' : ${tt}))))))">
+        </option>
+    </select>
+    <input type="text" id="ghiChuInput" class="form-control mb-2"
+           placeholder="Ghi chú (không bắt buộc)">
+    <button type="submit" class="btn btn-danger w-100">Cập nhật</button>
+</form>
+
+<script>
+var statusLabels = {
+    pending: 'Chờ xác nhận', confirmed: 'Đã xác nhận', processing: 'Đang xử lý',
+    shipped: 'Đang giao', delivered: 'Đã giao', cancelled: 'Đã hủy', refunded: 'Hoàn tiền'
+};
+
+function submitStatusUpdate(e) {
+    e.preventDefault();
+    var orderId = document.getElementById('orderIdInput').value;
+    var status  = document.getElementById('trangThaiSelect').value;
+    var note    = document.getElementById('ghiChuInput').value;
+    var label   = statusLabels[status] || status;
+
+    // Xác nhận lần 1: luôn hỏi trước khi đổi trạng thái
+    var confirm1 = confirm('Bạn có chắc muốn chuyển đơn hàng sang trạng thái "' + label + '"?');
+    if (!confirm1) return false;
+
+    // Xác nhận lần 2: chỉ khi chọn trạng thái cuối (delivered / cancelled)
+    if (status === 'delivered' || status === 'cancelled') {
+        var confirm2 = confirm(
+            'Lưu ý: "' + label + '" là trạng thái CUỐI.\n' +
+            'Sau khi xác nhận, đơn hàng sẽ KHÔNG THỂ cập nhật sang trạng thái khác nữa.\n\n' +
+            'Bạn có chắc chắn muốn tiếp tục?'
+        );
+        if (!confirm2) return false;
+    }
+
+    var body = new URLSearchParams();
+    body.append('trangThai', status);
+    if (note) body.append('ghiChu', note);
+
+    fetch('/admin/orders/' + orderId + '/status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body.toString()
+    })
+    .then(function(r) { return r.text(); })
+    .then(function() {
+        window.location.href = '/admin/orders/' + orderId;
+    })
+    .catch(function(err) {
+        alert('Có lỗi xảy ra khi cập nhật');
+        console.error(err);
+    });
+    return false;
+}
+</script>
             </div>
         </div>
     </div>
@@ -82,7 +149,15 @@
             <div class="card-body">
                 <ul class="list-unstyled mb-0">
                     <li th:each="log : ${order.lichSuTrangThai}" class="mb-2 border-bottom pb-2">
-                        <span class="fw-bold" th:text="${log.trangThai}"></span>
+                        <span class="fw-bold"
+      th:text="${log.trangThai == 'pending'} ? 'Chờ xác nhận' :
+                (${log.trangThai == 'confirmed'} ? 'Đã xác nhận' :
+                (${log.trangThai == 'processing'} ? 'Đang xử lý' :
+                (${log.trangThai == 'shipped'} ? 'Đang giao' :
+                (${log.trangThai == 'delivered'} ? 'Đã giao' :
+                (${log.trangThai == 'cancelled'} ? 'Đã hủy' :
+                (${log.trangThai == 'refunded'} ? 'Hoàn tiền' : ${log.trangThai}))))))">
+                        </span>
                         <span class="text-muted ms-2" th:text="${log.ghiChu}"></span>
                         <br>
                         <small class="text-muted"

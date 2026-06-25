@@ -1,0 +1,15 @@
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: #081a2d; }
+body { font-family: 'Be Vietnam Pro', sans-serif; -webkit-font-smoothing: antialiased; color: #e8f1fc; }
+input::placeholder { color: #5f7a9c; }
+input:focus, select:focus, button:focus { outline: none; }
+select option { background: #0c2742; color: #e8f1fc; }
+::-webkit-scrollbar { width: 11px; height: 11px; }
+::-webkit-scrollbar-thumb { background: #1a3a5c; border-radius: 6px; }
+::-webkit-scrollbar-track { background: #081a2d; }
+
+@keyframes floatBlob { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(18px,-22px) scale(1.06); } }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pulseGlow { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
+@keyframes barSlide { 0% { transform: translateX(-100%); } 100% { transform: translateX(250%); } }

@@ -1,17 +1,23 @@
 <script setup>
-import { onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import DefaultLayout from './layouts/DefaultLayout.vue'
+import BlankLayout from './layouts/BlankLayout.vue'
 import LoadingOverlay from './components/LoadingOverlay.vue'
 import { isLoading } from './composables/loading'
-import { initAccent } from './composables/theme'
+import { initAccent, initMode } from './composables/theme'
 
-onMounted(initAccent)
+const route = useRoute()
+// Trang auth (login/register/forgot) dùng layout trống — không header/footer
+const layout = computed(() => (route.meta.authLayout ? BlankLayout : DefaultLayout))
+
+onMounted(() => { initAccent(); initMode() })
 </script>
 
 <template>
-  <DefaultLayout>
+  <component :is="layout">
     <router-view />
-  </DefaultLayout>
+  </component>
 
   <LoadingOverlay v-if="isLoading" />
 </template>

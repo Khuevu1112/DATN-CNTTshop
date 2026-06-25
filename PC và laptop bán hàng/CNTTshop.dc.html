@@ -27,11 +27,11 @@
   @keyframes barSlide{0%{transform:translateX(-100%);}100%{transform:translateX(250%);}}
 </style>
 </helmet>
-<div style="--acc: {{ accent }}; min-height:100vh; background:radial-gradient(1200px 600px at 80% -10%, #0c2c52 0%, #081a2d 55%); color:#e8f1fc; font-family:'Be Vietnam Pro',sans-serif; -webkit-font-smoothing:antialiased;">
+<div style="--acc: {{ accent }}; --page-bg: {{ pageBg }}; --ink: {{ ink }}; --ink-soft: {{ inkSoft }}; min-height:100vh; background:var(--page-bg); color:#e8f1fc; font-family:'Be Vietnam Pro',sans-serif; -webkit-font-smoothing:antialiased;">
 
   <!-- ===== HEADER ===== -->
   <header style="position:sticky; top:0; z-index:50; backdrop-filter:blur(14px); background:rgba(7,18,33,0.84); border-bottom:1px solid rgba(120,170,230,0.14);">
-    <div style="max-width:1220px; margin:0 auto; padding:14px 24px; display:flex; align-items:center; gap:22px;">
+    <div style="max-width:1400px; margin:0 auto; padding:14px 24px; display:flex; align-items:center; gap:22px;">
       <div onClick="{{ goHome }}" style="display:flex; align-items:center; gap:11px; cursor:pointer; flex:none;">
         <div style="width:30px; height:30px; transform:rotate(45deg); border-radius:7px; background:linear-gradient(135deg, var(--acc,#00e5ff), #0b4f9e); box-shadow:0 0 18px color-mix(in srgb, var(--acc,#00e5ff) 55%, transparent);"></div>
         <div style="font-family:'Chakra Petch',sans-serif; font-weight:700; font-size:20px; letter-spacing:0.5px; line-height:1;">CNTT<span style="color:var(--acc,#00e5ff);">shop</span></div>
@@ -48,8 +48,8 @@
       <div style="display:flex; align-items:center; gap:6px; flex:none; padding:0 4px;">
         <button onClick="{{ themeCyan }}" title="Cyan" style="width:16px; height:16px; border-radius:50%; border:1px solid rgba(255,255,255,0.25); background:#00e5ff; cursor:pointer; padding:0;"></button>
         <button onClick="{{ themeMag }}" title="Magenta" style="width:16px; height:16px; border-radius:50%; border:1px solid rgba(255,255,255,0.25); background:#ff45e0; cursor:pointer; padding:0;"></button>
-        <button onClick="{{ themeVolt }}" title="Volt" style="width:16px; height:16px; border-radius:50%; border:1px solid rgba(255,255,255,0.25); background:#c6ff3d; cursor:pointer; padding:0;"></button>
       </div>
+      <button onClick="{{ toggleMode }}" title="Đổi giao diện sáng / tối" style="flex:none; width:42px; height:42px; border-radius:11px; border:1px solid rgba(120,170,230,0.2); background:#0a2138; color:#e8f1fc; cursor:pointer; font-size:18px; line-height:1; display:flex; align-items:center; justify-content:center;">{{ modeIcon }}</button>
       <button onClick="{{ goCart }}" style="position:relative; flex:none; height:42px; display:flex; align-items:center; gap:9px; padding:0 16px; border-radius:11px; border:1px solid rgba(120,170,230,0.2); background:color-mix(in srgb, var(--acc,#00e5ff) 12%, #0a2138); color:#e8f1fc; cursor:pointer; font-family:'Be Vietnam Pro',sans-serif; font-weight:600; font-size:13.5px;">
         <span style="font-size:17px;">🛒</span> Giỏ hàng
         <sc-if value="{{ showBadge }}" hint-placeholder-val="">
@@ -58,7 +58,7 @@
       </button>
     </div>
     <nav style="border-top:1px solid rgba(120,170,230,0.08);">
-      <div style="max-width:1220px; margin:0 auto; padding:0 24px; display:flex; align-items:center; gap:4px; height:46px; overflow-x:auto;">
+      <div style="max-width:1400px; margin:0 auto; padding:0 24px; display:flex; align-items:center; gap:4px; height:46px; overflow-x:auto;">
         <sc-for list="{{ navItems }}" as="item" hint-placeholder-count="6">
           <div onClick="{{ item.onClick }}" style="position:relative; height:46px; display:flex; align-items:center; padding:0 14px; cursor:pointer; white-space:nowrap; font-size:13.5px; font-weight:500; color: {{ item.color }};">
             {{ item.label }}
@@ -99,90 +99,95 @@
 
   <!-- ===== HOME ===== -->
   <sc-if value="{{ isHome }}" hint-placeholder-val="{{ true }}">
-  <main style="max-width:1220px; margin:0 auto; padding:0 24px 70px;">
-    <!-- hero -->
-    <section style="position:relative; margin-top:28px; border-radius:22px; overflow:hidden; border:1px solid rgba(120,170,230,0.16); background:linear-gradient(120deg,#0a2440 0%, #061427 60%);">
-      <div style="position:absolute; top:-80px; right:-40px; width:420px; height:420px; border-radius:50%; background:radial-gradient(circle, color-mix(in srgb, var(--acc,#00e5ff) 38%, transparent), transparent 65%); filter:blur(20px); animation:floatBlob 9s ease-in-out infinite; pointer-events:none;"></div>
-      <div style="position:relative; display:grid; grid-template-columns:1.15fr 0.85fr; gap:24px; padding:54px 48px; align-items:center;">
-        <div>
-          <div style="font-family:'Chakra Petch',sans-serif; font-size:12px; letter-spacing:3px; color:var(--acc,#00e5ff); font-weight:600; margin-bottom:16px;">CNTTSHOP // BUILD YOUR POWER</div>
-          <h1 style="font-family:'Be Vietnam Pro',sans-serif; font-weight:800; font-size:52px; line-height:1.05; margin:0 0 18px; letter-spacing:-1px;">Sức mạnh<br>không giới hạn.</h1>
-          <p style="margin:0 0 28px; max-width:430px; font-size:15px; line-height:1.6; color:#a9c0dc;">PC Gaming dựng sẵn, laptop RTX & linh kiện chính hãng. Test kỹ trước khi giao, bảo hành tới 36 tháng, trả góp 0%.</p>
-          <div style="display:flex; gap:12px; flex-wrap:wrap;">
-            <button onClick="{{ goCatPC }}" style="height:50px; padding:0 28px; border:none; border-radius:12px; background:var(--acc,#00e5ff); color:#04121f; font-family:'Be Vietnam Pro',sans-serif; font-weight:700; font-size:14.5px; cursor:pointer; box-shadow:0 10px 28px color-mix(in srgb, var(--acc,#00e5ff) 40%, transparent);">Mua PC Gaming →</button>
-            <button onClick="{{ goCatLap }}" style="height:50px; padding:0 26px; border:1px solid rgba(120,170,230,0.3); border-radius:12px; background:transparent; color:#e8f1fc; font-family:'Be Vietnam Pro',sans-serif; font-weight:600; font-size:14.5px; cursor:pointer;">Xem Laptop</button>
-          </div>
-          <div style="display:flex; gap:30px; margin-top:34px;">
-            <div><div style="font-family:'Chakra Petch',sans-serif; font-weight:700; font-size:24px; color:#fff;">12K+</div><div style="font-size:12px; color:#7e98b6;">Đơn đã giao</div></div>
-            <div><div style="font-family:'Chakra Petch',sans-serif; font-weight:700; font-size:24px; color:#fff;">4.9★</div><div style="font-size:12px; color:#7e98b6;">Đánh giá khách</div></div>
-            <div><div style="font-family:'Chakra Petch',sans-serif; font-weight:700; font-size:24px; color:#fff;">36th</div><div style="font-size:12px; color:#7e98b6;">Bảo hành tối đa</div></div>
-          </div>
-        </div>
-        <div style="position:relative; aspect-ratio:1/1; border-radius:18px; background:linear-gradient(145deg, hsl(265 50% 18%), hsl(220 60% 10%)); border:1px solid rgba(120,170,230,0.2); display:flex; align-items:center; justify-content:center; overflow:hidden;">
-          <div style="position:absolute; inset:0; background:repeating-linear-gradient(125deg, rgba(255,255,255,0.04) 0 2px, transparent 2px 14px);"></div>
-          <div style="text-align:center;">
-            <div style="font-family:'Chakra Petch',sans-serif; font-weight:700; font-size:38px; letter-spacing:2px; color:rgba(180,210,255,0.22);">PC BUILD</div>
-            <div style="font-family:'Chakra Petch',monospace; font-size:10px; letter-spacing:2px; color:rgba(200,225,255,0.32); margin-top:6px;">[ ẢNH SẢN PHẨM NỔI BẬT ]</div>
+  <main style="max-width:1800px; margin:0 auto; padding:0 24px 70px;">
+    <div style="display:grid; grid-template-columns:288px minmax(0,1fr) 288px; gap:20px; align-items:start; margin-top:28px;">
+
+      <!-- LEFT SIDEBAR — hero -->
+      <aside style="position:sticky; top:120px;">
+        <div style="position:relative; overflow:hidden; border-radius:20px; border:1px solid rgba(120,170,230,0.16); background:linear-gradient(160deg,#0a2440 0%, #061427 72%); padding:30px 26px 28px;">
+          <div style="position:absolute; top:-90px; right:-60px; width:280px; height:280px; border-radius:50%; background:radial-gradient(circle, color-mix(in srgb, var(--acc,#00e5ff) 38%, transparent), transparent 65%); filter:blur(20px); animation:floatBlob 9s ease-in-out infinite; pointer-events:none;"></div>
+          <div style="position:relative;">
+            <div style="font-family:'Chakra Petch',sans-serif; font-size:11px; letter-spacing:2.5px; color:var(--acc,#00e5ff); font-weight:600; margin-bottom:14px;">CNTTSHOP // BUILD YOUR POWER</div>
+            <h1 style="font-family:'Be Vietnam Pro',sans-serif; font-weight:800; font-size:38px; line-height:1.05; margin:0 0 16px; letter-spacing:-1px;">Sức mạnh<br>không giới hạn.</h1>
+            <p style="margin:0 0 24px; font-size:13.5px; line-height:1.6; color:#a9c0dc;">PC Gaming dựng sẵn, laptop RTX & linh kiện chính hãng. Test kỹ trước khi giao, bảo hành tới 36 tháng, trả góp 0%.</p>
+            <div style="display:flex; flex-direction:column; gap:11px;">
+              <button onClick="{{ goCatPC }}" style="height:48px; padding:0 22px; border:none; border-radius:12px; background:var(--acc,#00e5ff); color:#04121f; font-family:'Be Vietnam Pro',sans-serif; font-weight:700; font-size:14px; cursor:pointer; box-shadow:0 10px 28px color-mix(in srgb, var(--acc,#00e5ff) 40%, transparent);">Mua PC Gaming →</button>
+              <button onClick="{{ goCatLap }}" style="height:48px; padding:0 22px; border:1px solid rgba(120,170,230,0.3); border-radius:12px; background:transparent; color:#e8f1fc; font-family:'Be Vietnam Pro',sans-serif; font-weight:600; font-size:14px; cursor:pointer;">Xem Laptop</button>
+            </div>
+            <div style="display:flex; gap:22px; margin-top:28px; padding-top:24px; border-top:1px solid rgba(120,170,230,0.14);">
+              <div><div style="font-family:'Chakra Petch',sans-serif; font-weight:700; font-size:22px; color:#fff;">12K+</div><div style="font-size:11px; color:#7e98b6;">Đơn đã giao</div></div>
+              <div><div style="font-family:'Chakra Petch',sans-serif; font-weight:700; font-size:22px; color:#fff;">4.9★</div><div style="font-size:11px; color:#7e98b6;">Đánh giá khách</div></div>
+              <div><div style="font-family:'Chakra Petch',sans-serif; font-weight:700; font-size:22px; color:#fff;">36th</div><div style="font-size:11px; color:#7e98b6;">Bảo hành tối đa</div></div>
+            </div>
           </div>
         </div>
-      </div>
-    </section>
+      </aside>
 
-    <!-- category tiles -->
-    <section style="display:grid; grid-template-columns:repeat(5,1fr); gap:14px; margin-top:34px;">
-      <sc-for list="{{ catTiles }}" as="tile" hint-placeholder-count="5">
-        <div onClick="{{ tile.onClick }}" style="--ph: {{ tile.hue }}; cursor:pointer; border-radius:14px; padding:20px 18px; background:linear-gradient(160deg, hsl(var(--ph) 45% 16%), hsl(var(--ph) 55% 10%)); border:1px solid rgba(120,170,230,0.16); transition:transform .16s, border-color .16s;" style-hover="transform:translateY(-3px); border-color:var(--acc,#00e5ff);">
-          <div style="font-family:'Chakra Petch',sans-serif; font-size:10px; letter-spacing:2px; color:hsl(var(--ph) 70% 75%); font-weight:600;">{{ tile.en }}</div>
-          <div style="font-family:'Be Vietnam Pro',sans-serif; font-weight:700; font-size:16px; margin-top:8px; color:#fff;">{{ tile.vn }}</div>
-          <div style="font-size:12px; color:#a9c0dc; margin-top:4px;">Xem ngay →</div>
-        </div>
-      </sc-for>
-    </section>
-
-    <!-- featured -->
-    <section style="margin-top:44px;">
-      <div style="display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:18px;">
-        <div>
-          <div style="font-family:'Chakra Petch',sans-serif; font-size:11px; letter-spacing:2.5px; color:var(--acc,#00e5ff); font-weight:600;">BEST SELLERS</div>
-          <h2 style="font-family:'Be Vietnam Pro',sans-serif; font-weight:700; font-size:26px; margin:6px 0 0;">Sản phẩm bán chạy</h2>
-        </div>
-        <button onClick="{{ goCatAll }}" style="background:transparent; border:1px solid rgba(120,170,230,0.25); color:#cfdceb; padding:9px 18px; border-radius:10px; font-size:13px; font-weight:600; cursor:pointer; font-family:'Be Vietnam Pro',sans-serif;">Xem tất cả</button>
-      </div>
-      <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(225px,1fr)); gap:18px;">
-        <sc-for list="{{ featuredCards }}" as="card" hint-placeholder-count="5">
-          <dc-import name="ProductCard" p="{{ card }}" hint-size="100%,380px" style="width:100%;"></dc-import>
-        </sc-for>
-      </div>
-    </section>
-
-    <!-- promo band -->
-    <section onClick="{{ goCatPC }}" style="cursor:pointer; margin-top:44px; border-radius:18px; overflow:hidden; position:relative; padding:40px 44px; background:linear-gradient(110deg, #0b3a6e, #081a2d 70%); border:1px solid rgba(120,170,230,0.18); display:flex; align-items:center; justify-content:space-between; gap:24px;">
+      <!-- CENTER — content -->
       <div>
-        <div style="font-family:'Chakra Petch',sans-serif; font-size:11px; letter-spacing:2.5px; color:var(--acc,#00e5ff); font-weight:600;">CNTT BUILD SERVICE</div>
-        <h2 style="font-family:'Be Vietnam Pro',sans-serif; font-weight:800; font-size:30px; margin:8px 0 6px;">PC dựng sẵn — bật là chiến</h2>
-        <p style="margin:0; color:#a9c0dc; font-size:14px;">Đi dây gọn gàng, test stress 24h, cài sẵn Windows & driver. Đổi cấu hình theo nhu cầu.</p>
-      </div>
-      <div style="flex:none; font-family:'Be Vietnam Pro',sans-serif; font-weight:700; font-size:14.5px; color:#04121f; background:var(--acc,#00e5ff); padding:14px 26px; border-radius:12px; white-space:nowrap;">Khám phá build →</div>
-    </section>
+        <!-- trust -->
+        <section style="display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:34px;">
+          <sc-for list="{{ trust }}" as="t" hint-placeholder-count="4">
+            <div style="display:flex; align-items:center; gap:12px; padding:16px; border-radius:13px; background:#0a2138; border:1px solid rgba(120,170,230,0.12);">
+              <div style="font-size:22px;">{{ t.icon }}</div>
+              <div><div style="font-weight:700; font-size:13.5px;">{{ t.title }}</div><div style="font-size:11.5px; color:#7e98b6;">{{ t.sub }}</div></div>
+            </div>
+          </sc-for>
+        </section>
+        <!-- category tiles -->
+        <section style="display:grid; grid-template-columns:repeat(auto-fill,minmax(148px,1fr)); gap:12px;">
+          <sc-for list="{{ catTiles }}" as="tile" hint-placeholder-count="5">
+            <div onClick="{{ tile.onClick }}" style="--ph: {{ tile.hue }}; cursor:pointer; border-radius:14px; padding:18px 16px; background:linear-gradient(160deg, hsl(var(--ph) 45% 16%), hsl(var(--ph) 55% 10%)); border:1px solid rgba(120,170,230,0.16); transition:transform .16s, border-color .16s;" style-hover="transform:translateY(-3px); border-color:var(--acc,#00e5ff);">
+              <div style="font-family:'Chakra Petch',sans-serif; font-size:10px; letter-spacing:2px; color:hsl(var(--ph) 70% 75%); font-weight:600;">{{ tile.en }}</div>
+              <div style="font-family:'Be Vietnam Pro',sans-serif; font-weight:700; font-size:15px; margin-top:8px; color:#fff;">{{ tile.vn }}</div>
+              <div style="font-size:12px; color:#a9c0dc; margin-top:4px;">Xem ngay →</div>
+            </div>
+          </sc-for>
+        </section>
 
-    <!-- trust -->
-    <section style="display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-top:34px;">
-      <sc-for list="{{ trust }}" as="t" hint-placeholder-count="4">
-        <div style="display:flex; align-items:center; gap:13px; padding:18px; border-radius:13px; background:#0a2138; border:1px solid rgba(120,170,230,0.12);">
-          <div style="font-size:24px;">{{ t.icon }}</div>
-          <div><div style="font-weight:700; font-size:14px;">{{ t.title }}</div><div style="font-size:12px; color:#7e98b6;">{{ t.sub }}</div></div>
+        <!-- featured -->
+        <section style="margin-top:34px;">
+          <div style="display:flex; align-items:flex-end; justify-content:space-between; margin-bottom:18px;">
+            <div>
+              <div style="font-family:'Chakra Petch',sans-serif; font-size:11px; letter-spacing:2.5px; color:var(--acc,#00e5ff); font-weight:600;">BEST SELLERS</div>
+              <h2 style="font-family:'Be Vietnam Pro',sans-serif; font-weight:700; font-size:24px; margin:6px 0 0; color:var(--ink);">Sản phẩm bán chạy</h2>
+            </div>
+            <button onClick="{{ goCatAll }}" style="background:transparent; border:1px solid rgba(120,170,230,0.25); color:var(--ink-soft); padding:9px 18px; border-radius:10px; font-size:13px; font-weight:600; cursor:pointer; font-family:'Be Vietnam Pro',sans-serif;">Xem tất cả</button>
+          </div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:16px;">
+            <sc-for list="{{ featuredCards }}" as="card" hint-placeholder-count="5">
+              <dc-import name="ProductCard" p="{{ card }}" hint-size="100%,380px" style="width:100%;"></dc-import>
+            </sc-for>
+          </div>
+        </section>
+      </div>
+
+      <!-- RIGHT SIDEBAR — build promos -->
+      <aside style="position:sticky; top:120px; display:flex; flex-direction:column; gap:16px;">
+        <div onClick="{{ goCatPC }}" style="cursor:pointer; border-radius:20px; overflow:hidden; position:relative; padding:26px 24px; background:linear-gradient(150deg, #0b3a6e, #081a2d 78%); border:1px solid rgba(120,170,230,0.18);">
+          <div style="font-family:'Chakra Petch',sans-serif; font-size:10px; letter-spacing:2.5px; color:var(--acc,#00e5ff); font-weight:600;">CNTT BUILD SERVICE</div>
+          <h2 style="font-family:'Be Vietnam Pro',sans-serif; font-weight:800; font-size:22px; line-height:1.2; margin:10px 0 8px;">PC dựng sẵn — bật là chiến</h2>
+          <p style="margin:0 0 18px; color:#a9c0dc; font-size:13px; line-height:1.55;">Đi dây gọn gàng, test stress 24h, cài sẵn Windows & driver. Đổi cấu hình theo nhu cầu.</p>
+          <div style="display:inline-flex; font-family:'Be Vietnam Pro',sans-serif; font-weight:700; font-size:13.5px; color:#04121f; background:var(--acc,#00e5ff); padding:12px 22px; border-radius:11px;">Khám phá build →</div>
         </div>
-      </sc-for>
-    </section>
+        <div onClick="{{ goCatPC }}" style="cursor:pointer; border-radius:20px; overflow:hidden; position:relative; padding:26px 24px; background:linear-gradient(150deg, hsl(265 48% 22%), hsl(258 55% 11%) 78%); border:1px solid rgba(150,140,230,0.22);">
+          <div style="font-family:'Chakra Petch',sans-serif; font-size:10px; letter-spacing:2.5px; color:hsl(280 75% 78%); font-weight:600;">CUSTOM BUILD</div>
+          <h2 style="font-family:'Be Vietnam Pro',sans-serif; font-weight:800; font-size:22px; line-height:1.2; margin:10px 0 8px;">Tự build cấu hình cho bản thân</h2>
+          <p style="margin:0 0 18px; color:#cbb8ee; font-size:13px; line-height:1.55;">Tự chọn CPU, VGA, RAM, tản nhiệt theo ngân sách. Kiểm tra tương thích & lên giá tức thì.</p>
+          <div style="display:inline-flex; font-family:'Be Vietnam Pro',sans-serif; font-weight:700; font-size:13.5px; color:#1a0f2e; background:hsl(280 80% 72%); padding:12px 22px; border-radius:11px;">Khám phá ngay →</div>
+        </div>
+      </aside>
+
+    </div>
   </main>
   </sc-if>
 
   <!-- ===== CATEGORY ===== -->
   <sc-if value="{{ isCategory }}" hint-placeholder-val="">
-  <main style="max-width:1220px; margin:0 auto; padding:24px 24px 70px;">
-    <div style="font-size:12.5px; color:#7e98b6; margin-bottom:14px;"><span onClick="{{ goHome }}" style="cursor:pointer;">Trang chủ</span> <span style="color:#4a627e;">/</span> <span style="color:#cfdceb;">{{ catTitle }}</span></div>
+  <main style="max-width:1400px; margin:0 auto; padding:24px 24px 70px;">
+    <div style="font-size:12.5px; color:#7e98b6; margin-bottom:14px;"><span onClick="{{ goHome }}" style="cursor:pointer;">Trang chủ</span> <span style="color:#4a627e;">/</span> <span style="color:var(--ink-soft);">{{ catTitle }}</span></div>
     <div style="display:flex; align-items:baseline; gap:12px; margin-bottom:22px;">
-      <h1 style="font-family:'Be Vietnam Pro',sans-serif; font-weight:700; font-size:28px; margin:0;">{{ catTitle }}</h1>
+      <h1 style="font-family:'Be Vietnam Pro',sans-serif; font-weight:700; font-size:28px; margin:0; color:var(--ink);">{{ catTitle }}</h1>
       <span style="font-size:13px; color:#7e98b6;">{{ count }} sản phẩm</span>
     </div>
     <div style="display:grid; grid-template-columns:248px 1fr; gap:26px; align-items:start;">
@@ -239,9 +244,9 @@
 
   <!-- ===== DETAIL ===== -->
   <sc-if value="{{ isDetail }}" hint-placeholder-val="">
-  <main style="max-width:1220px; margin:0 auto; padding:24px 24px 70px;">
+  <main style="max-width:1400px; margin:0 auto; padding:24px 24px 70px;">
     <sc-if value="{{ hasDetail }}" hint-placeholder-val="{{ true }}">
-    <div style="font-size:12.5px; color:#7e98b6; margin-bottom:18px;"><span onClick="{{ goHome }}" style="cursor:pointer;">Trang chủ</span> <span style="color:#4a627e;">/</span> <span style="color:#cfdceb;">{{ detail.catVn }}</span> <span style="color:#4a627e;">/</span> <span style="color:#cfdceb;">{{ detail.name }}</span></div>
+    <div style="font-size:12.5px; color:#7e98b6; margin-bottom:18px;"><span onClick="{{ goHome }}" style="cursor:pointer;">Trang chủ</span> <span style="color:#4a627e;">/</span> <span style="color:var(--ink-soft);">{{ detail.catVn }}</span> <span style="color:#4a627e;">/</span> <span style="color:var(--ink-soft);">{{ detail.name }}</span></div>
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:36px; align-items:start;">
       <!-- gallery -->
       <div style="position:sticky; top:130px;">
@@ -261,9 +266,9 @@
       <!-- info -->
       <div>
         <div style="font-family:'Chakra Petch',sans-serif; font-size:11px; letter-spacing:2px; color:var(--acc,#00e5ff); font-weight:600;">{{ detail.brand }}</div>
-        <h1 style="font-family:'Be Vietnam Pro',sans-serif; font-weight:700; font-size:30px; line-height:1.25; margin:8px 0 12px;">{{ detail.name }}</h1>
+        <h1 style="font-family:'Be Vietnam Pro',sans-serif; font-weight:700; font-size:30px; line-height:1.25; margin:8px 0 12px; color:var(--ink);">{{ detail.name }}</h1>
         <div style="display:flex; align-items:center; gap:12px; margin-bottom:20px;">
-          <span style="color:#ffcf4d; font-size:13px;">★ <span style="color:#cfdceb; font-weight:600;">{{ detail.ratingText }}</span></span>
+          <span style="color:#ffcf4d; font-size:13px;">★ <span style="color:var(--ink); font-weight:600;">{{ detail.ratingText }}</span></span>
           <span style="color:#6e87a6; font-size:13px;">{{ detail.reviews }} đánh giá</span>
           <span style="color:#2bd47e; font-size:13px; font-weight:600;">● Còn hàng</span>
         </div>
@@ -279,7 +284,7 @@
           </div>
           <div style="font-size:12.5px; color:#7e98b6; margin-top:8px;">Trả góp chỉ từ <span style="color:#cfdceb;">{{ detail.installText }}</span>/tháng · 0% lãi suất</div>
         </div>
-        <p style="font-size:14px; line-height:1.65; color:#a9c0dc; margin:0 0 22px;">{{ detail.desc }}</p>
+        <p style="font-size:14px; line-height:1.65; color:var(--ink-soft); margin:0 0 22px;">{{ detail.desc }}</p>
         <sc-if value="{{ detail.hasCfg }}" hint-placeholder-val="">
           <div style="margin-bottom:24px; background:#0a2138; border:1px solid rgba(120,170,230,0.14); border-radius:14px; padding:18px 18px 20px;">
             <div style="font-family:'Chakra Petch',sans-serif; font-size:11px; letter-spacing:2px; color:var(--acc,#00e5ff); font-weight:600; margin-bottom:16px;">TÙY CHỌN CẤU HÌNH</div>
@@ -317,7 +322,7 @@
     </div>
     <!-- related -->
     <section style="margin-top:50px;">
-      <h2 style="font-family:'Be Vietnam Pro',sans-serif; font-weight:700; font-size:22px; margin:0 0 18px;">Sản phẩm liên quan</h2>
+      <h2 style="font-family:'Be Vietnam Pro',sans-serif; font-weight:700; font-size:22px; margin:0 0 18px; color:var(--ink);">Sản phẩm liên quan</h2>
       <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:18px;">
         <sc-for list="{{ relatedCards }}" as="card" hint-placeholder-count="4">
           <dc-import name="ProductCard" p="{{ card }}" hint-size="100%,380px" style="width:100%;"></dc-import>
@@ -330,7 +335,7 @@
 
   <!-- ===== CART ===== -->
   <sc-if value="{{ isCart }}" hint-placeholder-val="">
-  <main style="max-width:1100px; margin:0 auto; padding:24px 24px 70px;">
+  <main style="max-width:1320px; margin:0 auto; padding:24px 24px 70px;">
     <sc-if value="{{ placed }}" hint-placeholder-val="">
       <div style="text-align:center; padding:70px 24px; background:#0a2138; border:1px solid rgba(120,170,230,0.14); border-radius:18px; margin-top:20px;">
         <div style="width:74px; height:74px; margin:0 auto 22px; border-radius:50%; background:color-mix(in srgb, var(--acc,#00e5ff) 18%, #0c2742); display:flex; align-items:center; justify-content:center; font-size:36px; color:var(--acc,#00e5ff);">✓</div>
@@ -341,7 +346,7 @@
       </div>
     </sc-if>
     <sc-if value="{{ showCartView }}" hint-placeholder-val="{{ true }}">
-      <h1 style="font-family:'Be Vietnam Pro',sans-serif; font-weight:700; font-size:28px; margin:6px 0 22px;">Giỏ hàng</h1>
+      <h1 style="font-family:'Be Vietnam Pro',sans-serif; font-weight:700; font-size:28px; margin:6px 0 22px; color:var(--ink);">Giỏ hàng</h1>
       <sc-if value="{{ hasCart }}" hint-placeholder-val="{{ true }}">
         <div style="display:grid; grid-template-columns:1fr 340px; gap:24px; align-items:start;">
           <div style="display:flex; flex-direction:column; gap:12px;">
@@ -393,7 +398,7 @@
 
   <!-- ===== FOOTER ===== -->
   <footer style="border-top:1px solid rgba(120,170,230,0.12); background:#061427;">
-    <div style="max-width:1220px; margin:0 auto; padding:40px 24px; display:grid; grid-template-columns:1.5fr 1fr 1fr 1fr; gap:30px;">
+    <div style="max-width:1400px; margin:0 auto; padding:40px 24px; display:grid; grid-template-columns:1.5fr 1fr 1fr 1fr; gap:30px;">
       <div>
         <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
           <div style="width:26px; height:26px; transform:rotate(45deg); border-radius:6px; background:linear-gradient(135deg, var(--acc,#00e5ff), #0b4f9e);"></div>
@@ -420,9 +425,9 @@
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:860}}">
 class Component extends DCLogic {
-  state = { route:'home', cat:'all', selId:null, cfgSel:{}, cart:[], brandFilter:[], sort:'pop', priceMax:70000000, theme:'cyan', q:'', toast:'', placed:false, loading:false, loadingMsg:'Đang tải...' };
+  state = { route:'home', cat:'all', selId:null, cfgSel:{}, cart:[], brandFilter:[], sort:'pop', priceMax:70000000, theme:'cyan', mode:'dark', q:'', toast:'', placed:false, loading:false, loadingMsg:'Đang tải...' };
 
-  accents = { cyan:'#00e5ff', magenta:'#ff45e0', volt:'#c6ff3d' };
+  accents = { cyan:'#00e5ff', magenta:'#ff45e0' };
   catMeta = { laptop:{vn:'Laptop',en:'LAPTOPS',hue:210}, pc:{vn:'PC Gaming',en:'DESKTOP PC',hue:265}, linhkien:{vn:'Linh kiện',en:'COMPONENTS',hue:158}, manhinh:{vn:'Màn hình',en:'MONITORS',hue:190}, gear:{vn:'Gaming Gear',en:'GEAR',hue:328} };
 
   products = [
@@ -457,6 +462,7 @@ class Component extends DCLogic {
   goCat = (cat) => this.go({route:'category', cat, brandFilter:[], q:''}, 480, 'Đang tải sản phẩm...');
   goDetail = (id) => { const p=this.products.find(x=>x.id===id); this.go({route:'detail', selId:id, cfgSel:this.defaultSel(p)}, 480, 'Đang tải chi tiết...'); };
   setTheme = (t) => this.setState({theme:t});
+  toggleMode = () => this.setState(s => ({mode: s.mode==='light' ? 'dark' : 'light'}));
   setCfg = (groupKey, idx) => this.setState(s => ({cfgSel: Object.assign({}, s.cfgSel, {[groupKey]: idx})}));
 
   defaultSel = (p) => { const o={}; if(p && p.cfg) p.cfg.forEach(g => o[g.key]=0); return o; };
@@ -607,7 +613,11 @@ class Component extends DCLogic {
       cartBadge:cartCount, showBadge:cartCount>0,
       orderCode:'#CNTT' + (48210 + cartCount*7 + s.cart.length*13),
       goHome:this.goHome, goCart:this.goCart, goCatAll:()=>this.goCat('all'), goCatPC:()=>this.goCat('pc'), goCatLap:()=>this.goCat('laptop'),
-      themeCyan:()=>this.setTheme('cyan'), themeMag:()=>this.setTheme('magenta'), themeVolt:()=>this.setTheme('volt'),
+      themeCyan:()=>this.setTheme('cyan'), themeMag:()=>this.setTheme('magenta'),
+      toggleMode:this.toggleMode, modeIcon: s.mode==='light' ? '🌙' : '☀️',
+      pageBg: s.mode==='light' ? '#ffffff' : 'radial-gradient(1200px 600px at 80% -10%, #0c2c52 0%, #081a2d 55%)',
+      ink: s.mode==='light' ? '#0e2236' : '#e8f1fc',
+      inkSoft: s.mode==='light' ? '#51657c' : '#cfdceb',
       placeOrder:this.placeOrder, resetShop:this.resetShop,
       toast:s.toast, hasToast:!!s.toast,
       loading:s.loading, loadingMsg:s.loadingMsg

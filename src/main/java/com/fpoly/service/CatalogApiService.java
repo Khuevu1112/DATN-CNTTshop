@@ -3,6 +3,7 @@ package com.fpoly.service;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,9 +24,13 @@ import com.fpoly.model.OptionValue;
 import com.fpoly.model.Product;
 import com.fpoly.model.ProductImage;
 import com.fpoly.model.ProductOption;
+import com.fpoly.model.ProductSpec;
 import com.fpoly.model.ProductVariant;
 import com.fpoly.repository.CategoryRepository;
 import com.fpoly.repository.ProductRepository;
+
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 
 /**
  * Service phục vụ REST API catalog cho frontend Vue.
@@ -40,6 +45,9 @@ public class CatalogApiService {
 
     @Autowired
     private CategoryRepository categoryRepo;
+
+    @PersistenceContext
+    private EntityManager em;
 
     public List<CategoryDto> getCategories() {
         return categoryRepo.findAllByOrderBySortOrderAsc().stream()
@@ -66,7 +74,8 @@ public class CatalogApiService {
         }
 
         sortProducts(products, sort);
-        return products.stream().map(this::toSummary).toList();
+        Map<Integer, double[]> ratingMap = loadRatingMap();
+        return products.stream().map(p -> toSummary(p, ratingMap)).toList();
     }
 
     public ProductDetailDto getProductBySlug(String slug) {
@@ -83,7 +92,6 @@ public class CatalogApiService {
                     .map(s -> new SpecDto(s.getSpecKey(), s.getSpecValue()))
                     .toList();
 
-        // Các thuộc tính (option) của sản phẩm
         List<OptionDto> options = new ArrayList<>();
         if (p.getOptions() != null) {
             for (ProductOption o : p.getOptions()) {
@@ -95,7 +103,6 @@ public class CatalogApiService {
             }
         }
 
-        // Các biến thể, kèm map option->value để Vue khớp tổ hợp
         List<VariantDto> variants = new ArrayList<>();
         if (p.getVariants() != null) {
             for (ProductVariant v : p.getVariants()) {
@@ -122,14 +129,50 @@ public class CatalogApiService {
 
     // ===== helpers =====
 
-    private ProductSummaryDto toSummary(Product p) {
+    /** Trả map: productId -> [điểm trung bình, số lượt đánh giá] từ bảng REVIEW. */
+    private Map<Integer, double[]> loadRatingMap() {
+        Map<Integer, double[]> map = new HashMap<>();
+        try {
+            List<?> rows = em.createNativeQuery(
+                "SELECT product_id, AVG(CAST(rating AS FLOAT)), COUNT(*) FROM REVIEW GROUP BY product_id"
+            ).getResultList();
+            for (Object row : rows) {
+                Object[] r = (Object[]) row;
+                Integer pid = ((Number) r[0]).intValue();
+                double avg = r[1] == null ? 0 : ((Number) r[1]).doubleValue();
+                double cnt = r[2] == null ? 0 : ((Number) r[2]).doubleValue();
+                map.put(pid, new double[]{ avg, cnt });
+            }
+        } catch (Exception ignored) {
+            // bảng REVIEW có thể chưa có dữ liệu — bỏ qua, card sẽ không hiện rating
+        }
+        return map;
+    }
+
+    private ProductSummaryDto toSummary(Product p, Map<Integer, double[]> ratingMap) {
         ProductVariant v = pickVariant(p);
+
+        // 3 thông số nổi bật làm chip
+        List<String> chips = new ArrayList<>();
+        if (p.getSpecs() != null) {
+            p.getSpecs().stream()
+                    .sorted(Comparator.comparing((ProductSpec s) -> s.getSortOrder() == null ? 0 : s.getSortOrder()))
+                    .limit(3)
+                    .forEach(s -> chips.add(s.getSpecValue()));
+        }
+
+        double[] r = ratingMap.get(p.getId());
+        Double rating = (r != null) ? Math.round(r[0] * 10) / 10.0 : null;
+        Integer reviewCount = (r != null) ? (int) r[1] : 0;
+
         return new ProductSummaryDto(
                 p.getId(), p.getName(), p.getSlug(),
                 p.getCategory() != null ? p.getCategory().getName() : null,
+                p.getBrand() != null ? p.getBrand().getName() : null,
                 pickImageUrl(p),
                 v != null ? v.getPrice() : null,
-                v != null ? v.getOriginalPrice() : null);
+                v != null ? v.getOriginalPrice() : null,
+                chips, rating, reviewCount);
     }
 
     private String pickImageUrl(Product p) {

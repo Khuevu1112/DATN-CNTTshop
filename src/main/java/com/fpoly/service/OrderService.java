@@ -43,6 +43,9 @@ public class OrderService {
     @Autowired
     private CartItemRepository cartItemRepo;
 
+    @Autowired
+    private NotificationService notificationService;
+
     private static final BigDecimal PHI_VAN_CHUYEN_MAC_DINH = new BigDecimal("30000");
 
     @Transactional
@@ -114,6 +117,13 @@ public class OrderService {
         statusLogRepo.save(log);
 
         cartItemRepo.deleteByCart(cart);
+
+        notificationService.tao(
+                "new_order",
+                "Đơn hàng mới",
+                "Đơn " + saved.getMaDonHang() + " từ " + user.getHoTen() + " - " + tongTien.longValue() + "đ",
+                "/orders"
+        );
 
         return saved;
     }

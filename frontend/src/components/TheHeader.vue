@@ -1,16 +1,20 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { getCategories } from '../api/catalog'
 import { useAuthStore } from '../stores/auth'
-import { ACCENTS, applyAccent } from '../composables/theme'
+import { ACCENTS, applyAccent, getMode, toggleMode } from '../composables/theme'
 
 const categories = ref([])
 const keyword = ref('')
 const router = useRouter()
 const auth = useAuthStore()
 const { isAuthenticated, user } = storeToRefs(auth)
+
+const mode = ref(getMode())
+const modeIcon = computed(() => (mode.value === 'light' ? '🌙' : '☀️'))
+function switchMode() { mode.value = toggleMode() }
 
 onMounted(async () => {
   try { categories.value = await getCategories() } catch (e) { console.error(e) }
@@ -41,6 +45,7 @@ function logout() { auth.logout(); router.push('/') }
         <button v-for="a in ACCENTS" :key="a.key" :title="a.title"
                 :style="{ background: a.color }" @click="applyAccent(a.color)"></button>
       </div>
+      <button class="mode-btn" title="Đổi giao diện sáng / tối" @click="switchMode">{{ modeIcon }}</button>
 
       <router-link to="/cart" class="hact">🛒 <span class="d-none d-sm-inline">Giỏ hàng</span></router-link>
 

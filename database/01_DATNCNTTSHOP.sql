@@ -586,9 +586,7 @@ VALUES
 (N'Linh kiện máy tính', 'linh-kien', NULL, 3),
 (N'Màn hình', 'man-hinh', NULL, 4),
 (N'Thiết bị ngoại vi', 'ngoai-vi', NULL, 5),
-(N'Điện thoại', 'dien-thoai', NULL, 6),
-(N'Tablet', 'tablet', NULL, 7),
-(N'Phụ kiện', 'phu-kien', NULL, 8);
+(N'Phụ kiện', 'phu-kien', NULL, 6);
 GO
 
 INSERT INTO BRAND (name)

@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<style>
+:root{
+  --bg:#081a2d; --card:#0a2138; --card2:#0c2742; --line:rgba(120,170,230,0.14); --line2:rgba(120,170,230,0.22);
+  --acc:#00e5ff; --text:#e8f1fc; --muted:#7e98b6; --muted2:#a9c0dc; --sale:#ff3b5c; --green:#22d39a; --amber:#ffb43b;
+  --page:#06121f; --hover:rgba(120,170,230,0.06);
+}
+:root[data-mode="light"]{
+  --bg:#ffffff; --card:#ffffff; --card2:#f5f8fc; --line:rgba(18,40,70,0.10); --line2:rgba(18,40,70,0.16);
+  --acc:#0a84d8; --text:#0e2236; --muted:#64748b; --muted2:#334155; --sale:#e02447; --green:#0f9d6b; --amber:#c77b07;
+  --page:#eef1f6; --hover:rgba(18,40,70,0.035);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{font-family:'Be Vietnam Pro',Arial,sans-serif;background:var(--page);color:var(--text);-webkit-font-smoothing:antialiased;}
+.mono{font-family:'Chakra Petch',sans-serif;}
+::-webkit-scrollbar{width:9px;height:9px;}
+::-webkit-scrollbar-thumb{background:var(--line2);border-radius:6px;}
+::-webkit-scrollbar-track{background:transparent;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+@keyframes glow{0%,100%{opacity:.5;}50%{opacity:1;}}
+input,select,textarea,button{font-family:inherit;}
+</style>
+</helmet>
+
+<div style="display:flex;min-height:100vh;background:var(--page);">
+
+  <!-- ===== SIDEBAR ===== -->
+  <aside style="width:248px;flex:none;background:var(--bg);border-right:1px solid var(--line);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;">
+    <div style="display:flex;align-items:center;gap:11px;padding:18px 20px 16px;">
+      <div style="width:30px;height:30px;transform:rotate(45deg);border-radius:7px;background:linear-gradient(135deg,var(--acc),#0b4f9e);box-shadow:0 0 18px color-mix(in srgb,var(--acc) 55%,transparent);"></div>
+      <div>
+        <div class="mono" style="font-weight:700;font-size:17px;letter-spacing:.5px;color:var(--text);line-height:1;">CNTT<span style="color:var(--acc);">shop</span></div>
+        <div style="font-size:10.5px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;margin-top:3px;">Admin Console</div>
+      </div>
+    </div>
+
+    <nav style="flex:1;overflow-y:auto;padding:6px 12px;">
+      <sc-for list="{{ navGroups }}" as="grp" hint-placeholder-count="3">
+        <div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:1px;padding:14px 10px 6px;">{{ grp.title }}</div>
+        <sc-for list="{{ grp.items }}" as="it" hint-placeholder-count="3">
+          <button onClick="{{ it.go }}" style="width:100%;display:flex;align-items:center;gap:11px;padding:9px 10px;margin-bottom:2px;border:none;border-radius:9px;cursor:pointer;text-align:left;font-size:13.5px;font-weight:500;background:{{ it.bg }};color:{{ it.color }};transition:background .12s;">
+            <i class="bi {{ it.icon }}" style="font-size:15px;width:18px;text-align:center;"></i>
+            <span style="flex:1;">{{ it.label }}</span>
+            <sc-if value="{{ it.badge }}" hint-placeholder-val="{{ true }}"><span class="mono" style="font-size:11px;font-weight:700;padding:1px 7px;border-radius:9px;background:color-mix(in srgb,var(--acc) 18%,transparent);color:var(--acc);">{{ it.badge }}</span></sc-if>
+          </button>
+        </sc-for>
+      </sc-for>
+    </nav>
+
+    <div style="padding:12px;border-top:1px solid var(--line);">
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;background:var(--card);border:1px solid var(--line);">
+        <div class="mono" style="width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--acc),#0b4f9e);color:#04121f;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex:none;">QT</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Quản trị viên</div>
+          <div style="font-size:11px;color:var(--muted);">admin@cnttshop.vn</div>
+        </div>
+        <i class="bi bi-box-arrow-right" style="color:var(--muted);font-size:15px;cursor:pointer;"></i>
+      </div>
+    </div>
+  </aside>
+
+  <!-- ===== MAIN ===== -->
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;">
+
+    <!-- topbar -->
+    <header style="position:sticky;top:0;z-index:30;background:color-mix(in srgb,var(--page) 86%,transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:16px;padding:13px 26px;">
+      <div style="flex:none;">
+        <div style="font-size:17px;font-weight:700;color:var(--text);line-height:1.1;">{{ pageTitle }}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;">{{ pageSub }}</div>
+      </div>
+      <div style="flex:1;display:flex;justify-content:center;">
+        <div style="width:100%;max-width:420px;display:flex;align-items:center;gap:9px;background:var(--card);border:1px solid var(--line2);border-radius:10px;padding:0 13px;height:38px;">
+          <i class="bi bi-search" style="color:var(--muted);font-size:14px;"></i>
+          <input value="{{ search }}" onInput="{{ onSearch }}" placeholder="Tìm sản phẩm, đơn hàng, khách hàng..." style="flex:1;background:transparent;border:none;outline:none;color:var(--text);font-size:13px;">
+          <kbd class="mono" style="font-size:10px;color:var(--muted);border:1px solid var(--line2);border-radius:5px;padding:1px 5px;">/</kbd>
+        </div>
+      </div>
+      <div style="flex:none;display:flex;align-items:center;gap:8px;">
+        <button onClick="{{ toggleMode }}" title="Sáng / Tối" style="width:38px;height:38px;border-radius:10px;border:1px solid var(--line2);background:var(--card);color:var(--text);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;"><i class="bi {{ modeIcon }}"></i></button>
+        <button style="width:38px;height:38px;border-radius:10px;border:1px solid var(--line2);background:var(--card);color:var(--text);cursor:pointer;font-size:15px;position:relative;display:flex;align-items:center;justify-content:center;"><i class="bi bi-bell"></i><span style="position:absolute;top:7px;right:8px;width:7px;height:7px;border-radius:50%;background:var(--sale);"></span></button>
+        <button style="display:flex;align-items:center;gap:7px;height:38px;padding:0 15px;border-radius:10px;border:none;background:var(--acc);color:#04121f;font-weight:700;font-size:13px;cursor:pointer;box-shadow:0 6px 18px color-mix(in srgb,var(--acc) 32%,transparent);"><i class="bi bi-plus-lg"></i> Tạo mới</button>
+      </div>
+    </header>
+
+    <!-- content -->
+    <main style="flex:1;padding:22px 26px 60px;">
+
+      <!-- ============ DASHBOARD ============ -->
+      <sc-if value="{{ isDashboard }}" hint-placeholder-val="{{ true }}">
+        <div style="animation:fadeUp .35s ease;">
+
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px;">
+            <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+              <div style="background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 16px 14px;position:relative;overflow:hidden;">
+                <div style="display:flex;align-items:center;gap:8px;color:var(--muted);font-size:12.5px;font-weight:500;margin-bottom:10px;"><i class="bi {{ k.icon }}" style="color:var(--acc);font-size:14px;"></i> {{ k.label }}</div>
+                <div class="mono" style="font-size:27px;font-weight:700;color:var(--text);line-height:1;">{{ k.value }}</div>
+                <div style="display:flex;align-items:center;gap:5px;margin-top:9px;font-size:12px;">
+                  <span style="display:inline-flex;align-items:center;gap:2px;font-weight:600;color:{{ k.deltaColor }};"><i class="bi {{ k.deltaIcon }}"></i>{{ k.delta }}</span>
+                  <span style="color:var(--muted);">{{ k.note }}</span>
+                </div>
+                <svg viewBox="0 0 120 36" preserveAspectRatio="none" style="position:absolute;right:0;bottom:0;width:110px;height:36px;opacity:.5;"><path d="{{ k.spark }}" fill="none" stroke="var(--acc)" stroke-width="2"></path></svg>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:14px;margin-bottom:16px;">
+            <!-- revenue chart -->
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;">
+              <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px;">
+                <div>
+                  <div style="font-size:14.5px;font-weight:600;color:var(--text);">Doanh thu 7 ngày qua</div>
+                  <div class="mono" style="font-size:24px;font-weight:700;color:var(--text);margin-top:6px;">{{ weekRevenue }}</div>
+                </div>
+                <div style="display:flex;gap:4px;">
+                  <span style="font-size:12px;padding:5px 11px;border-radius:8px;background:color-mix(in srgb,var(--acc) 16%,transparent);color:var(--acc);font-weight:600;">7N</span>
+                  <span style="font-size:12px;padding:5px 11px;border-radius:8px;color:var(--muted);">28N</span>
+                  <span style="font-size:12px;padding:5px 11px;border-radius:8px;color:var(--muted);">12T</span>
+                </div>
+              </div>
+              <svg viewBox="0 0 560 200" preserveAspectRatio="none" style="width:100%;height:200px;margin-top:8px;">
+                <defs><linearGradient id="revfill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--acc)" stop-opacity="0.28"></stop><stop offset="100%" stop-color="var(--acc)" stop-opacity="0"></stop></linearGradient></defs>
+                <path d="{{ revArea }}" fill="url(#revfill)"></path>
+                <path d="{{ revLine }}" fill="none" stroke="var(--acc)" stroke-width="2.5" stroke-linecap="round"></path>
+              </svg>
+              <div style="display:flex;justify-content:space-between;margin-top:6px;">
+                <sc-for list="{{ revLabels }}" as="lb" hint-placeholder-count="7"><span style="font-size:11px;color:var(--muted);">{{ lb }}</span></sc-for>
+              </div>
+            </div>
+
+            <!-- phân bổ trạng thái đơn -->
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                <div style="font-size:14.5px;font-weight:600;color:var(--text);">Trạng thái đơn hàng</div>
+                <button onClick="{{ goAnalytics }}" style="font-size:12px;color:var(--acc);background:none;border:none;cursor:pointer;font-weight:600;">Phân tích →</button>
+              </div>
+              <div style="display:flex;height:12px;border-radius:6px;overflow:hidden;margin-bottom:18px;background:var(--card2);">
+                <sc-for list="{{ statusBreak }}" as="s" hint-placeholder-count="5"><div style="width:{{ s.pct }};background:{{ s.color }};"></div></sc-for>
+              </div>
+              <sc-for list="{{ statusBreak }}" as="s" hint-placeholder-count="5">
+                <div style="display:flex;align-items:center;gap:10px;padding:6px 0;">
+                  <span style="width:9px;height:9px;border-radius:3px;background:{{ s.color }};flex:none;"></span>
+                  <span style="flex:1;font-size:12.5px;color:var(--text);">{{ s.label }}</span>
+                  <span class="mono" style="font-size:12px;color:var(--muted2);">{{ s.count }}</span>
+                  <span class="mono" style="font-size:12px;font-weight:700;color:var(--text);width:38px;text-align:right;">{{ s.pct }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:14px;">
+            <!-- recent orders -->
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:15px 18px;border-bottom:1px solid var(--line);">
+                <div style="font-size:14.5px;font-weight:600;color:var(--text);">Đơn hàng gần đây</div>
+                <button onClick="{{ goOrders }}" style="font-size:12.5px;color:var(--acc);background:none;border:none;cursor:pointer;font-weight:600;">Xem tất cả →</button>
+              </div>
+              <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                <thead><tr>
+                  <th style="text-align:left;padding:9px 18px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;">Mã đơn</th>
+                  <th style="text-align:left;padding:9px 12px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;">Khách hàng</th>
+                  <th style="text-align:right;padding:9px 12px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;">Tổng tiền</th>
+                  <th style="text-align:left;padding:9px 18px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;">Trạng thái</th>
+                </tr></thead>
+                <tbody>
+                  <sc-for list="{{ recentOrders }}" as="o" hint-placeholder-count="6">
+                    <tr style="border-top:1px solid var(--line);cursor:pointer;">
+                      <td class="mono" style="padding:11px 18px;color:var(--acc);font-weight:600;">{{ o.code }}</td>
+                      <td style="padding:11px 12px;color:var(--text);">{{ o.customer }}</td>
+                      <td class="mono" style="padding:11px 12px;text-align:right;color:var(--text);font-weight:600;">{{ o.total }}</td>
+                      <td style="padding:11px 18px;"><span style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:20px;background:{{ o.stBg }};color:{{ o.stColor }};"><span style="width:6px;height:6px;border-radius:50%;background:{{ o.stColor }};"></span>{{ o.stLabel }}</span></td>
+                    </tr>
+                  </sc-for>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- low stock -->
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;">
+              <div style="display:flex;align-items:center;gap:8px;padding:15px 18px;border-bottom:1px solid var(--line);">
+                <i class="bi bi-exclamation-triangle-fill" style="color:var(--amber);font-size:14px;"></i>
+                <div style="font-size:14.5px;font-weight:600;color:var(--text);">Sắp hết hàng</div>
+              </div>
+              <div style="padding:6px 0;">
+                <sc-for list="{{ lowStock }}" as="p" hint-placeholder-count="5">
+                  <div style="display:flex;align-items:center;gap:12px;padding:10px 18px;">
+                    <div class="mono" style="width:38px;height:38px;border-radius:9px;flex:none;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;background:linear-gradient(135deg,hsl({{ p.hue }} 45% 22%),hsl({{ p.hue }} 55% 12%));color:hsl({{ p.hue }} 70% 75%);">{{ p.tag }}</div>
+                    <div style="flex:1;min-width:0;">
+                      <div style="font-size:12.5px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ p.name }}</div>
+                      <div style="font-size:11px;color:var(--muted);margin-top:1px;">{{ p.cat }}</div>
+                    </div>
+                    <div class="mono" style="font-size:13px;font-weight:700;color:{{ p.stockColor }};">{{ p.stock }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </sc-if>
+
+      <!-- ============ ANALYTICS ============ -->
+      <sc-if value="{{ isAnalytics }}" hint-placeholder-val="{{ true }}">
+        <div style="animation:fadeUp .35s ease;">
+
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;">
+            <sc-for list="{{ anRanges }}" as="r" hint-placeholder-count="5">
+              <button onClick="{{ r.go }}" style="padding:7px 14px;border-radius:9px;border:1px solid {{ r.bd }};background:{{ r.bg }};color:{{ r.color }};font-size:12.5px;font-weight:600;cursor:pointer;">{{ r.label }}</button>
+            </sc-for>
+            <div style="flex:1;"></div>
+            <button style="display:flex;align-items:center;gap:7px;height:34px;padding:0 14px;border-radius:9px;border:1px solid var(--line2);background:var(--card);color:var(--text);font-size:12.5px;font-weight:600;cursor:pointer;"><i class="bi bi-download"></i> Xuất báo cáo</button>
+          </div>
+
+          <!-- primary revenue chart -->
+          <div style="background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 18px 8px;margin-bottom:16px;">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px;">
+              <div>
+                <div style="font-size:13px;color:var(--muted);font-weight:500;">Tổng doanh thu · 9 tháng gần nhất</div>
+                <div class="mono" style="font-size:30px;font-weight:700;color:var(--text);margin-top:6px;line-height:1;">{{ totSum }}</div>
+                <div style="display:flex;align-items:center;gap:5px;margin-top:8px;font-size:12.5px;"><span style="display:inline-flex;align-items:center;gap:2px;font-weight:600;color:var(--green);"><i class="bi bi-arrow-up-short"></i>18%</span><span style="color:var(--muted);">so với 9 tháng trước</span></div>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);"><span style="width:11px;height:3px;border-radius:2px;background:var(--acc);display:inline-block;"></span> Doanh thu</div>
+            </div>
+            <svg viewBox="0 0 860 320" style="width:100%;height:auto;display:block;">
+              <defs><linearGradient id="anfill1" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="var(--acc)" stop-opacity="0.26"></stop><stop offset="100%" stop-color="var(--acc)" stop-opacity="0"></stop></linearGradient></defs>
+              <sc-for list="{{ totYTicks }}" as="t" hint-placeholder-count="5">
+                <line x1="50" x2="842" y1="{{ t.y }}" y2="{{ t.y }}" stroke="var(--line)" stroke-width="1"></line>
+                <text x="44" y="{{ t.y }}" text-anchor="end" dominant-baseline="middle" fill="var(--muted)" font-size="11" font-family="Chakra Petch">{{ t.label }}</text>
+              </sc-for>
+              <sc-for list="{{ xTicks }}" as="x" hint-placeholder-count="9">
+                <text x="{{ x.x }}" y="312" text-anchor="middle" fill="var(--muted)" font-size="11">{{ x.label }}</text>
+              </sc-for>
+              <path d="{{ totArea }}" fill="url(#anfill1)"></path>
+              <path d="{{ totLine }}" fill="none" stroke="var(--acc)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+          </div>
+
+          <!-- separated metric tiles -->
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:16px;">
+            <sc-for list="{{ anMetrics }}" as="m" hint-placeholder-count="5">
+              <div style="background:var(--card);border:1px solid var(--line);border-radius:13px;padding:15px 15px 10px;position:relative;overflow:hidden;">
+                <div style="display:flex;align-items:center;gap:7px;color:var(--muted);font-size:11.5px;font-weight:500;margin-bottom:9px;"><i class="bi {{ m.icon }}" style="color:var(--acc);font-size:13px;"></i> {{ m.label }}</div>
+                <div class="mono" style="font-size:22px;font-weight:700;color:var(--text);line-height:1;">{{ m.value }}</div>
+                <div style="display:flex;align-items:center;gap:3px;margin-top:7px;font-size:11.5px;font-weight:600;color:var(--green);"><i class="bi bi-arrow-up-short"></i>{{ m.delta }}</div>
+                <svg viewBox="0 0 120 34" preserveAspectRatio="none" style="position:absolute;right:0;bottom:0;width:88px;height:30px;opacity:.45;"><path d="{{ m.spark }}" fill="none" stroke="var(--acc)" stroke-width="2"></path></svg>
+              </div>
+            </sc-for>
+          </div>
+
+          <!-- category multi-line chart -->
+          <div style="background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px;">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px;">
+              <div>
+                <div style="font-size:15px;font-weight:600;color:var(--text);">Doanh thu theo danh mục</div>
+                <div style="font-size:12px;color:var(--muted);margin-top:3px;">Mỗi danh mục một đường · bấm chú giải để bật/tắt</div>
+              </div>
+            </div>
+            <svg viewBox="0 0 860 320" style="width:100%;height:auto;display:block;margin-top:8px;">
+              <sc-for list="{{ catYTicks }}" as="t" hint-placeholder-count="4">
+                <line x1="50" x2="842" y1="{{ t.y }}" y2="{{ t.y }}" stroke="var(--line)" stroke-width="1"></line>
+                <text x="44" y="{{ t.y }}" text-anchor="end" dominant-baseline="middle" fill="var(--muted)" font-size="11" font-family="Chakra Petch">{{ t.label }}</text>
+              </sc-for>
+              <sc-for list="{{ xTicks }}" as="x" hint-placeholder-count="9">
+                <text x="{{ x.x }}" y="312" text-anchor="middle" fill="var(--muted)" font-size="11">{{ x.label }}</text>
+              </sc-for>
+              <sc-for list="{{ multiLines }}" as="l" hint-placeholder-count="6">
+                <path d="{{ l.path }}" fill="none" stroke="{{ l.color }}" stroke-width="{{ l.width }}" opacity="{{ l.opacity }}" stroke-linecap="round" stroke-linejoin="round"></path>
+                <sc-if value="{{ l.dotShow }}" hint-placeholder-val="{{ true }}"><circle cx="{{ l.dotX }}" cy="{{ l.dotY }}" r="3.5" fill="{{ l.color }}"></circle></sc-if>
+              </sc-for>
+            </svg>
+            <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line);">
+              <sc-for list="{{ multiLines }}" as="l" hint-placeholder-count="6">
+                <button onClick="{{ l.toggle }}" style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:9px;border:1px solid var(--line2);background:var(--card2);cursor:pointer;">
+                  <span style="width:10px;height:10px;border-radius:3px;background:{{ l.legColor }};flex:none;"></span>
+                  <span style="font-size:12.5px;font-weight:600;color:{{ l.legText }};text-decoration:{{ l.legDeco }};">{{ l.name }}</span>
+                  <span class="mono" style="font-size:11.5px;color:var(--muted);text-decoration:{{ l.legDeco }};">{{ l.total }}</span>
+                </button>
+              </sc-for>
+            </div>
+          </div>
+
+          <!-- top products + status breakdown -->
+          <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:16px;">
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;">
+              <div style="padding:15px 18px;font-size:15px;font-weight:600;color:var(--text);border-bottom:1px solid var(--line);">Sản phẩm hàng đầu theo doanh thu</div>
+              <div style="padding:6px 0;">
+                <sc-for list="{{ topProducts }}" as="p" hint-placeholder-count="7">
+                  <div style="display:flex;align-items:center;gap:13px;padding:11px 18px;">
+                    <div class="mono" style="width:24px;font-size:13px;font-weight:700;color:var(--muted);flex:none;text-align:center;">{{ p.rank }}</div>
+                    <div style="flex:1;min-width:0;">
+                      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px;">
+                        <span style="font-size:12.5px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ p.name }}</span>
+                        <span class="mono" style="font-size:12.5px;font-weight:700;color:var(--text);flex:none;">{{ p.revenue }}</span>
+                      </div>
+                      <div style="display:flex;align-items:center;gap:10px;">
+                        <div style="flex:1;height:6px;border-radius:4px;background:var(--card2);overflow:hidden;"><div style="height:100%;width:{{ p.bar }};background:{{ p.color }};border-radius:4px;"></div></div>
+                        <span style="font-size:11px;color:var(--muted);flex:none;white-space:nowrap;">{{ p.sold }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+            <div style="background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;">
+              <div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:16px;">Phân bổ trạng thái đơn</div>
+              <div style="display:flex;height:12px;border-radius:6px;overflow:hidden;margin-bottom:18px;background:var(--card2);">
+                <sc-for list="{{ statusBreak }}" as="s" hint-placeholder-count="5"><div style="width:{{ s.pct }};background:{{ s.color }};"></div></sc-for>
+              </div>
+              <sc-for list="{{ statusBreak }}" as="s" hint-placeholder-count="5">
+                <div style="display:flex;align-items:center;gap:10px;padding:7px 0;">
+                  <span style="width:9px;height:9px;border-radius:3px;background:{{ s.color }};flex:none;"></span>
+                  <span style="flex:1;font-size:12.5px;color:var(--text);">{{ s.label }}</span>
+                  <span class="mono" style="font-size:12px;color:var(--muted2);">{{ s.count }}</span>
+                  <span class="mono" style="font-size:12px;font-weight:700;color:var(--text);width:40px;text-align:right;">{{ s.pct }}</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+        </div>
+      </sc-if>
+
+      <!-- other pages mount here -->
+      <sc-if value="{{ isProducts }}" hint-placeholder-val="{{ true }}">
+        <div style="animation:fadeUp .35s ease;">
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px;">
+            <sc-for list="{{ productStats }}" as="s" hint-placeholder-count="4">
+              <div style="background:var(--card);border:1px solid var(--line);border-radius:13px;padding:14px 16px;display:flex;align-items:center;gap:13px;">
+                <div style="width:40px;height:40px;border-radius:10px;flex:none;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,var(--acc) 14%,transparent);color:var(--acc);font-size:17px;"><i class="bi {{ s.icon }}"></i></div>
+                <div><div class="mono" style="font-size:21px;font-weight:700;color:var(--text);line-height:1;">{{ s.value }}</div><div style="font-size:11.5px;color:var(--muted);margin-top:4px;">{{ s.label }}</div></div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;">
+            <div style="display:flex;align-items:center;gap:8px;padding:14px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap;">
+              <sc-for list="{{ catChips }}" as="ch" hint-placeholder-count="7">
+                <button onClick="{{ ch.go }}" style="display:flex;align-items:center;gap:7px;padding:6px 12px;border-radius:9px;border:1px solid {{ ch.bd }};background:{{ ch.bg }};color:{{ ch.color }};font-size:12.5px;font-weight:600;cursor:pointer;">{{ ch.label }} <span class="mono" style="font-size:10.5px;padding:0 6px;border-radius:8px;background:{{ ch.cbg }};color:{{ ch.ccolor }};">{{ ch.count }}</span></button>
+              </sc-for>
+              <div style="flex:1;"></div>
+              <button style="display:flex;align-items:center;gap:7px;height:34px;padding:0 14px;border-radius:9px;border:none;background:var(--acc);color:#04121f;font-size:12.5px;font-weight:700;cursor:pointer;"><i class="bi bi-plus-lg"></i> Thêm sản phẩm</button>
+            </div>
+            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+              <thead><tr style="background:var(--card2);">
+                <th style="text-align:left;padding:10px 16px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;">Sản phẩm</th>
+                <th style="text-align:left;padding:10px 12px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;">Danh mục</th>
+                <th style="text-align:left;padding:10px 12px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;">Hãng</th>
+                <th style="text-align:right;padding:10px 12px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;">Giá bán</th>
+                <th style="text-align:left;padding:10px 12px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;width:130px;">Tồn kho</th>
+                <th style="text-align:left;padding:10px 12px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;">Trạng thái</th>
+                <th style="padding:10px 16px;width:50px;"></th>
+              </tr></thead>
+              <tbody>
+                <sc-for list="{{ productRows }}" as="p" hint-placeholder-count="10">
+                  <tr onClick="{{ p.open }}" style="border-top:1px solid var(--line);cursor:pointer;">
+                    <td style="padding:11px 16px;">
+                      <div style="display:flex;align-items:center;gap:11px;">
+                        <div class="mono" style="width:40px;height:40px;border-radius:9px;flex:none;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:linear-gradient(135deg,hsl({{ p.hue }} 45% 22%),hsl({{ p.hue }} 55% 12%));color:hsl({{ p.hue }} 70% 75%);">{{ p.tag }}</div>
+                        <div style="min-width:0;">
+                          <div style="font-size:13px;font-weight:500;color:var(--text);">{{ p.name }}</div>
+                          <div class="mono" style="font-size:11px;color:var(--muted);margin-top:2px;">{{ p.sku }} · {{ p.spec }}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td style="padding:11px 12px;"><span style="font-size:12px;color:var(--muted2);">{{ p.cat }}</span></td>
+                    <td style="padding:11px 12px;color:var(--text);font-size:12.5px;">{{ p.brand }}</td>
+                    <td style="padding:11px 12px;text-align:right;">
+                      <div class="mono" style="font-size:13.5px;font-weight:700;color:var(--text);">{{ p.priceFmt }}</div>
+                      <sc-if value="{{ p.hasOld }}" hint-placeholder-val="{{ true }}"><div style="display:flex;align-items:center;justify-content:flex-end;gap:6px;margin-top:2px;"><span class="mono" style="font-size:10.5px;color:var(--muted);text-decoration:line-through;">{{ p.oldFmt }}</span><span class="mono" style="font-size:10px;font-weight:700;color:var(--sale);">{{ p.disc }}</span></div></sc-if>
+                    </td>
+                    <td style="padding:11px 12px;">
+                      <div style="display:flex;align-items:center;gap:8px;"><span class="mono" style="font-size:13px;font-weight:700;color:{{ p.stockColor }};width:24px;">{{ p.stock }}</span><div style="flex:1;height:5px;border-radius:4px;background:var(--card2);overflow:hidden;"><div style="height:100%;width:{{ p.stockBar }};background:{{ p.stockColor }};border-radius:4px;"></div></div></div>
+                    </td>
+                    <td style="padding:11px 12px;"><span style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:20px;background:{{ p.stBg }};color:{{ p.stColor }};"><span style="width:6px;height:6px;border-radius:50%;background:{{ p.stColor }};"></span>{{ p.stText }}</span></td>
+                    <td style="padding:11px 16px;text-align:center;"><i class="bi bi-three-dots-vertical" style="color:var(--muted);font-size:15px;"></i></td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- product drawer -->
+        <sc-if value="{{ hasProductDetail }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ closeDrawer }}" style="position:fixed;inset:0;background:rgba(2,8,18,0.55);backdrop-filter:blur(2px);z-index:60;animation:fadeUp .2s ease;"></div>
+          <div style="position:fixed;top:0;right:0;width:440px;max-width:92vw;height:100vh;background:var(--bg);border-left:1px solid var(--line2);z-index:61;display:flex;flex-direction:column;box-shadow:-20px 0 60px rgba(0,0,0,.4);animation:fadeUp .25s ease;">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 20px;border-bottom:1px solid var(--line);">
+              <div style="font-size:14px;font-weight:600;color:var(--text);">Chi tiết sản phẩm</div>
+              <button onClick="{{ closeDrawer }}" style="width:32px;height:32px;border-radius:8px;border:1px solid var(--line2);background:var(--card);color:var(--text);cursor:pointer;"><i class="bi bi-x-lg" style="font-size:13px;"></i></button>
+            </div>
+            <div style="flex:1;overflow-y:auto;padding:20px;">
+              <div style="display:flex;gap:14px;align-items:center;margin-bottom:20px;">
+                <div class="mono" style="width:72px;height:72px;border-radius:14px;flex:none;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;background:linear-gradient(135deg,hsl({{ drawer.hue }} 45% 22%),hsl({{ drawer.hue }} 55% 12%));color:hsl({{ drawer.hue }} 70% 75%);">{{ drawer.tag }}</div>
+                <div><div style="font-size:16px;font-weight:700;color:var(--text);line-height:1.3;">{{ drawer.name }}</div><div class="mono" style="font-size:12px;color:var(--muted);margin-top:4px;">{{ drawer.sku }}</div></div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;">
+                <div style="background:var(--card);border:1px solid var(--line);border-radius:11px;padding:13px;"><div style="font-size:11px;color:var(--muted);margin-bottom:5px;">Giá bán</div><div class="mono" style="font-size:18px;font-weight:700;color:var(--acc);">{{ drawer.priceFmt }}</div><sc-if value="{{ drawer.hasOld }}" hint-placeholder-val="{{ false }}"><span class="mono" style="font-size:11px;color:var(--muted);text-decoration:line-through;">{{ drawer.oldFmt }}</span></sc-if></div>
+                <div style="background:var(--card);border:1px solid var(--line);border-radius:11px;padding:13px;"><div style="font-size:11px;color:var(--muted);margin-bottom:5px;">Tồn kho</div><div class="mono" style="font-size:18px;font-weight:700;color:var(--text);">{{ drawer.stock }}</div><span style="font-size:11px;color:{{ drawer.stColor }};">{{ drawer.stText }}</span></div>
+              </div>
+              <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Thông tin chung</div>
+              <div style="background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:20px;">
+                <div style="display:flex;justify-content:space-between;padding:11px 14px;font-size:13px;border-bottom:1px solid var(--line);"><span style="color:var(--muted);">Danh mục</span><span style="color:var(--text);font-weight:500;">{{ drawer.cat }}</span></div>
+                <div style="display:flex;justify-content:space-between;padding:11px 14px;font-size:13px;border-bottom:1px solid var(--line);"><span style="color:var(--muted);">Thương hiệu</span><span style="color:var(--text);font-weight:500;">{{ drawer.brand }}</span></div>
+                <div style="display:flex;justify-content:space-between;padding:11px 14px;font-size:13px;"><span style="color:var(--muted);">Cấu hình</span><span style="color:var(--text);font-weight:500;text-align:right;max-width:60%;">{{ drawer.spec }}</span></div>
+              </div>
+              <div style="display:flex;gap:10px;">
+                <button style="flex:1;height:42px;border-radius:10px;border:none;background:var(--acc);color:#04121f;font-weight:700;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;"><i class="bi bi-pencil-square"></i> Chỉnh sửa</button>
+                <button style="width:42px;height:42px;border-radius:10px;border:1px solid var(--line2);background:var(--card);color:var(--sale);font-size:15px;cursor:pointer;"><i class="bi bi-trash3"></i></button>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+      </sc-if>
+      <sc-if value="{{ isOrders }}" hint-placeholder-val="{{ true }}">
+        <!-- order list -->
+        <sc-if value="{{ hasOrderDetail }}" hint-placeholder-val="{{ false }}">
+          <div style="animation:fadeUp .3s ease;">
+            <button onClick="{{ orderDetail.back }}" style="display:inline-flex;align-items:center;gap:7px;background:none;border:none;color:var(--muted2);font-size:13px;cursor:pointer;margin-bottom:16px;font-weight:500;"><i class="bi bi-arrow-left"></i> Quay lại danh sách</button>
+            <div style="display:grid;grid-template-columns:1.7fr 1fr;gap:14px;">
+              <div>
+                <div style="background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:14px;">
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+                    <div><div class="mono" style="font-size:20px;font-weight:700;color:var(--text);">{{ orderDetail.code }}</div><div style="font-size:12.5px;color:var(--muted);margin-top:3px;">Đặt lúc {{ orderDetail.date }}</div></div>
+                    <span style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;padding:6px 13px;border-radius:20px;background:{{ orderDetail.stBg }};color:{{ orderDetail.stColor }};"><span style="width:7px;height:7px;border-radius:50%;background:{{ orderDetail.stColor }};"></span>{{ orderDetail.stLabel }}</span>
+                  </div>
+                  <sc-if value="{{ orderDetail.cancelled }}" hint-placeholder-val="{{ false }}"><div style="padding:14px;border-radius:10px;background:color-mix(in srgb,var(--sale) 12%,transparent);border:1px solid color-mix(in srgb,var(--sale) 30%,transparent);color:var(--sale);font-size:13px;display:flex;align-items:center;gap:9px;"><i class="bi bi-x-octagon-fill"></i> Đơn hàng đã bị huỷ / hoàn tiền.</div></sc-if>
+                  <sc-if value="{{ orderDetail.timeline }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex;justify-content:space-between;position:relative;margin-top:6px;">
+                    <sc-for list="{{ orderDetail.timeline }}" as="t" hint-placeholder-count="5">
+                      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;position:relative;z-index:2;">
+                        <div style="width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;background:var(--card2);border:2px solid {{ t.color }};color:{{ t.color }};"><i class="bi {{ t.icon }}"></i></div>
+                        <span style="font-size:11.5px;color:{{ t.color }};font-weight:500;">{{ t.label }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                  </sc-if>
+                </div>
+                <div style="background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;">
+                  <div style="padding:14px 18px;font-size:14px;font-weight:600;color:var(--text);border-bottom:1px solid var(--line);">Sản phẩm</div>
+                  <sc-for list="{{ orderDetail.items }}" as="it" hint-placeholder-count="1">
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--line);">
+                      <div style="font-size:13px;color:var(--text);">{{ it.name }}</div>
+                      <div style="display:flex;align-items:center;gap:18px;"><span class="mono" style="font-size:12px;color:var(--muted);">x{{ it.qty }}</span><span class="mono" style="font-size:13px;font-weight:700;color:var(--text);">{{ it.price }}</span></div>
+                    </div>
+                  </sc-for>
+                  <div style="padding:14px 18px;display:flex;flex-direction:column;gap:8px;">
+                    <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--muted);">Tạm tính</span><span class="mono" style="color:var(--text);">{{ orderDetail.subtotal }}</span></div>
+                    <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--muted);">Phí vận chuyển</span><span class="mono" style="color:var(--text);">{{ orderDetail.shipping }}</span></div>
+                    <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;padding-top:8px;border-top:1px solid var(--line);"><span style="color:var(--text);">Tổng cộng</span><span class="mono" style="color:var(--acc);">{{ orderDetail.total }}</span></div>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <div style="background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:14px;">
+                  <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:14px;">Khách hàng</div>
+                  <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+                    <div class="mono" style="width:44px;height:44px;border-radius:11px;background:linear-gradient(135deg,var(--acc),#0b4f9e);color:#04121f;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;">{{ orderDetail.init }}</div>
+                    <div><div style="font-size:14px;font-weight:600;color:var(--text);">{{ orderDetail.customer }}</div><div style="font-size:12px;color:var(--muted);">{{ orderDetail.email }}</div></div>
+                  </div>
+                </div>
+                <div style="background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;">
+                  <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px;">Cập nhật trạng thái</div>
+                  <select style="width:100%;height:42px;padding:0 12px;border-radius:10px;background:var(--card2);color:var(--text);border:1px solid var(--line2);font-size:13px;margin-bottom:10px;cursor:pointer;">
+                    <option>Chờ xác nhận</option><option>Đã xác nhận</option><option>Đang xử lý</option><option>Đang giao</option><option>Đã giao</option><option>Đã huỷ</option><option>Hoàn tiền</option>
+                  </select>
+                  <button style="width:100%;height:42px;border-radius:10px;border:none;background:var(--acc);color:#04121f;font-weight:700;font-size:13px;cursor:pointer;">Lưu thay đổi</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ showOrderList }}" hint-placeholder-val="{{ true }}">
+        <div style="animation:fadeUp .35s ease;">
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px;">
+            <sc-for list="{{ orderStats }}" as="s" hint-placeholder-count="4">
+              <div style="background:var(--card);border:1px solid var(--line);border-radius:13px;padding:14px 16px;display:flex;align-items:center;gap:13px;">
+                <div style="width:40px;height:40px;border-radius:10px;flex:none;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,{{ s.color }} 16%,transparent);color:{{ s.color }};font-size:17px;"><i class="bi {{ s.icon }}"></i></div>
+                <div><div class="mono" style="font-size:21px;font-weight:700;color:var(--text);line-height:1;">{{ s.value }}</div><div style="font-size:11.5px;color:var(--muted);margin-top:4px;">{{ s.label }}</div></div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;">
+            <div style="display:flex;align-items:center;gap:2px;padding:4px 12px;border-bottom:1px solid var(--line);overflow-x:auto;">
+              <sc-for list="{{ statusTabs }}" as="t" hint-placeholder-count="8">
+                <button onClick="{{ t.go }}" style="display:flex;align-items:center;gap:7px;padding:12px 13px;border:none;border-bottom:2px solid {{ t.bd }};background:transparent;color:{{ t.color }};font-size:12.5px;font-weight:{{ t.weight }};cursor:pointer;white-space:nowrap;">{{ t.label }} <span class="mono" style="font-size:10.5px;padding:0 6px;border-radius:8px;background:var(--card2);color:var(--muted);">{{ t.count }}</span></button>
+              </sc-for>
+            </div>
+            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+              <thead><tr style="background:var(--card2);">
+                <th style="text-align:left;padding:10px 16px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;">Mã đơn</th>
+                <th style="text-align:left;padding:10px 12px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;">Khách hàng</th>
+                <th style="text-align:left;padding:10px 12px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;">Sản phẩm</th>
+                <th style="text-align:left;padding:10px 12px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;">Ngày đặt</th>
+                <th style="text-align:right;padding:10px 12px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;">Tổng tiền</th>
+                <th style="text-align:left;padding:10px 16px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;">Trạng thái</th>
+              </tr></thead>
+              <tbody>
+                <sc-for list="{{ orderRows }}" as="o" hint-placeholder-count="10">
+                  <tr onClick="{{ o.open }}" style="border-top:1px solid var(--line);cursor:pointer;">
+                    <td class="mono" style="padding:12px 16px;color:var(--acc);font-weight:600;">{{ o.code }}</td>
+                    <td style="padding:12px 12px;"><div style="display:flex;align-items:center;gap:10px;"><div class="mono" style="width:32px;height:32px;border-radius:8px;flex:none;background:var(--card2);color:var(--muted2);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">{{ o.init }}</div><div style="min-width:0;"><div style="font-size:12.5px;color:var(--text);font-weight:500;">{{ o.customer }}</div><div style="font-size:11px;color:var(--muted);">{{ o.email }}</div></div></div></td>
+                    <td style="padding:12px 12px;color:var(--muted2);font-size:12px;max-width:200px;">{{ o.item }}</td>
+                    <td style="padding:12px 12px;color:var(--muted2);font-size:12px;">{{ o.date }}</td>
+                    <td class="mono" style="padding:12px 12px;text-align:right;color:var(--text);font-weight:700;">{{ o.total }}</td>
+                    <td style="padding:12px 16px;"><span style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:20px;background:{{ o.stBg }};color:{{ o.stColor }};"><span style="width:6px;height:6px;border-radius:50%;background:{{ o.stColor }};"></span>{{ o.stLabel }}</span></td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        </sc-if>
+      </sc-if>
+      <sc-if value="{{ isCustomers }}" hint-placeholder-val="{{ true }}">
+        <div style="animation:fadeUp .35s ease;">
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px;">
+            <sc-for list="{{ custStats }}" as="s" hint-placeholder-count="4">
+              <div style="background:var(--card);border:1px solid var(--line);border-radius:13px;padding:14px 16px;display:flex;align-items:center;gap:13px;">
+                <div style="width:40px;height:40px;border-radius:10px;flex:none;display:flex;align-items:center;justify-content:center;background:color-mix(in srgb,{{ s.color }} 16%,transparent);color:{{ s.color }};font-size:17px;"><i class="bi {{ s.icon }}"></i></div>
+                <div><div class="mono" style="font-size:21px;font-weight:700;color:var(--text);line-height:1;">{{ s.value }}</div><div style="font-size:11.5px;color:var(--muted);margin-top:4px;">{{ s.label }}</div></div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;">
+            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+              <thead><tr style="background:var(--card2);">
+                <th style="text-align:left;padding:10px 16px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;">Khách hàng</th>
+                <th style="text-align:left;padding:10px 12px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;">Số điện thoại</th>
+                <th style="text-align:left;padding:10px 12px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;">Vai trò</th>
+                <th style="text-align:right;padding:10px 12px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;">Đơn hàng</th>
+                <th style="text-align:right;padding:10px 12px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;">Tổng chi tiêu</th>
+                <th style="text-align:left;padding:10px 12px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;">Tham gia</th>
+                <th style="text-align:left;padding:10px 16px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;">Trạng thái</th>
+              </tr></thead>
+              <tbody>
+                <sc-for list="{{ custRows }}" as="c" hint-placeholder-count="10">
+                  <tr style="border-top:1px solid var(--line);cursor:pointer;">
+                    <td style="padding:11px 16px;"><div style="display:flex;align-items:center;gap:11px;"><div class="mono" style="width:38px;height:38px;border-radius:10px;flex:none;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;background:linear-gradient(135deg,hsl({{ c.hue }} 50% 40%),hsl({{ c.hue }} 60% 26%));color:#fff;">{{ c.init }}</div><div><div style="font-size:13px;font-weight:500;color:var(--text);">{{ c.name }}</div><div style="font-size:11.5px;color:var(--muted);">{{ c.email }}</div></div></div></td>
+                    <td class="mono" style="padding:11px 12px;color:var(--muted2);font-size:12.5px;">{{ c.phone }}</td>
+                    <td style="padding:11px 12px;"><span style="font-size:11.5px;font-weight:600;padding:3px 10px;border-radius:20px;background:{{ c.roleBg }};color:{{ c.roleColor }};">{{ c.roleLabel }}</span></td>
+                    <td class="mono" style="padding:11px 12px;text-align:right;color:var(--text);font-weight:600;">{{ c.orders }}</td>
+                    <td class="mono" style="padding:11px 12px;text-align:right;color:var(--text);font-weight:700;">{{ c.spent }}</td>
+                    <td style="padding:11px 12px;color:var(--muted2);font-size:12px;">{{ c.joined }}</td>
+                    <td style="padding:11px 16px;"><span style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;color:{{ c.stColor }};"><span style="width:6px;height:6px;border-radius:50%;background:{{ c.stColor }};"></span>{{ c.stText }}</span></td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ isCategories }}" hint-placeholder-val="{{ true }}">
+        <div style="animation:fadeUp .35s ease;">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+            <div style="font-size:13.5px;color:var(--muted);">6 danh mục đang hoạt động</div>
+            <button style="display:flex;align-items:center;gap:7px;height:36px;padding:0 15px;border-radius:9px;border:none;background:var(--acc);color:#04121f;font-size:12.5px;font-weight:700;cursor:pointer;"><i class="bi bi-plus-lg"></i> Thêm danh mục</button>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;">
+            <sc-for list="{{ catCards }}" as="c" hint-placeholder-count="6">
+              <div style="background:var(--card);border:1px solid var(--line);border-radius:15px;overflow:hidden;cursor:pointer;">
+                <div style="height:96px;position:relative;background:linear-gradient(135deg,hsl({{ c.hue }} 50% 22%),hsl({{ c.hue }} 60% 11%));display:flex;align-items:flex-end;padding:14px 16px;overflow:hidden;">
+                  <div style="position:absolute;inset:0;background:repeating-linear-gradient(125deg,rgba(255,255,255,.05) 0 2px,transparent 2px 13px);"></div>
+                  <div class="mono" style="position:absolute;top:12px;right:16px;font-size:11px;letter-spacing:2px;font-weight:600;color:{{ c.color }};opacity:.9;">{{ c.en }}</div>
+                  <div style="position:relative;font-size:18px;font-weight:700;color:#fff;">{{ c.name }}</div>
+                </div>
+                <div style="padding:16px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+                  <div><div class="mono" style="font-size:18px;font-weight:700;color:var(--text);">{{ c.count }}</div><div style="font-size:10.5px;color:var(--muted);margin-top:2px;">Sản phẩm</div></div>
+                  <div><div class="mono" style="font-size:18px;font-weight:700;color:var(--text);">{{ c.stock }}</div><div style="font-size:10.5px;color:var(--muted);margin-top:2px;">Tồn kho</div></div>
+                  <div><div class="mono" style="font-size:18px;font-weight:700;color:{{ c.color }};">{{ c.value }}</div><div style="font-size:10.5px;color:var(--muted);margin-top:2px;">Giá trị</div></div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ isCoupons }}" hint-placeholder-val="{{ true }}">
+        <div style="animation:fadeUp .35s ease;display:grid;grid-template-columns:340px 1fr;gap:14px;align-items:start;">
+          <div style="background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;">
+            <div style="font-size:14.5px;font-weight:600;color:var(--text);margin-bottom:16px;display:flex;align-items:center;gap:8px;"><i class="bi bi-ticket-perforated" style="color:var(--acc);"></i> Tạo mã khuyến mãi</div>
+            <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:6px;">Mã coupon</label>
+            <input value="SUMMER30" style="width:100%;height:40px;padding:0 12px;border-radius:9px;background:var(--card2);border:1px solid var(--line2);color:var(--text);font-size:13px;margin-bottom:14px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+              <div><label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:6px;">Loại</label><select style="width:100%;height:40px;padding:0 10px;border-radius:9px;background:var(--card2);border:1px solid var(--line2);color:var(--text);font-size:13px;cursor:pointer;"><option>Phần trăm (%)</option><option>Tiền mặt (đ)</option></select></div>
+              <div><label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:6px;">Giá trị</label><input value="30" style="width:100%;height:40px;padding:0 12px;border-radius:9px;background:var(--card2);border:1px solid var(--line2);color:var(--text);font-size:13px;"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+              <div><label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:6px;">Đơn tối thiểu</label><input value="500000" style="width:100%;height:40px;padding:0 12px;border-radius:9px;background:var(--card2);border:1px solid var(--line2);color:var(--text);font-size:13px;"></div>
+              <div><label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:6px;">Hạn dùng</label><input value="31/07/2024" style="width:100%;height:40px;padding:0 12px;border-radius:9px;background:var(--card2);border:1px solid var(--line2);color:var(--text);font-size:13px;"></div>
+            </div>
+            <button style="width:100%;height:42px;border-radius:10px;border:none;background:var(--acc);color:#04121f;font-weight:700;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;"><i class="bi bi-plus-circle"></i> Tạo mã</button>
+          </div>
+          <div style="background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;">
+            <div style="padding:14px 18px;font-size:14.5px;font-weight:600;color:var(--text);border-bottom:1px solid var(--line);">Danh sách mã khuyến mãi</div>
+            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+              <thead><tr style="background:var(--card2);">
+                <th style="text-align:left;padding:10px 18px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;">Mã</th>
+                <th style="text-align:left;padding:10px 12px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;">Loại</th>
+                <th style="text-align:right;padding:10px 12px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;">Giá trị</th>
+                <th style="text-align:right;padding:10px 12px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;">Đơn tối thiểu</th>
+                <th style="text-align:left;padding:10px 12px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;width:130px;">Đã dùng</th>
+                <th style="text-align:left;padding:10px 12px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;">Hạn</th>
+                <th style="text-align:left;padding:10px 18px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;">Trạng thái</th>
+              </tr></thead>
+              <tbody>
+                <sc-for list="{{ couponRows }}" as="c" hint-placeholder-count="5">
+                  <tr style="border-top:1px solid var(--line);">
+                    <td class="mono" style="padding:12px 18px;color:var(--acc);font-weight:700;letter-spacing:.5px;">{{ c.code }}</td>
+                    <td style="padding:12px 12px;"><span style="font-size:11.5px;font-weight:600;color:{{ c.typeColor }};">{{ c.type }}</span></td>
+                    <td class="mono" style="padding:12px 12px;text-align:right;color:var(--text);font-weight:700;">{{ c.value }}</td>
+                    <td class="mono" style="padding:12px 12px;text-align:right;color:var(--muted2);font-size:12px;">{{ c.min }}</td>
+                    <td style="padding:12px 12px;"><div style="display:flex;align-items:center;gap:8px;"><span class="mono" style="font-size:11.5px;color:var(--muted2);white-space:nowrap;">{{ c.used }}</span><div style="flex:1;height:5px;border-radius:4px;background:var(--card2);overflow:hidden;"><div style="height:100%;width:{{ c.usedPct }};background:var(--acc);border-radius:4px;"></div></div></div></td>
+                    <td style="padding:12px 12px;color:var(--muted2);font-size:12px;">{{ c.exp }}</td>
+                    <td style="padding:12px 18px;"><span style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:20px;background:{{ c.stBg }};color:{{ c.stColor }};"><span style="width:6px;height:6px;border-radius:50%;background:{{ c.stColor }};"></span>{{ c.stText }}</span></td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </sc-if>
+      <sc-if value="{{ isShipping }}" hint-placeholder-val="{{ true }}">
+        <div style="animation:fadeUp .35s ease;display:grid;grid-template-columns:340px 1fr;gap:14px;align-items:start;">
+          <div style="background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;">
+            <div style="font-size:14.5px;font-weight:600;color:var(--text);margin-bottom:16px;display:flex;align-items:center;gap:8px;"><i class="bi bi-calculator" style="color:var(--acc);"></i> Tính thử phí giao</div>
+            <label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:6px;">Khu vực</label>
+            <select style="width:100%;height:40px;padding:0 10px;border-radius:9px;background:var(--card2);border:1px solid var(--line2);color:var(--text);font-size:13px;margin-bottom:14px;cursor:pointer;"><option>Nội thành TP.HCM</option><option>Các tỉnh miền Nam</option><option>Các tỉnh miền Bắc</option></select>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+              <div><label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:6px;">Khối lượng (kg)</label><input value="2.5" style="width:100%;height:40px;padding:0 12px;border-radius:9px;background:var(--card2);border:1px solid var(--line2);color:var(--text);font-size:13px;"></div>
+              <div><label style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:6px;">Giá trị đơn</label><input value="850000" style="width:100%;height:40px;padding:0 12px;border-radius:9px;background:var(--card2);border:1px solid var(--line2);color:var(--text);font-size:13px;"></div>
+            </div>
+            <div style="background:var(--card2);border-radius:11px;padding:14px;">
+              <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:9px;"><span style="color:var(--muted);">Phí cơ bản</span><span class="mono" style="color:var(--text);">15.000₫</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:9px;"><span style="color:var(--muted);">Phụ phí 1.5kg</span><span class="mono" style="color:var(--text);">7.500₫</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;padding-top:9px;border-top:1px solid var(--line);"><span style="color:var(--text);">Tổng phí</span><span class="mono" style="color:var(--acc);">22.500₫</span></div>
+            </div>
+          </div>
+          <div style="background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--line);">
+              <div style="font-size:14.5px;font-weight:600;color:var(--text);">Cấu hình vùng giao hàng</div>
+              <button style="display:flex;align-items:center;gap:7px;height:34px;padding:0 14px;border-radius:9px;border:none;background:var(--acc);color:#04121f;font-size:12.5px;font-weight:700;cursor:pointer;"><i class="bi bi-plus-lg"></i> Thêm vùng</button>
+            </div>
+            <table style="width:100%;border-collapse:collapse;font-size:13px;">
+              <thead><tr style="background:var(--card2);">
+                <th style="text-align:left;padding:10px 18px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;">Vùng giao hàng</th>
+                <th style="text-align:right;padding:10px 12px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;">Phí cơ bản</th>
+                <th style="text-align:right;padding:10px 12px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;">Phí / kg thêm</th>
+                <th style="text-align:right;padding:10px 12px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;">Miễn phí từ</th>
+                <th style="text-align:left;padding:10px 18px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;">Trạng thái</th>
+              </tr></thead>
+              <tbody>
+                <sc-for list="{{ zoneRows }}" as="z" hint-placeholder-count="6">
+                  <tr style="border-top:1px solid var(--line);">
+                    <td style="padding:12px 18px;"><div style="display:flex;align-items:center;gap:10px;"><i class="bi bi-geo-alt-fill" style="color:var(--acc);font-size:14px;"></i><div><div style="font-size:13px;color:var(--text);font-weight:500;">{{ z.name }}</div><div class="mono" style="font-size:11px;color:var(--muted);">{{ z.key }}</div></div></div></td>
+                    <td class="mono" style="padding:12px 12px;text-align:right;color:var(--text);font-weight:600;">{{ z.base }}</td>
+                    <td class="mono" style="padding:12px 12px;text-align:right;color:var(--muted2);">{{ z.kg }}</td>
+                    <td class="mono" style="padding:12px 12px;text-align:right;color:var(--muted2);">{{ z.free }}</td>
+                    <td style="padding:12px 18px;"><span style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:20px;background:{{ z.stBg }};color:{{ z.stColor }};"><span style="width:6px;height:6px;border-radius:50%;background:{{ z.stColor }};"></span>{{ z.stText }}</span></td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </sc-if>
+
+    </main>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:860}}">
+class Component extends DCLogic {
+  state = { page: 'dashboard', search: '', mode: 'dark', statusFilter: 'all', catFilter: 'all', orderDetail: null, productDetail: null, hiddenCats: [], anRange: '9m' };
+
+  componentDidMount(){ document.documentElement.setAttribute('data-mode', this.state.mode); }
+
+  // ---------- helpers ----------
+  money(n){ return n.toLocaleString('vi-VN') + '₫'; }
+  short(n){
+    if(n>=1e9) return (n/1e9).toFixed(n>=1e10?0:1).replace('.0','')+' tỷ';
+    if(n>=1e6) return (n/1e6).toFixed(n>=1e7?0:1).replace('.0','')+ 'tr';
+    if(n>=1e3) return Math.round(n/1e3)+'k';
+    return n+'';
+  }
+
+  CATS(){ return {
+    'laptop':{label:'Laptop',hue:210}, 'pc-may-tinh-ban':{label:'PC bàn',hue:265},
+    'linh-kien':{label:'Linh kiện',hue:150}, 'man-hinh':{label:'Màn hình',hue:190},
+    'ngoai-vi':{label:'Ngoại vi',hue:32}, 'phu-kien':{label:'Phụ kiện',hue:330} }; }
+
+  STATUS(){ return {
+    pending:{label:'Chờ xác nhận',color:'#ffb43b'}, confirmed:{label:'Đã xác nhận',color:'#00e5ff'},
+    processing:{label:'Đang xử lý',color:'#7aa2ff'}, shipped:{label:'Đang giao',color:'#a855f7'},
+    delivered:{label:'Đã giao',color:'#22d39a'}, cancelled:{label:'Đã huỷ',color:'#ff3b5c'},
+    refunded:{label:'Hoàn tiền',color:'#94a3b8'} }; }
+
+  rawProducts(){ return [
+    ['Laptop ASUS TUF Gaming F15','laptop','ASUS','TUF',22990000,25990000,15,'i7 · RTX 4060 · 144Hz'],
+    ['Laptop Dell XPS 13','laptop','Dell','XPS',31490000,0,8,'i7 · 13.4" · siêu mỏng'],
+    ['Laptop ASUS ROG Strix G16','laptop','ASUS','ROG',32990000,35990000,12,'i7 · RTX 4060 · 16GB'],
+    ['Laptop MSI Katana 15','laptop','MSI','KAT',24490000,26990000,9,'i5 · RTX 4050 · 16GB'],
+    ['Laptop Acer Nitro V15','laptop','ACER','NIT',19990000,0,15,'i5 · RTX 3050 · 8GB'],
+    ['Laptop Dell G15 5530','laptop','Dell','G15',23490000,25000000,7,'i7 · RTX 4050 · 16GB'],
+    ['PC Gaming MSI Aegis','pc-may-tinh-ban','MSI','AEG',35000000,37500000,5,'Dựng sẵn cao cấp'],
+    ['PC CNTT Titan RTX 4070','pc-may-tinh-ban','Gigabyte','TIT',38500000,41000000,6,'i5 · RTX 4070 · 32GB'],
+    ['PC CNTT Spark RTX 4060','pc-may-tinh-ban','Gigabyte','SPK',24900000,0,10,'i5 · RTX 4060 · 16GB'],
+    ['PC Văn phòng CNTT Office Pro','pc-may-tinh-ban','Intel','OFF',9990000,0,20,'i3 · UHD 730 · 16GB'],
+    ['PC CNTT Apex RTX 4080 Super','pc-may-tinh-ban','Gigabyte','APX',62900000,67000000,4,'i7 · RTX 4080S · 32GB'],
+    ['CPU Intel Core i5-13400F','linh-kien','Intel','I54',4690000,5200000,30,'10 nhân · LGA1700'],
+    ['CPU AMD Ryzen 7 7800X3D','linh-kien','AMD','7X3',9490000,10490000,25,'8 nhân · AM5 · 5.0GHz'],
+    ['CPU Intel Core i5-14400F','linh-kien','Intel','I54',4790000,0,30,'10 nhân · 4.7GHz'],
+    ['Card NVIDIA RTX 4060','linh-kien','NVIDIA','406',8990000,0,12,'8GB GDDR6'],
+    ['VGA NVIDIA RTX 4070 Ti Super','linh-kien','NVIDIA','47T',22990000,0,8,'16GB GDDR6X · 285W'],
+    ['RAM Corsair Vengeance 32GB DDR5','linh-kien','Corsair','RAM',2690000,2990000,40,'2x16GB · 6000MHz'],
+    ['SSD Samsung 990 Pro 2TB','linh-kien','Samsung','SSD',4290000,0,35,'7450MB/s · NVMe 4.0'],
+    ['Màn hình Samsung Odyssey 27"','man-hinh','Samsung','OD27',6490000,7200000,20,'27" · 165Hz · VA'],
+    ['Màn hình LG UltraGear 27GR75Q','man-hinh','LG','LG27',7990000,8990000,14,'27" QHD · 165Hz · IPS'],
+    ['Màn hình Samsung Odyssey G6','man-hinh','Samsung','G6',9490000,0,11,'27" QHD · 240Hz'],
+    ['Màn hình Asus TUF VG27AQ','man-hinh','ASUS','VG27',6490000,7200000,18,'27" QHD · 165Hz · IPS'],
+    ['Bàn phím cơ AKKO 3068','ngoai-vi','AKKO','AKK',1290000,0,40,'68 phím · không dây'],
+    ['Bàn phím Keychron Q1 Pro','ngoai-vi','Keychron','Q1',3490000,0,22,'75% · Gateron Pro'],
+    ['Chuột Logitech G Pro X Superlight 2','ngoai-vi','Logitech','GPX',2890000,3190000,27,'60g · HERO 2 · 32K DPI'],
+    ['Tai nghe Logitech G733','phu-kien','Logitech','733',2290000,2690000,19,'7.1 · Lightspeed · RGB'],
+    ['Lót chuột Corsair MM300 Extended','phu-kien','Corsair','MM3',390000,0,50,'930x300 · vải dệt'],
+  ]; }
+
+  products(){
+    const C=this.CATS();
+    return this.rawProducts().map((r,i)=>{
+      const [name,cs,brand,tag,price,oldp,stock,spec]=r;
+      return { id:1001+i, name, catSlug:cs, cat:C[cs].label, hue:C[cs].hue, brand, tag, sku:'SKU-'+(1001+i),
+        price, oldp, stock, spec, active: i!==9 && i!==26, priceFmt:this.money(price), oldFmt: oldp?this.money(oldp):'',
+        disc: oldp? Math.round((1-price/oldp)*100):0 };
+    });
+  }
+
+  orders(){
+    const S=this.STATUS();
+    const raw=[
+      ['DH240615','Nguyễn Văn An','an.nguyen@gmail.com',32990000,'delivered','15/06 09:42','Laptop ASUS ROG Strix G16'],
+      ['DH240614','Trần Thị Bình','binh.tran@gmail.com',13280000,'shipped','15/06 08:10','RTX 4060 + RAM Corsair'],
+      ['DH240613','Lê Hoàng Cường','cuong.le@outlook.com',62900000,'processing','14/06 21:30','PC CNTT Apex RTX 4080S'],
+      ['DH240612','Phạm Minh Dũng','dung.pham@gmail.com',4290000,'confirmed','14/06 17:05','SSD Samsung 990 Pro 2TB'],
+      ['DH240611','Vũ Thị Hà','ha.vu@gmail.com',24900000,'pending','14/06 15:48','PC CNTT Spark RTX 4060'],
+      ['DH240610','Đỗ Quang Huy','huy.do@gmail.com',9490000,'delivered','13/06 11:20','CPU AMD Ryzen 7 7800X3D'],
+      ['DH240609','Bùi Thanh Lan','lan.bui@yahoo.com',7990000,'cancelled','13/06 10:02','Màn LG UltraGear 27GR75Q'],
+      ['DH240608','Hồ Văn Mạnh','manh.ho@gmail.com',38500000,'delivered','12/06 19:15','PC CNTT Titan RTX 4070'],
+      ['DH240607','Ngô Thị Ngọc','ngoc.ngo@gmail.com',2890000,'refunded','12/06 14:33','Chuột Logitech G Pro X SL2'],
+      ['DH240606','Dương Văn Phú','phu.duong@gmail.com',31490000,'shipped','12/06 09:50','Laptop Dell XPS 13'],
+      ['DH240605','Lý Thị Quỳnh','quynh.ly@gmail.com',6490000,'delivered','11/06 16:40','Màn Samsung Odyssey 27"'],
+      ['DH240604','Trịnh Văn Sơn','son.trinh@gmail.com',19990000,'processing','11/06 13:12','Laptop Acer Nitro V15'],
+    ];
+    return raw.map((r,i)=>{ const [code,customer,email,total,st,date,item]=r;
+      return { id:i, code, customer, email, total, totalFmt:this.money(total), st, stLabel:S[st].label, stColor:S[st].color,
+        stBg:'color-mix(in srgb,'+S[st].color+' 16%, transparent)', date, item }; });
+  }
+
+  customers(){
+    const raw=[
+      ['Nguyễn Văn An','an.nguyen@gmail.com','0901234567','customer',8,184500000,'02/2024'],
+      ['Trần Thị Bình','binh.tran@gmail.com','0912345678','customer',3,41200000,'03/2024'],
+      ['Lê Hoàng Cường','cuong.le@outlook.com','0987654321','customer',5,128900000,'01/2024'],
+      ['Phạm Minh Dũng','dung.pham@gmail.com','0934567890','customer',2,9800000,'05/2024'],
+      ['Vũ Thị Hà','ha.vu@gmail.com','0976543210','customer',1,24900000,'06/2024'],
+      ['Đỗ Quang Huy','huy.do@gmail.com','0945678901','customer',6,72300000,'11/2023'],
+      ['Hồ Văn Mạnh','manh.ho@gmail.com','0967890123','customer',4,96100000,'12/2023'],
+      ['Trần Quản Trị','admin@cnttshop.vn','0900000001','admin',0,0,'08/2023'],
+      ['Nguyễn Thu Staff','staff@cnttshop.vn','0900000002','staff',0,0,'09/2023'],
+      ['Ngô Thị Ngọc','ngoc.ngo@gmail.com','0923456789','customer',2,12600000,'04/2024'],
+    ];
+    const RM={customer:{label:'Khách hàng',color:'#7aa2ff'},admin:{label:'Quản trị',color:'#ff3b5c'},staff:{label:'Nhân viên',color:'#22d39a'}};
+    return raw.map((r,i)=>{ const [name,email,phone,role,ord,spent,joined]=r;
+      const init=name.split(' ').slice(-2).map(w=>w[0]).join('').toUpperCase();
+      return { id:i, name, email, phone, role, roleLabel:RM[role].label, roleColor:RM[role].color, init,
+        roleBg:'color-mix(in srgb,'+RM[role].color+' 16%, transparent)', orders:ord, spent, spentFmt:this.money(spent),
+        joined, active: i!==9, hue:[210,265,150,190,32,330][i%6] }; });
+  }
+
+  // ---------- nav ----------
+  navData(){ return [
+    { title:'Tổng quan', items:[ ['dashboard','Bảng điều khiển','bi-grid-1x2-fill'], ['analytics','Phân tích','bi-graph-up-arrow'] ] },
+    { title:'Bán hàng', items:[ ['orders','Đơn hàng','bi-receipt','12'], ['products','Sản phẩm','bi-box-seam'], ['categories','Danh mục','bi-tags'] ] },
+    { title:'Khách hàng', items:[ ['customers','Khách hàng','bi-people'] ] },
+    { title:'Marketing', items:[ ['coupons','Khuyến mãi','bi-ticket-perforated'], ['shipping','Phí giao hàng','bi-truck'] ] },
+  ]; }
+
+  go(p){ return ()=> this.setState({ page:p, orderDetail:null }); }
+
+  pageMeta(){ return {
+    dashboard:['Bảng điều khiển','Tổng quan hoạt động cửa hàng hôm nay'],
+    analytics:['Phân tích','Báo cáo & biểu đồ chi tiết theo thời gian'],
+    products:['Sản phẩm','27 sản phẩm · quản lý kho & giá'],
+    orders:['Đơn hàng','Theo dõi & cập nhật trạng thái đơn'],
+    customers:['Khách hàng','Danh sách tài khoản & lịch sử mua'],
+    categories:['Danh mục','Cấu trúc danh mục sản phẩm'],
+    coupons:['Khuyến mãi','Mã giảm giá & chương trình'],
+    shipping:['Phí giao hàng','Cấu hình vùng & biểu phí vận chuyển'],
+  }; }
+
+  // ---------- dashboard compute ----------
+  buildSpark(arr){
+    const max=Math.max(...arr), min=Math.min(...arr), w=120, h=34;
+    return arr.map((v,i)=>{ const x=(i/(arr.length-1))*w; const y=h-2-((v-min)/(max-min||1))*(h-6); return (i?'L':'M')+x.toFixed(1)+' '+y.toFixed(1); }).join(' ');
+  }
+  buildArea(arr,line){
+    const max=Math.max(...arr), min=0, w=560, h=200;
+    const pts=arr.map((v,i)=>{ const x=(i/(arr.length-1))*w; const y=h-8-((v-min)/(max-min||1))*(h-24); return [x,y]; });
+    const d=pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
+    if(line) return d;
+    return d+' L'+w+' '+h+' L0 '+h+' Z';
+  }
+
+  renderVals(){
+    const page=this.state.page;
+    const meta=this.pageMeta()[page];
+    const S=this.STATUS();
+
+    // nav
+    const navGroups=this.navData().map(g=>({ title:g.title, items:g.items.map(it=>{
+      const [key,label,icon,badge]=it; const active=key===page;
+      return { label, icon, badge:badge||null, go:this.go(key),
+        bg: active?'color-mix(in srgb,var(--acc) 14%,transparent)':'transparent',
+        color: active?'var(--acc)':'var(--muted2)' };
+    }) }));
+
+    // dashboard data
+    const week=[180,225,198,262,241,312,288]; // triệu
+    const revLabels=['T2','T3','T4','T5','T6','T7','CN'];
+    const weekTotal=week.reduce((a,b)=>a+b,0)*1e6;
+    const cr=[['Laptop',520,'#00e5ff'],['PC bàn',410,'#a855f7'],['Linh kiện',280,'#22d39a'],['Màn hình',165,'#ffb43b'],['Ngoại vi',88,'#7aa2ff']];
+    const crMax=cr[0][1];
+    const catRevenue=cr.map(c=>({name:c[0],value:this.short(c[1]*1e6),pct:Math.round(c[1]/crMax*100)+'%',color:c[2]}));
+
+    const kpis=[
+      {icon:'bi-receipt',label:'Đơn hàng hôm nay',value:'47',delta:'12%',note:'so với hôm qua',deltaColor:'var(--green)',deltaIcon:'bi-arrow-up-short',spark:this.buildSpark([12,18,15,22,19,28,31])},
+      {icon:'bi-cash-stack',label:'Doanh thu hôm nay',value:'288tr',delta:'8.4%',note:'so với hôm qua',deltaColor:'var(--green)',deltaIcon:'bi-arrow-up-short',spark:this.buildSpark([180,225,198,262,241,312,288])},
+      {icon:'bi-person-plus',label:'Khách mới hôm nay',value:'23',delta:'5',note:'tài khoản mới',deltaColor:'var(--green)',deltaIcon:'bi-arrow-up-short',spark:this.buildSpark([8,11,9,14,12,18,23])},
+      {icon:'bi-people',label:'Tổng khách hàng',value:'1.284',delta:'2.1%',note:'tháng này',deltaColor:'var(--green)',deltaIcon:'bi-arrow-up-short',spark:this.buildSpark([1180,1205,1230,1248,1262,1275,1284])},
+    ];
+
+    const recentOrders=this.orders().slice(0,6).map(o=>({code:o.code,customer:o.customer,total:o.totalFmt,stLabel:o.stLabel,stColor:o.stColor,stBg:o.stBg}));
+
+    const lowStock=this.products().filter(p=>p.stock<=8).sort((a,b)=>a.stock-b.stock).slice(0,6).map(p=>({
+      name:p.name,cat:p.cat,tag:p.tag,hue:p.hue,stock:p.stock+'',stockColor:p.stock<=5?'var(--sale)':'var(--amber)'}));
+
+    // ----- products page -----
+    const C=this.CATS();
+    const allProd=this.products();
+    const q=this.state.search.trim().toLowerCase();
+    const catChips=[{key:'all',label:'Tất cả',count:allProd.length}].concat(
+      Object.keys(C).map(k=>({key:k,label:C[k].label,count:allProd.filter(p=>p.catSlug===k).length})))
+      .map(ch=>{ const active=this.state.catFilter===ch.key;
+        return {label:ch.label, count:ch.count+'', go:()=>this.setState({catFilter:ch.key}),
+          bg:active?'var(--acc)':'var(--card)', color:active?'#04121f':'var(--muted2)',
+          bd:active?'var(--acc)':'var(--line2)', cbg:active?'rgba(4,18,31,0.18)':'var(--card2)', ccolor:active?'#04121f':'var(--muted)'}; });
+    const productRows=allProd.filter(p=> (this.state.catFilter==='all'||p.catSlug===this.state.catFilter)
+        && (!q || p.name.toLowerCase().includes(q) || p.brand.toLowerCase().includes(q)))
+      .map(p=>({ id:p.id, name:p.name, sku:p.sku, tag:p.tag, hue:p.hue, cat:p.cat, brand:p.brand, spec:p.spec,
+        priceFmt:p.priceFmt, oldFmt:p.oldFmt, hasOld:!!p.oldp, disc:p.disc?'-'+p.disc+'%':'', hasDisc:!!p.disc,
+        stock:p.stock+'', stockBar:Math.min(100,Math.round(p.stock/50*100))+'%',
+        stockColor:p.stock<=5?'var(--sale)':(p.stock<=12?'var(--amber)':'var(--green)'),
+        active:p.active, stText:p.active?'Hiển thị':'Ẩn', stColor:p.active?'var(--green)':'var(--muted)',
+        stBg:p.active?'color-mix(in srgb,var(--green) 16%,transparent)':'var(--card2)',
+        open:()=>this.setState({productDetail:p}) }));
+    const pStockVal=allProd.reduce((a,p)=>a+p.price*p.stock,0);
+    const productStats=[
+      {label:'Tổng sản phẩm',value:allProd.length+'',icon:'bi-box-seam'},
+      {label:'Đang hiển thị',value:allProd.filter(p=>p.active).length+'',icon:'bi-eye'},
+      {label:'Sắp hết hàng',value:allProd.filter(p=>p.stock<=5).length+'',icon:'bi-exclamation-triangle'},
+      {label:'Giá trị tồn kho',value:this.short(pStockVal),icon:'bi-cash-stack'},
+    ];
+    const pd=this.state.productDetail;
+    const drawer = pd ? { name:pd.name, sku:pd.sku, cat:pd.cat, brand:pd.brand, spec:pd.spec, hue:pd.hue, tag:pd.tag,
+      priceFmt:pd.priceFmt, oldFmt:pd.oldFmt, hasOld:!!pd.oldp, stock:pd.stock+'', disc:pd.disc?'-'+pd.disc+'%':'', hasDisc:!!pd.disc,
+      active:pd.active, stText:pd.active?'Đang hiển thị':'Đang ẩn', stColor:pd.active?'var(--green)':'var(--muted)' } : null;
+
+    // ----- orders page -----
+    const allOrd=this.orders();
+    const stKeys=['all','pending','confirmed','processing','shipped','delivered','cancelled','refunded'];
+    const stLabels={all:'Tất cả',pending:'Chờ xác nhận',confirmed:'Đã xác nhận',processing:'Đang xử lý',shipped:'Đang giao',delivered:'Đã giao',cancelled:'Đã huỷ',refunded:'Hoàn tiền'};
+    const statusTabs=stKeys.map(k=>{ const active=this.state.statusFilter===k;
+      const cnt=k==='all'?allOrd.length:allOrd.filter(o=>o.st===k).length;
+      return {label:stLabels[k],count:cnt+'',go:()=>this.setState({statusFilter:k}),
+        color:active?'var(--text)':'var(--muted)', bd:active?'var(--acc)':'transparent', weight:active?'600':'500'}; });
+    const orderRows=allOrd.filter(o=> (this.state.statusFilter==='all'||o.st===this.state.statusFilter)
+        && (!q || o.code.toLowerCase().includes(q) || o.customer.toLowerCase().includes(q)))
+      .map(o=>({ code:o.code, customer:o.customer, email:o.email, item:o.item, date:o.date, total:o.totalFmt,
+        stLabel:o.stLabel, stColor:o.stColor, stBg:o.stBg, init:o.customer.split(' ').slice(-2).map(w=>w[0]).join('').toUpperCase(),
+        open:()=>this.setState({orderDetail:o}) }));
+    const ordTotal=allOrd.filter(o=>o.st!=='cancelled'&&o.st!=='refunded').reduce((a,o)=>a+o.total,0);
+    const orderStats=[
+      {label:'Tổng đơn',value:allOrd.length+'',icon:'bi-receipt',color:'var(--acc)'},
+      {label:'Chờ xử lý',value:allOrd.filter(o=>['pending','confirmed','processing'].includes(o.st)).length+'',icon:'bi-hourglass-split',color:'var(--amber)'},
+      {label:'Đang giao',value:allOrd.filter(o=>o.st==='shipped').length+'',icon:'bi-truck',color:'#a855f7'},
+      {label:'Doanh thu',value:this.short(ordTotal),icon:'bi-cash-stack',color:'var(--green)'},
+    ];
+    const od=this.state.orderDetail;
+    let orderDetail=null;
+    if(od){
+      const steps=['pending','confirmed','processing','shipped','delivered'];
+      const curIdx=steps.indexOf(od.st);
+      const timeline=[['pending','Đặt hàng','bi-bag-check'],['confirmed','Xác nhận','bi-check-circle'],['processing','Đóng gói','bi-box-seam'],['shipped','Giao hàng','bi-truck'],['delivered','Hoàn tất','bi-flag']]
+        .map((s,i)=>({label:s[1],icon:s[2], done: od.st==='cancelled'||od.st==='refunded' ? false : i<=curIdx,
+          color: (od.st==='cancelled'||od.st==='refunded') ? 'var(--muted)' : (i<=curIdx?'var(--acc)':'var(--muted)') }));
+      const items=[{name:od.item,qty:1,price:od.total}];
+      orderDetail={ code:od.code, customer:od.customer, email:od.email, date:od.date, stLabel:od.stLabel, stColor:od.stColor, stBg:od.stBg,
+        init:od.customer.split(' ').slice(-2).map(w=>w[0]).join('').toUpperCase(),
+        subtotal:this.money(od.total), shipping:this.money(30000), total:this.money(od.total+30000),
+        timeline, cancelled: od.st==='cancelled'||od.st==='refunded',
+        items: items.map(it=>({name:it.name,qty:it.qty+'',price:this.money(it.price)})),
+        back:()=>this.setState({orderDetail:null}) };
+    }
+
+    // ----- customers page -----
+    const allCust=this.customers();
+    const custRows=allCust.filter(c=>!q || c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q)).map(c=>({
+      name:c.name, email:c.email, phone:c.phone, init:c.init, hue:c.hue, roleLabel:c.roleLabel, roleColor:c.roleColor, roleBg:c.roleBg,
+      orders:c.orders+'', spent:c.spentFmt, joined:c.joined,
+      stText:c.active?'Hoạt động':'Khoá', stColor:c.active?'var(--green)':'var(--muted)' }));
+    const custStats=[
+      {label:'Tổng khách hàng',value:allCust.filter(c=>c.role==='customer').length+'',icon:'bi-people',color:'var(--acc)'},
+      {label:'Nhân viên & Admin',value:allCust.filter(c=>c.role!=='customer').length+'',icon:'bi-person-badge',color:'#a855f7'},
+      {label:'Tổng đơn đã đặt',value:allCust.reduce((a,c)=>a+c.orders,0)+'',icon:'bi-bag-check',color:'var(--green)'},
+      {label:'Tổng chi tiêu',value:this.short(allCust.reduce((a,c)=>a+c.spent,0)),icon:'bi-cash-stack',color:'var(--amber)'},
+    ];
+
+    // ----- categories page -----
+    const catColors={'laptop':'#00e5ff','pc-may-tinh-ban':'#a855f7','linh-kien':'#22d39a','man-hinh':'#ffb43b','ngoai-vi':'#7aa2ff','phu-kien':'#ff6ec7'};
+    const catEN={'laptop':'LAPTOP','pc-may-tinh-ban':'DESKTOP PC','linh-kien':'COMPONENTS','man-hinh':'MONITORS','ngoai-vi':'PERIPHERALS','phu-kien':'ACCESSORIES'};
+    const catCards=Object.keys(C).map(k=>{ const ps=allProd.filter(p=>p.catSlug===k);
+      const val=ps.reduce((a,p)=>a+p.price*p.stock,0);
+      return {name:C[k].label, en:catEN[k], hue:C[k].hue, color:catColors[k], count:ps.length+'',
+        stock:ps.reduce((a,p)=>a+p.stock,0)+'', value:this.short(val),
+        active:ps.filter(p=>p.active).length+'' }; });
+
+    // ----- coupons page -----
+    const rawCp=[
+      ['SUMMER30','percent',30,500000,100,42,'31/07/2024',true],
+      ['CNTT500K','fixed',500000,10000000,50,18,'30/06/2024',true],
+      ['NEWBIE10','percent',10,0,200,156,'31/12/2024',true],
+      ['PCGAMING','fixed',1000000,30000000,30,7,'15/06/2024',false],
+      ['FREESHIP','fixed',30000,300000,500,389,'31/12/2024',true],
+    ];
+    const couponRows=rawCp.map(r=>{ const [code,type,val,min,max,used,exp,active]=r;
+      return {code, type:type==='percent'?'Phần trăm':'Tiền mặt', typeColor:type==='percent'?'var(--acc)':'#a855f7',
+        value:type==='percent'?val+'%':this.money(val), min:min?this.money(min):'Không', used:used+'/'+max,
+        usedPct:Math.round(used/max*100)+'%', exp, stText:active?'Đang chạy':'Tạm dừng',
+        stColor:active?'var(--green)':'var(--muted)', stBg:active?'color-mix(in srgb,var(--green) 16%,transparent)':'var(--card2)'}; });
+
+    // ----- shipping page -----
+    const rawZone=[
+      ['Nội thành TP.HCM','hcm-noi-thanh',15000,5000,500000,true],
+      ['Nội thành Hà Nội','hn-noi-thanh',18000,5000,500000,true],
+      ['Các tỉnh miền Nam','mien-nam',25000,7000,1000000,true],
+      ['Các tỉnh miền Bắc','mien-bac',28000,7000,1000000,true],
+      ['Miền Trung & Tây Nguyên','mien-trung',30000,8000,1500000,true],
+      ['Vùng sâu, hải đảo','vung-xa',45000,12000,2000000,false],
+    ];
+    const zoneRows=rawZone.map(r=>{ const [name,key,base,kg,free,active]=r;
+      return {name, key, base:this.money(base), kg:this.money(kg), free:this.money(free),
+        stText:active?'Bật':'Tắt', stColor:active?'var(--green)':'var(--muted)',
+        stBg:active?'color-mix(in srgb,var(--green) 16%,transparent)':'var(--card2)'}; });
+
+    // ----- analytics page -----
+    const W=860, H=320, padL=50, padR=18, padT=14, padB=32;
+    const plotW=W-padL-padR, plotH=H-padT-padB;
+    const X=(i,n)=>padL+(i/(n-1))*plotW;
+    const Y=(v,max)=>padT+plotH-(v/max)*plotH;
+    const anXLabels=['Th10','Th11','Th12','Th1','Th2','Th3','Th4','Th5','Th6'];
+    const nX=anXLabels.length;
+    const xTicks=anXLabels.map((l,i)=>({label:l, x:X(i,nX)+''}));
+
+    const catSeries=[
+      ['laptop','Laptop','#00e5ff',[320,360,410,380,450,520,490,560,610]],
+      ['pc','PC bàn','#a855f7',[240,280,300,330,360,410,390,440,480]],
+      ['linhkien','Linh kiện','#22d39a',[160,180,200,210,240,280,260,300,330]],
+      ['manhinh','Màn hình','#ffb43b',[90,110,120,130,150,165,158,180,200]],
+      ['ngoaivi','Ngoại vi','#7aa2ff',[45,52,60,58,70,88,80,95,110]],
+      ['phukien','Phụ kiện','#ff6ec7',[30,35,40,38,46,55,50,60,68]],
+    ];
+    const catMax=700;
+    const catYTicks=[0,200,400,600].map(v=>({label:v+'tr', y:Y(v,catMax)+'', val:v}));
+    const hidden=this.state.hiddenCats;
+    const multiLines=catSeries.map(s=>{ const [key,name,color,data]=s; const off=hidden.includes(key);
+      const path=data.map((v,i)=>(i?'L':'M')+X(i,nX).toFixed(1)+' '+Y(v,catMax).toFixed(1)).join(' ');
+      const lastV=data[data.length-1];
+      return { key, name, color, path, opacity:off?'0.10':'1', width:off?'1.5':'2.4',
+        dotX:X(nX-1,nX)+'', dotY:Y(lastV,catMax)+'', dotShow:!off,
+        total:this.short(data.reduce((a,b)=>a+b,0)*1e6),
+        legColor:off?'var(--card2)':color, legText:off?'var(--muted)':'var(--text)', legDeco:off?'line-through':'none',
+        toggle:()=>{ const h=this.state.hiddenCats.slice(); const idx=h.indexOf(key); idx>=0?h.splice(idx,1):h.push(key); this.setState({hiddenCats:h}); } }; });
+
+    // primary total revenue area
+    const totals=anXLabels.map((_,i)=>catSeries.reduce((a,s)=>a+s[3][i],0));
+    const totMax=2000;
+    const totYTicks=[0,500,1000,1500,2000].map(v=>({label:this.short(v*1e6), y:Y(v,totMax)+''}));
+    const totPts=totals.map((v,i)=>[X(i,nX),Y(v,totMax)]);
+    const totLine=totPts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
+    const totArea=totLine+' L'+X(nX-1,nX).toFixed(1)+' '+(padT+plotH)+' L'+padL+' '+(padT+plotH)+' Z';
+    const totSum=totals.reduce((a,b)=>a+b,0)*1e6;
+
+    const anRanges=[['7d','7 ngày'],['28d','28 ngày'],['90d','90 ngày'],['9m','9 tháng'],['12m','12 tháng']]
+      .map(r=>{ const active=this.state.anRange===r[0];
+        return {label:r[1], go:()=>this.setState({anRange:r[0]}), bg:active?'var(--acc)':'var(--card)', color:active?'#04121f':'var(--muted2)', bd:active?'var(--acc)':'var(--line2)'}; });
+
+    const anMetrics=[
+      {label:'Doanh thu (9 tháng)',value:this.short(totSum),delta:'+18%',icon:'bi-cash-stack',spark:this.buildSpark(totals)},
+      {label:'Tổng đơn hàng',value:'1.284',delta:'+9.2%',icon:'bi-receipt',spark:this.buildSpark([88,102,96,118,130,156,142,168,184])},
+      {label:'Khách hàng mới',value:'312',delta:'+12%',icon:'bi-person-plus',spark:this.buildSpark([22,28,25,31,30,38,35,42,48])},
+      {label:'Tỷ lệ chuyển đổi',value:'3.8%',delta:'+0.4%',icon:'bi-graph-up',spark:this.buildSpark([2.9,3.1,3.0,3.3,3.4,3.6,3.5,3.7,3.8])},
+      {label:'Giá trị TB / đơn',value:this.short(totSum/1284),delta:'+5.1%',icon:'bi-bag-check',spark:this.buildSpark([11,12,11.5,13,12.8,14,13.6,14.5,15])},
+    ];
+
+    const topRaw=[
+      ['RAM Corsair Vengeance 32GB DDR5','linh-kien',410,'#22d39a',2690000],
+      ['SSD Samsung 990 Pro 2TB','linh-kien',320,'#22d39a',4290000],
+      ['CPU Intel Core i5-13400F','linh-kien',265,'#22d39a',4690000],
+      ['Màn hình Asus TUF VG27AQ','man-hinh',176,'#ffb43b',6490000],
+      ['Laptop ASUS TUF Gaming F15','laptop',142,'#00e5ff',22990000],
+      ['Chuột Logitech G Pro X SL2','ngoai-vi',138,'#7aa2ff',2890000],
+      ['PC CNTT Spark RTX 4060','pc-may-tinh-ban',98,'#a855f7',24900000],
+    ].map(r=>({name:r[0],sold:r[2],color:r[3],revenue:r[2]*r[4]}));
+    const topMaxRev=Math.max(...topRaw.map(t=>t.revenue));
+    const topProducts=topRaw.slice().sort((a,b)=>b.revenue-a.revenue).map((t,i)=>({
+      rank:(i+1)+'', name:t.name, sold:t.sold+' đã bán', color:t.color,
+      revenue:this.short(t.revenue), bar:Math.round(t.revenue/topMaxRev*100)+'%' }));
+
+    // order status breakdown
+    const Sx=this.STATUS();
+    const sbTotal=allOrd.length;
+    const statusBreak=['delivered','shipped','processing','confirmed','pending','cancelled','refunded']
+      .map(k=>{ const cnt=allOrd.filter(o=>o.st===k).length;
+        return {label:Sx[k].label, color:Sx[k].color, count:cnt+'', pct:Math.round(cnt/sbTotal*100)+'%', show:cnt>0}; })
+      .filter(s=>s.show);
+
+    return {
+      anChartW:W, anChartH:H, xTicks, catYTicks, multiLines, totYTicks, totLine, totArea,
+      totSum:this.short(totSum), anRanges, anMetrics, topProducts, statusBreak,
+      isAnalytics:page==='analytics',
+      couponRows, zoneRows,
+      custRows, custStats, catCards,
+      orderRows, statusTabs, orderStats, hasOrderDetail:!!od, orderDetail, showOrderList:!od,
+      pageTitle:meta[0], pageSub:meta[1],
+      catChips, productRows, productStats, hasProductDetail:!!pd, drawer,
+      closeDrawer:()=>this.setState({productDetail:null}),
+      search:this.state.search, onSearch:(e)=>this.setState({search:e.target.value}),
+      toggleMode:()=>{ const m=this.state.mode==='dark'?'light':'dark'; document.documentElement.setAttribute('data-mode',m); this.setState({mode:m}); },
+      modeIcon:this.state.mode==='dark'?'bi-sun':'bi-moon-stars',
+      navGroups, goOrders:this.go('orders'), goAnalytics:this.go('analytics'),
+      isDashboard:page==='dashboard', isProducts:page==='products', isOrders:page==='orders',
+      isCustomers:page==='customers', isCategories:page==='categories', isCoupons:page==='coupons', isShipping:page==='shipping',
+      kpis, weekRevenue:this.short(weekTotal), revLabels,
+      revLine:this.buildArea(week,true), revArea:this.buildArea(week,false),
+      catRevenue, recentOrders, lowStock,
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CNTTshop — Vue preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; background: #081a2d; }
+    body { font-family: 'Be Vietnam Pro', sans-serif; -webkit-font-smoothing: antialiased; color: #e8f1fc; }
+    input::placeholder { color: #5f7a9c; }
+    input:focus, select:focus, button:focus { outline: none; }
+    select option { background: #0c2742; color: #e8f1fc; }
+    ::-webkit-scrollbar { width: 11px; height: 11px; }
+    ::-webkit-scrollbar-thumb { background: #1a3a5c; border-radius: 6px; }
+    ::-webkit-scrollbar-track { background: #081a2d; }
+    @keyframes floatBlob { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(18px,-22px) scale(1.06); } }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes pulseGlow { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
+    @keyframes barSlide { 0% { transform: translateX(-100%); } 100% { transform: translateX(250%); } }
+    #boot { color:#7e98b6; font-family:'Be Vietnam Pro',sans-serif; padding:60px; text-align:center; }
+  </style>
+</head>
+<body>
+  <div id="app"><div id="boot">Đang khởi động Vue…</div></div>
+
+  <script type="importmap">
+  { "imports": { "vue": "https://cdn.jsdelivr.net/npm/vue@3.4.21/dist/vue.esm-browser.prod.js" } }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/vue3-sfc-loader@0.9.5/dist/vue3-sfc-loader.js"></script>
+  <script type="module">
+    // Live-loads the real .vue single-file components straight from /src — no build step.
+    // .vue files go through vue3-sfc-loader; plain .js modules load natively via the import map
+    // so everything shares ONE Vue instance (keeps reactivity intact).
+    // (For production use the Vite project: `npm install` then `npm run dev`.)
+    import * as Vue from 'vue';
+    const { loadModule } = window['vue3-sfc-loader'];
+    const options = {
+      moduleCache: { vue: Vue },
+      async getFile(url) {
+        const res = await fetch(url);
+        if (!res.ok) throw Object.assign(new Error(url + ' ' + res.statusText), { res });
+        return { getContentData: asBinary => asBinary ? res.arrayBuffer() : res.text() };
+      },
+      addStyle(textContent) {
+        const style = document.createElement('style');
+        style.textContent = textContent;
+        document.head.appendChild(style);
+      },
+      async handleModule(type, getContentData, path) {
+        if (type === '.js') return await import(new URL(path, location.href).href);
+        return undefined; // let the loader compile .vue
+      }
+    };
+    try {
+      const App = await loadModule('./src/App.vue', options);
+      Vue.createApp(App).mount('#app');
+    } catch (err) {
+      document.getElementById('app').innerHTML =
+        '<pre style="color:#ff8aa0; padding:24px; white-space:pre-wrap;">' + (err && (err.stack || err.message)) + '</pre>';
+      console.error(err);
+    }
+  </script>
+</body>
+</html>

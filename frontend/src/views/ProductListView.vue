@@ -68,7 +68,7 @@ watch(() => displayed.value.length, () => { if (page.value > totalPages.value) p
 
 <template>
   <div class="crumb">
-    <a @click="router.push('/')">Trang chủ</a><span class="sep">/</span><span style="color:#cfdceb">{{ title }}</span>
+    <a @click="router.push('/')">Trang chủ</a><span class="sep">/</span><span style="color:var(--ink-soft)">{{ title }}</span>
   </div>
   <div class="list-head">
     <h1>{{ title }}</h1>

@@ -1,0 +1,205 @@
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Chakra+Petch:wght@500;600;700&display=swap');
+@import url('https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css');
+
+:root {
+  --bg: #081a2d;
+  --card: #0a2138;
+  --card2: #0c2742;
+  --line: rgba(120, 170, 230, 0.14);
+  --line2: rgba(120, 170, 230, 0.22);
+  --acc: #00e5ff;
+  --text: #e8f1fc;
+  --muted: #7e98b6;
+  --muted2: #a9c0dc;
+  --sale: #ff3b5c;
+  --green: #22d39a;
+  --amber: #ffb43b;
+  --page: #06121f;
+  --hover: rgba(120, 170, 230, 0.06);
+}
+:root[data-mode='light'] {
+  --bg: #ffffff;
+  --card: #ffffff;
+  --card2: #f5f8fc;
+  --line: rgba(18, 40, 70, 0.1);
+  --line2: rgba(18, 40, 70, 0.16);
+  --acc: #0a84d8;
+  --text: #0e2236;
+  --muted: #64748b;
+  --muted2: #334155;
+  --sale: #e02447;
+  --green: #0f9d6b;
+  --amber: #c77b07;
+  --page: #eef1f6;
+  --hover: rgba(18, 40, 70, 0.035);
+}
+* {
+  box-sizing: border-box;
+}
+html,
+body,
+#app {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}
+body {
+  font-family: 'Be Vietnam Pro', Arial, sans-serif;
+  background: var(--page);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+.mono {
+  font-family: 'Chakra Petch', sans-serif;
+}
+a {
+  text-decoration: none;
+  color: inherit;
+}
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--line2);
+  border-radius: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes glow {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+input,
+select,
+textarea,
+button {
+  font-family: inherit;
+}
+
+/* ===== Login (trang riêng, ngoài layout) ===== */
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: var(--page);
+}
+.login-card {
+  width: 100%;
+  max-width: 400px;
+  background: var(--card);
+  border: 1px solid var(--line2);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+}
+.login-head {
+  text-align: center;
+  padding: 28px 24px 18px;
+}
+.login-head .logo {
+  width: 46px;
+  height: 46px;
+  margin: 0 auto 12px;
+  transform: rotate(45deg);
+  border-radius: 11px;
+  background: linear-gradient(135deg, var(--acc), #0b4f9e);
+  box-shadow: 0 0 22px color-mix(in srgb, var(--acc) 50%, transparent);
+}
+.login-head .name {
+  font-family: 'Chakra Petch';
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--text);
+}
+.login-head .name span {
+  color: var(--acc);
+}
+.login-head .sub {
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--muted);
+  margin-top: 4px;
+  text-transform: uppercase;
+}
+.login-body {
+  padding: 8px 26px 28px;
+}
+.login-body label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin: 12px 0 6px;
+  color: var(--text);
+}
+.fld {
+  width: 100%;
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 10px;
+  background: var(--card2);
+  border: 1px solid var(--line2);
+  color: var(--text);
+  font-size: 14px;
+  font-family: inherit;
+}
+.fld:focus {
+  outline: none;
+  border-color: var(--acc);
+}
+.btn-acc {
+  width: 100%;
+  height: 46px;
+  margin-top: 18px;
+  border: none;
+  border-radius: 11px;
+  background: var(--acc);
+  color: #04121f;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+}
+.btn-acc:disabled {
+  opacity: 0.6;
+}
+.alert-err {
+  background: rgba(255, 59, 92, 0.12);
+  color: #ff8da0;
+  border: 1px solid rgba(255, 59, 92, 0.3);
+  padding: 10px 12px;
+  border-radius: 9px;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+.spin {
+  width: 46px;
+  height: 46px;
+  border: 3px solid var(--line);
+  border-top-color: var(--acc);
+  border-radius: 50%;
+  animation: sp 0.8s linear infinite;
+  margin: 40px auto;
+}
+@keyframes sp {
+  to {
+    transform: rotate(360deg);
+  }
+}

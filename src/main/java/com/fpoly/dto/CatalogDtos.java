@@ -51,9 +51,15 @@ public class CatalogDtos {
             String name,
             String slug,
             String categoryName,
+            String brandName,
             String imageUrl,
             BigDecimal price,
-            BigDecimal originalPrice
+            BigDecimal originalPrice,
+            /** 3 thông số nổi bật hiển thị dạng chip trên card. */
+            List<String> chips,
+            /** điểm đánh giá trung bình (null nếu chưa có đánh giá). */
+            Double rating,
+            Integer reviewCount
     ) {}
 
     /** Dùng cho trang chi tiết sản phẩm. */

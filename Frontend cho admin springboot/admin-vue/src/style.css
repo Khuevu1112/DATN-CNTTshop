@@ -1,0 +1,91 @@
+:root {
+  --bg: #081a2d;
+  --card: #0a2138;
+  --card2: #0c2742;
+  --line: rgba(120, 170, 230, 0.14);
+  --line2: rgba(120, 170, 230, 0.22);
+  --acc: #00e5ff;
+  --text: #e8f1fc;
+  --muted: #7e98b6;
+  --muted2: #a9c0dc;
+  --sale: #ff3b5c;
+  --green: #22d39a;
+  --amber: #ffb43b;
+  --page: #06121f;
+  --hover: rgba(120, 170, 230, 0.06);
+}
+:root[data-mode='light'] {
+  --bg: #ffffff;
+  --card: #ffffff;
+  --card2: #f5f8fc;
+  --line: rgba(18, 40, 70, 0.1);
+  --line2: rgba(18, 40, 70, 0.16);
+  --acc: #0a84d8;
+  --text: #0e2236;
+  --muted: #64748b;
+  --muted2: #334155;
+  --sale: #e02447;
+  --green: #0f9d6b;
+  --amber: #c77b07;
+  --page: #eef1f6;
+  --hover: rgba(18, 40, 70, 0.035);
+}
+* {
+  box-sizing: border-box;
+}
+html,
+body,
+#app {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}
+body {
+  font-family: 'Be Vietnam Pro', Arial, sans-serif;
+  background: var(--page);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+.mono {
+  font-family: 'Chakra Petch', sans-serif;
+}
+a {
+  text-decoration: none;
+  color: inherit;
+}
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--line2);
+  border-radius: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes glow {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+input,
+select,
+textarea,
+button {
+  font-family: inherit;
+}
