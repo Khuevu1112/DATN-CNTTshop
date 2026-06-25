@@ -1,0 +1,31 @@
+LƯU Ý!!!: Ở PHẦN STATIC THÊM FOLDER TÊN "uploads" RỒI TỪ FOLDER "uploads" THÊM TRONG 1 FOLDER TÊN "payment"
+-- Xem tên Constraint đang áp dụng cho cột status
+SELECT name
+FROM sys.check_constraints
+WHERE parent_object_id = OBJECT_ID('PAYMENT');
+
+-- Xóa CHECK CONSTRAINT cũ
+ALTER TABLE PAYMENT
+DROP CONSTRAINT CK__PAYMENT__status__2DE6D218;
+
+-- Cho phép thêm trạng thái waiting_verify
+ALTER TABLE PAYMENT
+ADD CONSTRAINT CK_PAYMENT_STATUS
+CHECK (
+    status IN (
+        'pending',          -- Chờ thanh toán
+        'paid',             -- Đã thanh toán
+        'failed',           -- Thanh toán thất bại
+        'refunded',         -- Đã hoàn tiền
+        'waiting_verify'    -- Đang chờ admin xác nhận chuyển khoản
+    )
+);
+
+-- Gán payment có id = 1 sang trạng thái chờ xác nhận
+UPDATE PAYMENT
+SET status='waiting_verify'
+WHERE id=1;
+
+-- Lưu đường dẫn ảnh khách upload
+ALTER TABLE PAYMENT
+ADD proof_image VARCHAR(500);
