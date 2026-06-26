@@ -24,29 +24,25 @@ public class AdminOrderController {
             "pending", "confirmed", "processing", "shipped", "delivered", "cancelled", "refunded"
     );
 
-    @GetMapping
-    public String danhSach(@RequestParam(required = false) String trangThai, Model model) {
-        List<Order> orders = (trangThai != null && !trangThai.isBlank())
-                ? orderService.layDonTheoTrangThai(trangThai)
-                : orderService.layTatCaDon();
+@GetMapping
+public String danhSach(@RequestParam(required = false) String trangThai, Model model) {
+    List<Order> orders = (trangThai != null && !trangThai.isBlank())
+            ? orderService.layDonTheoTrangThai(trangThai)
+            : orderService.layTatCaDon();
 
-        model.addAttribute("orders", orders);
-        model.addAttribute("trangThaiFilter", trangThai);
-        model.addAttribute("trangThaiList", TRANG_THAI_LIST);
-        model.addAttribute("title", "Quản lý đơn hàng");
-        model.addAttribute("content", "admin/order-list");
-        return "layout/Base";
-    }
+    model.addAttribute("orders", orders);
+    model.addAttribute("trangThaiFilter", trangThai);
+    model.addAttribute("trangThaiList", TRANG_THAI_LIST);
+    return "admin/order-list";
+}
 
-    @GetMapping("/{id}")
-    public String chiTiet(@PathVariable Integer id, Model model) {
-        Order order = orderService.layDonById(id);
-        model.addAttribute("order", order);
-        model.addAttribute("trangThaiList", TRANG_THAI_LIST);
-        model.addAttribute("title", "Chi tiết đơn " + order.getMaDonHang());
-        model.addAttribute("content", "admin/order-detail");
-        return "layout/Base";
-    }
+@GetMapping("/{id}")
+public String chiTiet(@PathVariable Integer id, Model model) {
+    Order order = orderService.layDonById(id);
+    model.addAttribute("order", order);
+    model.addAttribute("trangThaiList", TRANG_THAI_LIST);
+    return "admin/order-detail";
+}
 
     @PostMapping("/{id}/status")
     public String capNhatTrangThai(@PathVariable Integer id,
