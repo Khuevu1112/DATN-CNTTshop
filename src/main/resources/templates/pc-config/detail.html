@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" th:fragment="content">
+<div th:fragment="content">
+
+<style>
+  * { font-family: Arial, sans-serif; }
+
+  .detail-hero {
+    background: linear-gradient(135deg, #081a2d 0%, #032e5d 100%);
+    border-radius: 16px;
+    padding: 32px 36px;
+    color: white;
+    margin-bottom: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 20px;
+  }
+  .detail-hero h2 { font-size: 24px; font-weight: 700; margin: 0 0 6px; }
+  .detail-hero .meta { font-size: 13px; opacity: .75; }
+
+  .tong-gia-hero {
+    text-align: right;
+  }
+  .tong-gia-hero .label { font-size: 13px; opacity: .75; }
+  .tong-gia-hero .value { font-size: 32px; font-weight: 700; }
+
+  /* Cảnh báo */
+  .canh-bao-box {
+    background: #fffbeb; border: 1.5px solid #fcd34d;
+    border-radius: 10px; padding: 14px 18px; margin-bottom: 22px;
+    font-size: 13px; color: #92400e;
+  }
+  .canh-bao-box ul { margin: 6px 0 0; padding-left: 18px; }
+
+  /* Bảng linh kiện */
+  .linh-kien-table {
+    background: white;
+    border-radius: 14px;
+    border: 1.5px solid #e2e8f0;
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+  .table-header {
+    background: #f8fafc;
+    padding: 14px 22px;
+    border-bottom: 1.5px solid #f1f5f9;
+    font-size: 15px;
+    font-weight: 700;
+    color: #081a2d;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .lk-row {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 16px 22px;
+    border-bottom: 1px solid #f8fafc;
+    transition: background .15s;
+  }
+  .lk-row:last-child { border-bottom: none; }
+  .lk-row:hover { background: #fafbff; }
+
+  .lk-slot-badge {
+    min-width: 140px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .slot-icon-sm {
+    width: 34px; height: 34px;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #081a2d, #032e5d);
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 16px; flex-shrink: 0;
+  }
+  .slot-name-sm { font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; }
+
+  .lk-img {
+    width: 60px; height: 60px;
+    object-fit: cover; border-radius: 8px;
+    border: 1px solid #e2e8f0; flex-shrink: 0;
+  }
+  .lk-img-placeholder {
+    width: 60px; height: 60px;
+    border-radius: 8px; border: 1px dashed #e2e8f0;
+    background: #f8fafc;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; color: #cbd5e1; flex-shrink: 0;
+  }
+
+  .lk-info { flex: 1; min-width: 0; }
+  .lk-name { font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 3px; }
+  .lk-brand { font-size: 12px; color: #94a3b8; }
+  .lk-sku { font-size: 11px; color: #cbd5e1; }
+
+  .lk-price {
+    font-size: 16px; font-weight: 700; color: #032e5d;
+    white-space: nowrap; min-width: 120px; text-align: right;
+  }
+
+  .btn-xoa-slot {
+    background: transparent;
+    border: 1.5px solid #fca5a5;
+    color: #ef4444;
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all .15s;
+    flex-shrink: 0;
+  }
+  .btn-xoa-slot:hover { background: #fef2f2; }
+
+  /* Slot trống */
+  .lk-row-empty {
+    display: flex; align-items: center; gap: 18px;
+    padding: 14px 22px;
+    border-bottom: 1px solid #f8fafc;
+    opacity: .55;
+  }
+  .lk-row-empty:last-child { border-bottom: none; }
+
+  /* Action bar */
+  .action-bar {
+    display: flex; gap: 14px; flex-wrap: wrap; align-items: center;
+    background: white;
+    border-radius: 14px;
+    border: 1.5px solid #e2e8f0;
+    padding: 20px 24px;
+  }
+
+  .btn-them-gio {
+    background: #032e5d; border: none; color: white;
+    padding: 13px 32px; border-radius: 10px;
+    font-size: 16px; font-weight: 700;
+    font-family: Arial, sans-serif;
+    cursor: pointer; transition: background .2s;
+    display: inline-flex; align-items: center; gap: 10px;
+  }
+  .btn-them-gio:hover { background: #081a2d; }
+
+  .btn-chinh-sua {
+    background: transparent;
+    border: 2px solid #032e5d;
+    color: #032e5d;
+    padding: 13px 24px; border-radius: 10px;
+    font-size: 15px; font-weight: 700;
+    font-family: Arial, sans-serif;
+    cursor: pointer; transition: all .2s;
+    text-decoration: none;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .btn-chinh-sua:hover { background: #032e5d; color: white; }
+
+  .btn-back {
+    color: #64748b; font-size: 14px; text-decoration: none;
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: color .2s;
+  }
+  .btn-back:hover { color: #032e5d; }
+
+  .flash-success {
+    background: #f0fdf4; border: 1.5px solid #86efac;
+    color: #166534; border-radius: 10px; padding: 12px 16px; margin-bottom: 16px;
+  }
+  .flash-error {
+    background: #fef2f2; border: 1.5px solid #fca5a5;
+    color: #991b1b; border-radius: 10px; padding: 12px 16px; margin-bottom: 16px;
+  }
+
+  /* Summary sidebar style */
+  .summary-box {
+    background: #f8fafc;
+    border-radius: 12px;
+    border: 1.5px solid #e2e8f0;
+    padding: 20px 22px;
+    margin-bottom: 24px;
+  }
+  .summary-row {
+    display: flex; justify-content: space-between;
+    font-size: 13px; padding: 5px 0; color: #64748b;
+  }
+  .summary-row.total {
+    font-size: 18px; font-weight: 700; color: #081a2d;
+    border-top: 1.5px solid #e2e8f0; margin-top: 10px; padding-top: 12px;
+  }
+  .dot-ok { color: #22c55e; }
+  .dot-missing { color: #f59e0b; }
+</style>
+
+<!-- Flash -->
+<div th:if="${success}" class="flash-success"><i class="bi bi-check-circle me-2"></i><span th:text="${success}"></span></div>
+<div th:if="${error}" class="flash-error"><i class="bi bi-exclamation-circle me-2"></i><span th:text="${error}"></span></div>
+
+<!-- Hero -->
+<div class="detail-hero">
+  <div>
+    <div style="font-size:12px;opacity:.6;margin-bottom:6px;text-transform:uppercase;letter-spacing:1px;">
+      <i class="bi bi-cpu me-1"></i>Chi tiết cấu hình
+    </div>
+    <h2 th:text="${build.tenCauHinh}">Cấu hình Gaming</h2>
+    <div class="meta">
+      <i class="bi bi-calendar3 me-1"></i>
+      Tạo ngày <span th:text="${#temporals.format(build.createdAt,'dd/MM/yyyy HH:mm')}"></span>
+      &nbsp;·&nbsp;
+      <span th:text="${build.items.size()}"></span> linh kiện
+    </div>
+    <div th:if="${build.ghiChu != null and !build.ghiChu.isBlank()}"
+         style="margin-top:8px;font-size:13px;opacity:.8;font-style:italic;"
+         th:text="'📝 ' + ${build.ghiChu}"></div>
+  </div>
+  <div class="tong-gia-hero">
+    <div class="label">Tổng giá ước tính</div>
+    <div class="value" th:text="${#numbers.formatDecimal(build.tongGia,0,'COMMA',0,'POINT')} + ' ₫'">0 ₫</div>
+  </div>
+</div>
+
+<!-- Cảnh báo -->
+<div th:if="${canhBao != null and !canhBao.isEmpty()}" class="canh-bao-box">
+  <strong><i class="bi bi-exclamation-triangle me-2"></i>Cấu hình chưa hoàn chỉnh:</strong>
+  <ul>
+    <li th:each="cb : ${canhBao}" th:text="${cb}"></li>
+  </ul>
+</div>
+
+<div class="row g-4">
+
+  <!-- ── CỘT CHÍNH: bảng linh kiện ── -->
+  <div class="col-lg-8">
+    <div class="linh-kien-table">
+      <div class="table-header">
+        <i class="bi bi-list-ul" style="color:#032e5d;"></i>
+        Danh sách linh kiện
+      </div>
+
+      <!-- Linh kiện đã chọn -->
+      <div th:each="item : ${build.items}" class="lk-row">
+
+        <!-- Badge loại -->
+        <div class="lk-slot-badge">
+          <div class="slot-icon-sm">
+            <i th:class="'bi ' + ${item.iconLoai}"></i>
+          </div>
+          <span class="slot-name-sm" th:text="${item.tenLoai}"></span>
+        </div>
+
+        <!-- Ảnh -->
+        <div th:if="${item.productVariant.product.images != null and !item.productVariant.product.images.isEmpty()}">
+          <img th:src="${item.productVariant.product.images[0].url}"
+               class="lk-img" alt="ảnh"
+               onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <div class="lk-img-placeholder" style="display:none;"><i class="bi bi-image"></i></div>
+        </div>
+        <div th:if="${item.productVariant.product.images == null or item.productVariant.product.images.isEmpty()}"
+             class="lk-img-placeholder"><i class="bi bi-image"></i></div>
+
+        <!-- Thông tin sản phẩm -->
+        <div class="lk-info">
+          <div class="lk-name" th:text="${item.productVariant.product.name}"></div>
+          <div class="lk-brand"
+               th:if="${item.productVariant.product.brand != null}"
+               th:text="${item.productVariant.product.brand.name}"></div>
+          <div class="lk-sku">SKU: <span th:text="${item.productVariant.sku}"></span></div>
+        </div>
+
+        <!-- Giá -->
+        <div class="lk-price"
+             th:text="${#numbers.formatDecimal(item.productVariant.price,0,'COMMA',0,'POINT')} + ' ₫'">0 ₫</div>
+
+        <!-- Xóa slot -->
+        <form th:action="@{/pc-config/builder/{id}/xoa(id=${build.id})}" method="post"
+              onsubmit="return confirm('Xóa linh kiện này?')">
+          <input type="hidden" name="loaiLinhKien" th:value="${item.loaiLinhKien}">
+          <button type="submit" class="btn-xoa-slot" title="Xóa">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </form>
+
+      </div>
+
+      <!-- Slot trống (nếu chưa chọn đủ) -->
+      <div th:if="${build.items.isEmpty()}"
+           style="text-align:center;padding:40px;color:#94a3b8;">
+        <i class="bi bi-cpu" style="font-size:40px;display:block;margin-bottom:12px;color:#cbd5e1;"></i>
+        Chưa có linh kiện nào trong cấu hình này
+      </div>
+
+    </div>
+
+    <!-- Action bar -->
+    <div class="action-bar">
+      <a th:href="@{/pc-config}" class="btn-back">
+        <i class="bi bi-arrow-left me-1"></i>Quay lại
+      </a>
+
+      <a th:href="@{/pc-config/builder/{id}(id=${build.id})}" class="btn-chinh-sua">
+        <i class="bi bi-pencil-square"></i>Chỉnh sửa
+      </a>
+
+      <form th:action="@{/pc-config/chi-tiet/{id}/them-gio(id=${build.id})}" method="post"
+            th:if="${!build.items.isEmpty()}"
+            style="margin-left:auto;">
+        <button type="submit" class="btn-them-gio">
+          <i class="bi bi-cart-plus"></i>Thêm tất cả vào giỏ
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── CỘT PHỤ: tóm tắt ── -->
+  <div class="col-lg-4">
+    <div class="summary-box">
+      <div style="font-size:14px;font-weight:700;color:#081a2d;margin-bottom:14px;">
+        <i class="bi bi-receipt me-2" style="color:#032e5d;"></i>Tóm tắt chi phí
+      </div>
+
+      <div th:each="item : ${build.items}" class="summary-row">
+        <span th:text="${item.tenLoai}"></span>
+        <span th:text="${#numbers.formatDecimal(item.productVariant.price,0,'COMMA',0,'POINT')} + ' ₫'"></span>
+      </div>
+
+      <div class="summary-row total">
+        <span>Tổng cộng</span>
+        <span th:text="${#numbers.formatDecimal(build.tongGia,0,'COMMA',0,'POINT')} + ' ₫'">0 ₫</span>
+      </div>
+    </div>
+
+    <!-- Checklist tương thích -->
+    <div class="summary-box" style="margin-top:0;">
+      <div style="font-size:14px;font-weight:700;color:#081a2d;margin-bottom:14px;">
+        <i class="bi bi-shield-check me-2" style="color:#032e5d;"></i>Kiểm tra cấu hình
+      </div>
+
+      <th:block th:with="
+        slotsDaCo=${build.items.![loaiLinhKien]}
+      ">
+        <div style="font-size:13px;display:flex;flex-direction:column;gap:8px;">
+
+          <div style="display:flex;align-items:center;gap:8px;">
+            <i th:class="${#lists.contains(slotsDaCo,'CPU')} ? 'bi bi-check-circle-fill dot-ok' : 'bi bi-exclamation-circle-fill dot-missing'" style="font-size:15px;"></i>
+            <span th:style="${#lists.contains(slotsDaCo,'CPU')} ? 'color:#334155' : 'color:#f59e0b;font-weight:600'">Vi xử lý (CPU)</span>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:8px;">
+            <i th:class="${#lists.contains(slotsDaCo,'MAINBOARD')} ? 'bi bi-check-circle-fill dot-ok' : 'bi bi-exclamation-circle-fill dot-missing'" style="font-size:15px;"></i>
+            <span th:style="${#lists.contains(slotsDaCo,'MAINBOARD')} ? 'color:#334155' : 'color:#f59e0b;font-weight:600'">Bo mạch chủ</span>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:8px;">
+            <i th:class="${#lists.contains(slotsDaCo,'RAM')} ? 'bi bi-check-circle-fill dot-ok' : 'bi bi-exclamation-circle-fill dot-missing'" style="font-size:15px;"></i>
+            <span th:style="${#lists.contains(slotsDaCo,'RAM')} ? 'color:#334155' : 'color:#f59e0b;font-weight:600'">RAM</span>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:8px;">
+            <i th:class="${#lists.contains(slotsDaCo,'GPU')} ? 'bi bi-check-circle-fill dot-ok' : 'bi bi-circle dot-missing'" style="font-size:15px;"></i>
+            <span style="color:#334155;">Card đồ họa (GPU) <span style="color:#94a3b8;font-size:11px;">tùy chọn</span></span>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:8px;">
+            <i th:class="${#lists.contains(slotsDaCo,'SSD') or #lists.contains(slotsDaCo,'HDD')} ? 'bi bi-check-circle-fill dot-ok' : 'bi bi-exclamation-circle-fill dot-missing'" style="font-size:15px;"></i>
+            <span th:style="${#lists.contains(slotsDaCo,'SSD') or #lists.contains(slotsDaCo,'HDD')} ? 'color:#334155' : 'color:#f59e0b;font-weight:600'">Ổ cứng (SSD/HDD)</span>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:8px;">
+            <i th:class="${#lists.contains(slotsDaCo,'PSU')} ? 'bi bi-check-circle-fill dot-ok' : 'bi bi-exclamation-circle-fill dot-missing'" style="font-size:15px;"></i>
+            <span th:style="${#lists.contains(slotsDaCo,'PSU')} ? 'color:#334155' : 'color:#f59e0b;font-weight:600'">Nguồn (PSU)</span>
+          </div>
+
+        </div>
+      </th:block>
+    </div>
+
+  </div>
+</div>
+
+</div>
+</html>

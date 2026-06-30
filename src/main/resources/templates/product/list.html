@@ -1,94 +1,99 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Insert title here</title>
-</head>
-<body>
 <div class="bg-white p-4 rounded shadow-sm">
-
     <div class="d-flex justify-content-between align-items-center mb-4">
-
-        <h3 th:if="${category != null}"
-            th:text="${category.name}">
-            Danh mục
-        </h3>
-
-        <h3 th:if="${category == null}">
-            Tất cả sản phẩm
-        </h3>
-
+        <h3 th:if="${category != null}" th:text="${category.name}">Danh mục</h3>
+        <h3 th:if="${category == null}">Tất cả sản phẩm</h3>
         <form method="get" class="d-flex gap-2">
-
-            <input type="text"
-                   name="keyword"
-                   class="form-control"
-                   placeholder="Tìm sản phẩm"
-                   th:value="${keyword}">
-
+            <input type="text" name="keyword" class="form-control" placeholder="Tìm sản phẩm" th:value="${keyword}">
             <select name="sort" class="form-select">
                 <option value="">Sắp xếp</option>
                 <option value="newest" th:selected="${sort == 'newest'}">Mới nhất</option>
                 <option value="name_asc" th:selected="${sort == 'name_asc'}">Tên A-Z</option>
                 <option value="name_desc" th:selected="${sort == 'name_desc'}">Tên Z-A</option>
             </select>
-
-            <button class="btn btn-danger">
-                Lọc
-            </button>
-
+            <button class="btn btn-danger">Lọc</button>
         </form>
-
     </div>
-
     <div class="row">
-
-        <div class="col-lg-3 col-md-4 col-6 mb-4"
-             th:each="p : ${products}">
-
-            <a th:href="@{/product/{slug}(slug=${p.slug})}"
-               class="text-decoration-none text-dark">
-
-                <div class="card h-100 shadow-sm">
-
-                    <img th:if="${p.images != null and !p.images.isEmpty()}"
-                         th:src="${p.images[0].url}"
-                         class="card-img-top"
-                         style="height:220px; object-fit:contain; padding:15px;">
-
-                    <img th:if="${p.images == null or p.images.isEmpty()}"
-                         src="https://via.placeholder.com/300"
-                         class="card-img-top"
-                         style="height:220px; object-fit:contain; padding:15px;">
-
-                    <div class="card-body">
-
-                        <h6 class="card-title"
-                            th:text="${p.name}">
-                            Tên sản phẩm
-                        </h6>
-
-                     <p class="text-danger fw-bold fs-5"
-   th:if="${p.variants != null and !p.variants.isEmpty()}"
-   th:text="${#numbers.formatDecimal(p.variants[0].price, 0, 'COMMA', 0, 'POINT')} + ' đ'">
-    0 đ
-</p>
-
-<p class="text-muted"
-   th:if="${p.variants == null or p.variants.isEmpty()}">
-    Chưa có giá
-</p>
-
-                    </div>
-
+        <div class="col-lg-3 col-md-4 col-6 mb-4" th:each="p : ${products}">
+            <div class="card h-100 shadow-sm position-relative">
+                <div class="position-absolute top-0 start-0 m-2" style="z-index:5;">
+                    <input class="form-check-input compare-checkbox" type="checkbox"
+                           th:value="${p.id}" th:data-name="${p.name}">
                 </div>
-
-            </a>
-
+                <a th:href="@{/product/{slug}(slug=${p.slug})}" class="text-decoration-none text-dark">
+                    <img th:if="${p.images != null and !p.images.isEmpty()}"
+                         th:src="${p.images[0].url}" class="card-img-top"
+                         style="height:220px; object-fit:contain; padding:15px;">
+                    <img th:if="${p.images == null or p.images.isEmpty()}"
+                         src="https://via.placeholder.com/300" class="card-img-top"
+                         style="height:220px; object-fit:contain; padding:15px;">
+                    <div class="card-body">
+                        <h6 class="card-title" th:text="${p.name}">Tên sản phẩm</h6>
+                        <p class="text-danger fw-bold fs-5"
+                           th:if="${p.variants != null and !p.variants.isEmpty()}"
+                           th:text="${#numbers.formatDecimal(p.variants[0].price, 0, 'COMMA', 0, 'POINT')} + ' đ'">
+                            0 đ
+                        </p>
+                        <p class="text-muted" th:if="${p.variants == null or p.variants.isEmpty()}">
+                            Chưa có giá
+                        </p>
+                    </div>
+                </a>
+            </div>
         </div>
-
     </div>
-
 </div>
-</body>
-</html>
+
+<div id="compareBar" class="position-fixed bottom-0 start-0 end-0 bg-dark text-white p-3 d-none"
+     style="z-index:1000;">
+    <div class="container d-flex justify-content-between align-items-center">
+        <div id="compareList" class="d-flex gap-2 flex-wrap"></div>
+        <a id="compareGoBtn" href="#" class="btn btn-danger">So sánh ngay</a>
+    </div>
+</div>
+
+<script>
+(function() {
+    const MAX_COMPARE = 4;
+    let selected = [];
+
+    document.querySelectorAll('.compare-checkbox').forEach(function(cb) {
+        cb.addEventListener('change', function() {
+            const id = parseInt(this.value);
+            const name = this.dataset.name;
+
+            if (this.checked) {
+                if (selected.length >= MAX_COMPARE) {
+                    alert('Chỉ được chọn tối đa ' + MAX_COMPARE + ' sản phẩm để so sánh');
+                    this.checked = false;
+                    return;
+                }
+                selected.push({ id: id, name: name });
+            } else {
+                selected = selected.filter(function(s) { return s.id !== id; });
+            }
+
+            renderCompareBar();
+        });
+    });
+
+    function renderCompareBar() {
+        const bar = document.getElementById('compareBar');
+        const list = document.getElementById('compareList');
+        const goBtn = document.getElementById('compareGoBtn');
+
+        if (selected.length === 0) {
+            bar.classList.add('d-none');
+            return;
+        }
+
+        bar.classList.remove('d-none');
+        list.innerHTML = selected.map(function(s) {
+            return '<span class="badge bg-secondary">' + s.name + '</span>';
+        }).join('');
+
+        const ids = selected.map(function(s) { return s.id; }).join('&ids=');
+        goBtn.href = '/compare?ids=' + ids;
+    }
+})();
+</script>

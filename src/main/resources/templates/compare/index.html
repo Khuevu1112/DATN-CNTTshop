@@ -1,0 +1,163 @@
+<div xmlns:th="http://www.thymeleaf.org">
+
+<style>
+* { font-family: Arial, sans-serif; }
+.compare-hero {
+  background: linear-gradient(135deg, #081a2d 0%, #032e5d 100%);
+  border-radius: 16px; padding: 28px 32px; color: white;
+  margin-bottom: 28px; display: flex; align-items: center;
+  justify-content: space-between; flex-wrap: wrap; gap: 16px;
+}
+.compare-hero h2 { font-size: 22px; font-weight: 700; margin: 0; }
+.compare-hero p  { font-size: 13px; opacity: .75; margin: 4px 0 0; }
+.btn-back-custom {
+  background: white; color: #032e5d; border: none; border-radius: 8px;
+  padding: 10px 20px; font-size: 14px; font-weight: 700;
+  font-family: Arial, sans-serif; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.btn-back-custom:hover { background: #e8f0fe; color: #032e5d; }
+.empty-state { text-align: center; padding: 80px 20px; }
+.empty-state i { font-size: 64px; color: #cbd5e1; display: block; margin-bottom: 16px; }
+.empty-state h4 { color: #475569; font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+.empty-state p { color: #94a3b8; margin-bottom: 24px; }
+.btn-primary-custom {
+  background: #032e5d; border: none; color: white;
+  padding: 12px 28px; border-radius: 8px; font-size: 15px; font-weight: 700;
+  font-family: Arial, sans-serif; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.btn-primary-custom:hover { background: #081a2d; color: white; }
+.compare-table-wrap {
+  background: white; border-radius: 14px;
+  border: 1.5px solid #e2e8f0; overflow: hidden; overflow-x: auto;
+}
+table.compare-table { width: 100%; border-collapse: collapse; min-width: 600px; }
+.compare-table .col-label {
+  width: 180px; background: #f8fafc; font-size: 13px; font-weight: 700;
+  color: #475569; padding: 14px 18px; border-bottom: 1px solid #f1f5f9;
+  border-right: 1.5px solid #e2e8f0; vertical-align: middle; white-space: nowrap;
+}
+.compare-table .col-product {
+  padding: 14px 20px; border-bottom: 1px solid #f1f5f9;
+  border-right: 1px solid #f1f5f9; vertical-align: middle;
+  text-align: center; font-size: 13px; color: #334155;
+}
+.compare-table .col-product:last-child { border-right: none; }
+.compare-table thead tr th {
+  border-bottom: 2px solid #e2e8f0; border-right: 1px solid #f1f5f9;
+  padding: 20px; vertical-align: top; background: white;
+}
+.compare-table thead tr th:first-child {
+  background: linear-gradient(135deg, #081a2d, #032e5d);
+  width: 180px; border-right: 1.5px solid #032e5d;
+}
+.compare-table thead tr th:last-child { border-right: none; }
+.product-header-img {
+  width: 120px; height: 120px; object-fit: contain;
+  border-radius: 10px; border: 1px solid #e2e8f0;
+  padding: 8px; margin-bottom: 12px;
+}
+.product-header-name { font-size: 14px; font-weight: 700; color: #0f172a; margin-bottom: 6px; }
+.product-header-price { font-size: 18px; font-weight: 700; color: #032e5d; margin-bottom: 12px; }
+.btn-detail {
+  background: transparent; border: 2px solid #032e5d; color: #032e5d;
+  padding: 7px 16px; border-radius: 8px; font-size: 13px; font-weight: 700;
+  font-family: Arial, sans-serif; text-decoration: none; display: inline-block;
+}
+.btn-detail:hover { background: #032e5d; color: white; }
+.btn-remove-col {
+  background: transparent; border: none; color: #94a3b8;
+  font-size: 20px; cursor: pointer; padding: 0; line-height: 1;
+  display: block; margin: 0 auto 10px; transition: color .2s;
+}
+.btn-remove-col:hover { color: #ef4444; }
+.label-header-text {
+  color: white; font-size: 13px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .5px; opacity: .85;
+}
+.info-note { font-size: 12px; color: #94a3b8; margin-top: 16px; text-align: right; }
+.compare-table tbody tr:hover .col-product { background: #fafbff; }
+</style>
+
+<!-- Hero -->
+<div class="compare-hero">
+  <div>
+    <h2><i class="bi bi-bar-chart-steps me-2"></i>So sánh sản phẩm</h2>
+    <p>So sánh thông số kỹ thuật và giá cả giữa các sản phẩm</p>
+  </div>
+  <a th:href="@{/}" class="btn-back-custom">
+    <i class="bi bi-arrow-left"></i> Tiếp tục mua sắm
+  </a>
+</div>
+
+<!-- Empty state -->
+<div th:if="${products == null or products.isEmpty()}" class="empty-state">
+  <i class="bi bi-bar-chart-steps"></i>
+  <h4>Chưa có sản phẩm nào để so sánh</h4>
+  <p>Chọn sản phẩm từ danh sách và nhấn "So sánh" để xem bảng so sánh</p>
+  <a th:href="@{/}" class="btn-primary-custom">
+    <i class="bi bi-grid"></i> Chọn sản phẩm
+  </a>
+</div>
+
+<!-- Bảng so sánh -->
+<div th:if="${products != null and !products.isEmpty()}">
+  <div class="compare-table-wrap">
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th><span class="label-header-text">Thông số</span></th>
+          <th th:each="p : ${products}" style="text-align:center;">
+
+            <!-- Nút xóa: link đơn giản không dùng th:with phức tạp -->
+            <a th:href="@{/compare}" style="display:block;text-align:right;color:#94a3b8;font-size:11px;text-decoration:none;margin-bottom:8px;">
+              <button type="button" class="btn-remove-col" title="Xóa khỏi so sánh">
+                <i class="bi bi-x-circle"></i>
+              </button>
+            </a>
+
+            <!-- Ảnh -->
+            <img th:if="${p.images != null and !p.images.isEmpty()}"
+                 th:src="${p.images[0].url}"
+                 class="product-header-img" alt="ảnh sản phẩm">
+            <div th:if="${p.images == null or p.images.isEmpty()}"
+                 style="width:120px;height:120px;border-radius:10px;border:1px dashed #e2e8f0;
+                        background:#f8fafc;display:flex;align-items:center;justify-content:center;
+                        margin:0 auto 12px;font-size:32px;color:#cbd5e1;">
+              <i class="bi bi-image"></i>
+            </div>
+
+            <div class="product-header-name" th:text="${p.name}"></div>
+            <div class="product-header-price"
+                 th:if="${p.variants != null and !p.variants.isEmpty()}"
+                 th:text="${#numbers.formatDecimal(p.variants[0].price,0,'COMMA',0,'POINT')} + ' ₫'"></div>
+            <div th:if="${p.variants == null or p.variants.isEmpty()}"
+                 style="font-size:14px;color:#94a3b8;margin-bottom:12px;">Chưa có giá</div>
+            <a th:href="@{/product/{slug}(slug=${p.slug})}" class="btn-detail">
+              <i class="bi bi-eye me-1"></i>Xem chi tiết
+            </a>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:each="row : ${rows}">
+          <td class="col-label" th:text="${row.specKey}"></td>
+          <td class="col-product" th:each="v : ${row.values}" th:text="${v}"></td>
+        </tr>
+        <tr th:if="${rows == null or rows.isEmpty()}">
+          <td class="col-label">Thông số</td>
+          <td class="col-product" th:each="p : ${products}"
+              style="color:#94a3b8;font-style:italic;">Chưa có thông số</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="info-note">
+    <i class="bi bi-info-circle me-1" style="color:#032e5d;"></i>
+    So sánh tối đa <strong th:text="${maxCompare}"></strong> sản phẩm.
+    Đang so sánh <strong th:text="${products.size()}"></strong> sản phẩm.
+  </p>
+</div>
+
+</div>
