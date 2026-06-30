@@ -1,0 +1,203 @@
+<div xmlns:th="http://www.thymeleaf.org" th:fragment="content">
+
+<style>
+* { font-family: Arial, sans-serif; }
+.canh-bao-box { background:#fffbeb; border:1.5px solid #fcd34d; border-radius:10px; padding:14px 18px; margin-bottom:20px; font-size:13px; color:#92400e; }
+.canh-bao-box ul { margin:6px 0 0; padding-left:18px; }
+.builder-wrap { display:grid; grid-template-columns:300px 1fr; gap:24px; align-items:start; }
+@media(max-width:900px){ .builder-wrap{grid-template-columns:1fr;} }
+.slot-panel { background:white; border-radius:14px; border:1.5px solid #e2e8f0; overflow:hidden; position:sticky; top:16px; }
+.slot-panel-header { background:linear-gradient(135deg,#081a2d,#032e5d); color:white; padding:18px 20px; font-size:15px; font-weight:700; }
+.slot-item { display:flex; align-items:center; gap:12px; padding:13px 18px; border-bottom:1px solid #f1f5f9; cursor:pointer; transition:background .15s; text-decoration:none; color:inherit; }
+.slot-item:hover { background:#f8fafc; color:inherit; }
+.slot-item.active { background:#eef2ff; border-left:3px solid #032e5d; }
+.slot-item.has-item { background:#f0fdf4; }
+.slot-icon { width:36px; height:36px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:17px; flex-shrink:0; background:#f1f5f9; color:#64748b; }
+.slot-item.active .slot-icon, .slot-item.has-item .slot-icon { background:#032e5d; color:white; }
+.slot-name { font-size:13px; font-weight:600; color:#334155; flex:1; }
+.slot-product-name { font-size:11px; color:#64748b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:140px; }
+.slot-check { color:#22c55e; font-size:16px; }
+.slot-empty { color:#cbd5e1; font-size:16px; }
+.tong-gia-box { padding:16px 18px; border-top:2px solid #e2e8f0; background:#f8fafc; }
+.tong-gia-label { font-size:12px; color:#94a3b8; font-weight:600; text-transform:uppercase; }
+.tong-gia-value { font-size:22px; font-weight:700; color:#032e5d; }
+.product-panel { background:white; border-radius:14px; border:1.5px solid #e2e8f0; overflow:hidden; }
+.product-panel-header { padding:18px 22px; border-bottom:1.5px solid #f1f5f9; display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.panel-title { font-size:17px; font-weight:700; color:#081a2d; margin:0; }
+.search-box { display:flex; gap:10px; flex:1; min-width:200px; }
+.search-box input { flex:1; border:1.5px solid #e2e8f0; border-radius:8px; padding:9px 14px; font-size:14px; font-family:Arial,sans-serif; outline:none; }
+.search-box input:focus { border-color:#032e5d; }
+.btn-search { background:#032e5d; border:none; color:white; padding:9px 18px; border-radius:8px; font-size:14px; font-family:Arial,sans-serif; cursor:pointer; }
+.btn-search:hover { background:#081a2d; }
+.product-list { padding:18px 22px; }
+.product-row { display:flex; align-items:center; gap:16px; padding:14px 0; border-bottom:1px solid #f1f5f9; }
+.product-row:last-child { border-bottom:none; }
+.product-img { width:72px; height:72px; object-fit:cover; border-radius:10px; border:1px solid #e2e8f0; flex-shrink:0; }
+.product-img-placeholder { width:72px; height:72px; border-radius:10px; border:1px dashed #e2e8f0; background:#f8fafc; display:flex; align-items:center; justify-content:center; font-size:24px; color:#cbd5e1; flex-shrink:0; }
+.product-name { font-size:14px; font-weight:700; color:#0f172a; margin-bottom:4px; }
+.product-brand { font-size:12px; color:#64748b; margin-bottom:6px; }
+.product-price { font-size:16px; font-weight:700; color:#032e5d; }
+.btn-add-variant { background:#032e5d; border:none; color:white; padding:8px 16px; border-radius:8px; font-size:13px; font-family:Arial,sans-serif; cursor:pointer; white-space:nowrap; margin-left:auto; flex-shrink:0; }
+.btn-add-variant:hover { background:#081a2d; }
+.action-bar { background:white; border-radius:14px; border:1.5px solid #e2e8f0; padding:20px 24px; margin-top:20px; display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+.btn-luu { background:#032e5d; border:none; color:white; padding:12px 28px; border-radius:9px; font-size:15px; font-weight:700; font-family:Arial,sans-serif; cursor:pointer; display:flex; align-items:center; gap:8px; }
+.btn-luu:hover { background:#081a2d; }
+.btn-back { background:transparent; border:2px solid #e2e8f0; color:#64748b; padding:12px 22px; border-radius:9px; font-size:15px; font-family:Arial,sans-serif; text-decoration:none; display:inline-flex; align-items:center; gap:8px; }
+.btn-back:hover { border-color:#032e5d; color:#032e5d; }
+.flash-success { background:#f0fdf4; border:1.5px solid #86efac; color:#166534; border-radius:10px; padding:12px 16px; margin-bottom:16px; }
+.flash-error { background:#fef2f2; border:1.5px solid #fca5a5; color:#991b1b; border-radius:10px; padding:12px 16px; margin-bottom:16px; }
+.pagination-custom { display:flex; gap:8px; justify-content:center; padding:16px 0 4px; flex-wrap:wrap; }
+.page-btn { width:36px; height:36px; border-radius:8px; border:1.5px solid #e2e8f0; background:white; font-size:13px; font-family:Arial,sans-serif; cursor:pointer; display:flex; align-items:center; justify-content:center; text-decoration:none; color:#334155; }
+.page-btn:hover, .page-btn.active { background:#032e5d; color:white; border-color:#032e5d; }
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(8,26,45,.5); z-index:9999; align-items:center; justify-content:center; }
+.modal-overlay.show { display:flex; }
+.modal-box { background:white; border-radius:16px; padding:32px; width:440px; max-width:90vw; }
+.modal-box input, .modal-box textarea { width:100%; border:1.5px solid #e2e8f0; border-radius:8px; padding:10px 14px; font-size:14px; font-family:Arial,sans-serif; outline:none; box-sizing:border-box; }
+.modal-box input:focus, .modal-box textarea:focus { border-color:#032e5d; }
+</style>
+
+<!-- Flash -->
+<div th:if="${success}" class="flash-success"><i class="bi bi-check-circle me-2"></i><span th:text="${success}"></span></div>
+<div th:if="${error}" class="flash-error"><i class="bi bi-exclamation-circle me-2"></i><span th:text="${error}"></span></div>
+
+<!-- Cảnh báo -->
+<div th:if="${canhBao != null and !canhBao.isEmpty()}" class="canh-bao-box">
+  <strong><i class="bi bi-exclamation-triangle me-2"></i>Cấu hình chưa hoàn chỉnh:</strong>
+  <ul><li th:each="cb : ${canhBao}" th:text="${cb}"></li></ul>
+</div>
+
+<!-- Builder 2 cột -->
+<div class="builder-wrap">
+
+  <!-- CỘT TRÁI -->
+  <div>
+    <div class="slot-panel">
+      <div class="slot-panel-header"><i class="bi bi-list-check me-2"></i>Cấu hình của bạn</div>
+
+      <th:block th:each="loai : ${danhSachLoai}">
+<th:block th:with="itemFound=${itemTheoLoai[loai.name()]}, daCoItem=${itemFound != null}">
+          <a th:href="@{/pc-config/builder/{id}(id=${build.id},loai=${loai.name()})}"
+             th:class="'slot-item' + (${loai.name() == loaiDangChon} ? ' active' : '') + (${daCoItem} ? ' has-item' : '')">
+            <div class="slot-icon"><i th:class="'bi ' + ${loai.icon}"></i></div>
+            <div style="min-width:0;flex:1;">
+              <div class="slot-name" th:text="${loai.tenHienThi}"></div>
+<div th:if="${daCoItem}" class="slot-product-name" th:text="${itemFound.productVariant.product.name}"></div>
+            </div>
+            <i th:if="${daCoItem}" class="bi bi-check-circle-fill slot-check"></i>
+            <i th:if="${!daCoItem}" class="bi bi-plus-circle slot-empty"></i>
+          </a>
+        </th:block>
+      </th:block>
+
+      <div class="tong-gia-box">
+        <div class="tong-gia-label">Tổng giá ước tính</div>
+        <div class="tong-gia-value" th:text="${#numbers.formatDecimal(build.tongGia,0,'COMMA',0,'POINT')} + ' ₫'">0 ₫</div>
+        <div style="font-size:12px;color:#94a3b8;margin-top:4px;">
+          <span th:text="${build.items.size()}">0</span> / <span th:text="${danhSachLoai.size()}">10</span> linh kiện đã chọn
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CỘT PHẢI -->
+  <div>
+    <div class="product-panel">
+      <div class="product-panel-header">
+        <p class="panel-title">
+          <i class="bi bi-search me-2" style="color:#032e5d;"></i>Chọn
+          <span th:each="loai : ${danhSachLoai}" th:if="${loai.name() == loaiDangChon}" th:text="${loai.tenHienThi}"></span>
+        </p>
+        <form th:action="@{/pc-config/builder/{id}(id=${build.id})}" method="get" class="search-box">
+          <input type="hidden" name="loai" th:value="${loaiDangChon}">
+          <input type="text" name="keyword" th:value="${keyword}" placeholder="Tìm tên sản phẩm...">
+          <button type="submit" class="btn-search"><i class="bi bi-search"></i> Tìm</button>
+        </form>
+      </div>
+
+      <div class="product-list">
+        <div th:if="${sanPhamTrang == null or sanPhamTrang.isEmpty()}"
+             style="text-align:center;padding:40px;color:#94a3b8;">
+          <i class="bi bi-box-seam" style="font-size:40px;display:block;margin-bottom:12px;color:#cbd5e1;"></i>
+          Không tìm thấy sản phẩm phù hợp
+        </div>
+
+        <div th:each="sp : ${sanPhamTrang}" class="product-row">
+          <div th:if="${sp.images != null and !sp.images.isEmpty()}">
+            <img th:src="${sp.images[0].url}" alt="ảnh" class="product-img"
+                 onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+            <div class="product-img-placeholder" style="display:none;"><i class="bi bi-image"></i></div>
+          </div>
+          <div th:if="${sp.images == null or sp.images.isEmpty()}" class="product-img-placeholder">
+            <i class="bi bi-image"></i>
+          </div>
+          <div style="flex:1;min-width:0;">
+            <div class="product-name" th:text="${sp.name}"></div>
+            <div class="product-brand" th:if="${sp.brand != null}" th:text="${sp.brand.name}"></div>
+            <div th:if="${sp.variants != null and !sp.variants.isEmpty()}" class="product-price"
+                 th:text="${#numbers.formatDecimal(sp.variants[0].price,0,'COMMA',0,'POINT')} + ' ₫'"></div>
+          </div>
+          <div th:if="${sp.variants != null and !sp.variants.isEmpty()}">
+            <form th:action="@{/pc-config/builder/{id}/them(id=${build.id})}" method="post">
+              <input type="hidden" name="variantId" th:value="${sp.variants[0].id}">
+              <input type="hidden" name="loaiLinhKien" th:value="${loaiDangChon}">
+              <button type="submit" class="btn-add-variant"><i class="bi bi-plus-lg me-1"></i>Chọn</button>
+            </form>
+          </div>
+          <div th:if="${sp.variants == null or sp.variants.isEmpty()}"
+               style="font-size:12px;color:#94a3b8;flex-shrink:0;">Hết hàng</div>
+        </div>
+
+        <div th:if="${sanPhamTrang != null and sanPhamTrang.totalPages > 1}" class="pagination-custom">
+          <a th:each="i : ${#numbers.sequence(0, sanPhamTrang.totalPages - 1)}"
+             th:href="@{/pc-config/builder/{id}(id=${build.id},loai=${loaiDangChon},keyword=${keyword},page=${i})}"
+             th:class="'page-btn' + (${i == sanPhamTrang.number} ? ' active' : '')"
+             th:text="${i + 1}">1</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ACTION BAR -->
+<div class="action-bar">
+  <a th:href="@{/pc-config}" class="btn-back"><i class="bi bi-arrow-left"></i> Danh sách</a>
+  <button type="button" class="btn-luu" onclick="document.getElementById('modal-luu').classList.add('show')">
+    <i class="bi bi-save"></i> Lưu cấu hình
+  </button>
+  <a th:href="@{/pc-config/chi-tiet/{id}(id=${build.id})}"
+     style="background:#f0fdf4;border:2px solid #86efac;color:#166534;padding:12px 22px;
+            border-radius:9px;font-size:15px;font-family:Arial,sans-serif;text-decoration:none;
+            display:inline-flex;align-items:center;gap:8px;font-weight:700;">
+    <i class="bi bi-eye"></i> Xem chi tiết
+  </a>
+</div>
+
+<!-- Modal lưu -->
+<div id="modal-luu" class="modal-overlay" onclick="if(event.target===this) this.classList.remove('show')">
+  <div class="modal-box">
+    <h5 style="color:#081a2d;font-weight:700;margin-bottom:6px;">Lưu cấu hình</h5>
+    <p style="color:#64748b;font-size:13px;margin-bottom:20px;">Đặt tên để dễ tìm lại sau này</p>
+    <form th:action="@{/pc-config/builder/{id}/luu(id=${build.id})}" method="post">
+      <div style="margin-bottom:14px;">
+        <label style="font-size:13px;font-weight:700;color:#334155;display:block;margin-bottom:6px;">Tên cấu hình</label>
+        <input type="text" name="tenCauHinh" th:value="${build.tenCauHinh}" placeholder="VD: PC Gaming RTX 4070...">
+      </div>
+      <div style="margin-bottom:20px;">
+        <label style="font-size:13px;font-weight:700;color:#334155;display:block;margin-bottom:6px;">Ghi chú (tùy chọn)</label>
+        <textarea name="ghiChu" rows="3" placeholder="Mục đích sử dụng, ngân sách..." th:text="${build.ghiChu}"></textarea>
+      </div>
+      <div style="display:flex;gap:12px;">
+        <button type="submit"
+                style="flex:1;background:#032e5d;border:none;color:white;padding:12px;border-radius:9px;font-size:15px;font-weight:700;font-family:Arial,sans-serif;cursor:pointer;">
+          <i class="bi bi-save me-2"></i>Lưu ngay
+        </button>
+        <button type="button" onclick="document.getElementById('modal-luu').classList.remove('show')"
+                style="background:#f1f5f9;border:none;color:#64748b;padding:12px 20px;border-radius:9px;font-size:15px;font-family:Arial,sans-serif;cursor:pointer;">
+          Hủy
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+</div>
