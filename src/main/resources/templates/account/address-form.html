@@ -1,75 +1,443 @@
-<div class="bg-white p-4 rounded shadow-sm">
 
-<div class="row justify-content-center">
-<div class="col-md-7">
+<div class="bg-white p-4 rounded shadow-sm addr-form-scope">
+    <style>
+        .addr-form-scope { font-family: Arial, Helvetica, sans-serif; }
+        .addr-form-scope h4 { color: #081a2d; }
+        .addr-form-scope .card-navy-head {
+            background: linear-gradient(120deg, #081a2d, #032e5d);
+            color: #fff;
+            padding: 14px 18px;
+            border-radius: 10px 10px 0 0;
+        }
+        .addr-form-scope .card-navy-head h6 { margin: 0; font-weight: 700; }
+        .addr-form-scope .card-navy-head small { color: #cfe0f2; }
+        .addr-form-scope .btn-navy {
+            background: #081a2d;
+            border-color: #081a2d;
+            color: #fff;
+        }
+        .addr-form-scope .btn-navy:hover { background: #032e5d; border-color: #032e5d; color: #fff; }
+        .addr-form-scope label.form-label { font-weight: 600; color: #081a2d; }
+        .addr-form-scope .form-control:focus,
+        .addr-form-scope .form-select:focus {
+            border-color: #032e5d;
+            box-shadow: 0 0 0 .2rem rgba(3, 46, 93, .15);
+        }
+        .addr-form-scope #map { width: 100%; height: 300px; border-radius: 0 0 10px 10px; z-index: 1; }
+        .addr-form-scope .map-search-wrap { position: relative; padding: 12px; background: #fff; }
+        .addr-form-scope .search-suggestions {
+            position: absolute;
+            left: 12px;
+            right: 12px;
+            top: 56px;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            box-shadow: 0 6px 18px rgba(8,26,45,.12);
+            max-height: 220px;
+            overflow-y: auto;
+            z-index: 500;
+            display: none;
+        }
+        .addr-form-scope .search-suggestions .sug-item {
+            padding: 9px 12px;
+            font-size: 13.5px;
+            cursor: pointer;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .addr-form-scope .search-suggestions .sug-item:hover { background: #eef3fa; }
+        .addr-form-scope .search-suggestions .sug-item:last-child { border-bottom: none; }
+        .addr-form-scope .coord-box {
+            font-size: 12.5px;
+            color: #475569;
+            background: #f1f5f9;
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin: 12px;
+        }
+        .addr-form-scope .coord-box strong { color: #081a2d; }
+        .addr-form-scope .locate-btn {
+            background: #eef3fa;
+            color: #032e5d;
+            border: 1px solid #d7e3f0;
+            font-size: 13px;
+            font-weight: 700;
+            border-radius: 8px;
+            margin: 0 12px 12px;
+        }
+        .addr-form-scope .locate-btn:hover { background: #e2ecf7; }
+        .addr-form-scope .card-map { border: 0; box-shadow: 0 1px 4px rgba(8,26,45,.08); border-radius: 10px; overflow: hidden; }
+    </style>
 
-    <h4 class="fw-bold mb-4" th:text="${title}"></h4>
+    <div class="row justify-content-center">
+        <div class="col-12">
+            <h4 class="fw-bold mb-4" th:text="${title}">Thêm địa chỉ mới</h4>
 
-    <div class="card border-0 shadow-sm">
-        <div class="card-body">
-            <form th:action="${address.id == null}
-                              ? @{/account/addresses/new(returnUrl=${returnUrl})}
-                              : @{/account/addresses/{id}/edit(id=${address.id},returnUrl=${returnUrl})}"
+            <form id="addressForm"
+                  th:action="${address.id == null} ? @{/account/addresses/new(returnUrl=${returnUrl})} : @{/account/addresses/{id}/edit(id=${address.id},returnUrl=${returnUrl})}"
                   method="post">
 
-                <input type="hidden" name="returnUrl" th:value="${returnUrl}">
+                <!-- KHÔNG thêm input ẩn "returnUrl" ở đây: giá trị này đã nằm sẵn trong
+                     query string của th:action bên trên (?returnUrl=...). Nếu thêm thêm 1
+                     input cùng tên "returnUrl" nữa, request sẽ có 2 giá trị trùng tên và
+                     Spring sẽ tự nối chúng bằng dấu phẩy (vd: "/orders/checkout,/orders/checkout"),
+                     gây lỗi 404 khi redirect. -->
+                <input type="hidden" name="tinhThanh" id="tinhThanhInput" th:value="${address.tinhThanh}">
+                <input type="hidden" name="phuongXa" id="phuongXaInput" th:value="${address.phuongXa}">
+                <input type="hidden" name="latitude" id="latitudeInput" th:value="${address.latitude}">
+                <input type="hidden" name="longitude" id="longitudeInput" th:value="${address.longitude}">
 
-                <div class="mb-3">
-                    <label class="form-label">Họ tên người nhận *</label>
-                    <input type="text" name="tenNguoiNhan" class="form-control" required
-                           th:value="${address.tenNguoiNhan}">
-                </div>
+                <div class="row g-3">
+                    <!-- ================= CỘT TRÁI: THÔNG TIN ================= -->
+                    <div class="col-lg-7">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-navy-head">
+                                <h6>Thông tin người nhận</h6>
+                                <small>Điền đầy đủ để đơn hàng giao chính xác nhất</small>
+                            </div>
+                            <div class="card-body">
 
-                <div class="mb-3">
-                    <label class="form-label">Số điện thoại *</label>
-                    <input type="tel" name="soDienThoai" class="form-control" required
-                           th:value="${address.soDienThoai}">
-                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Họ tên người nhận *</label>
+                                    <input type="text" name="tenNguoiNhan" class="form-control" required
+                                           th:value="${address.tenNguoiNhan}">
+                                </div>
 
-                <div class="row g-2 mb-3">
-                    <div class="col-md-4">
-                        <label class="form-label">Tỉnh/Thành *</label>
-                        <input type="text" name="tinhThanh" class="form-control" required
-                               th:value="${address.tinhThanh}">
+                                <div class="mb-3">
+                                    <label class="form-label">Số điện thoại *</label>
+                                    <input type="tel" name="soDienThoai" class="form-control" required
+                                           pattern="^(0|\+84)([0-9]{9})$"
+                                           th:value="${address.soDienThoai}">
+                                </div>
+
+                                <div class="row g-2 mb-1">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Tỉnh/Thành phố *</label>
+                                        <select id="provinceSelect" class="form-select" required>
+                                            <option value="">-- Chọn Tỉnh/Thành phố --</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Phường/Xã/Đặc khu *</label>
+                                        <select id="wardSelect" class="form-select" required disabled>
+                                            <option value="">-- Chọn Tỉnh/Thành phố trước --</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <small class="text-muted d-block mb-3">
+                                    Theo địa giới hành chính 2 cấp hiện hành (từ 1/7/2025): không còn Quận/Huyện.
+                                </small>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Địa chỉ cụ thể *</label>
+                                    <input type="text" id="addressDetail" name="diaChiCuThe" class="form-control"
+                                           required th:value="${address.diaChiCuThe}"
+                                           placeholder="Số nhà, tên đường, tổ/thôn...">
+                                    <small class="text-muted">Tự động điền khi bạn ghim vị trí trên bản đồ, vẫn có thể sửa lại.</small>
+                                </div>
+
+                                <div class="form-check mb-4">
+                                    <input type="checkbox" name="isDefault" value="true" class="form-check-input"
+                                           id="isDefault" th:checked="${address.isDefault}">
+                                    <label class="form-check-label" for="isDefault">Đặt làm địa chỉ mặc định</label>
+                                </div>
+
+                                <div class="d-flex gap-2">
+                                    <button type="submit" class="btn btn-navy">Lưu</button>
+                                    <a th:href="${returnUrl != null and !returnUrl.isEmpty()} ? ${returnUrl} : @{/account/addresses}"
+                                       class="btn btn-outline-secondary">Hủy</a>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Quận/Huyện *</label>
-                        <input type="text" name="quanHuyen" class="form-control" required
-                               th:value="${address.quanHuyen}">
+
+                    <!-- ================= CỘT PHẢI: BẢN ĐỒ (Leaflet + OpenStreetMap) ================= -->
+                    <div class="col-lg-5">
+                        <div class="card card-map h-100">
+                            <div class="card-navy-head">
+                                <h6>Ghim vị trí giao hàng</h6>
+                                <small>Kéo ghim hoặc tìm kiếm để định vị chính xác</small>
+                            </div>
+                            <div class="map-search-wrap">
+                                <input type="text" id="mapSearchBox" class="form-control" autocomplete="off"
+                                       placeholder="🔍 Tìm địa chỉ, toà nhà, khu vực...">
+                                <div id="searchSuggestions" class="search-suggestions"></div>
+                            </div>
+                            <div id="map"></div>
+                            <button type="button" id="useMyLocationBtn" class="btn locate-btn">
+                                📍 Dùng vị trí hiện tại của tôi
+                            </button>
+                            <div class="coord-box">
+                                Toạ độ: <strong id="coordText">Chưa chọn</strong>
+                            </div>
+                        </div>
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Phường/Xã *</label>
-                        <input type="text" name="phuongXa" class="form-control" required
-                               th:value="${address.phuongXa}">
-                    </div>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Địa chỉ cụ thể *</label>
-                    <input type="text" name="diaChiCuThe" class="form-control" required
-                           th:value="${address.diaChiCuThe}"
-                           placeholder="Số nhà, tên đường...">
-                </div>
-
-                <div class="form-check mb-4">
-                    <input type="checkbox" name="isDefault" value="true"
-                           class="form-check-input" id="isDefault"
-                           th:checked="${address.isDefault}">
-                    <label class="form-check-label" for="isDefault">
-                        Đặt làm địa chỉ mặc định
-                    </label>
-                </div>
-
-                <div class="d-flex gap-2">
-                    <button type="submit" class="btn btn-danger">Lưu</button>
-                    <a th:href="${returnUrl != null and !returnUrl.isEmpty()} ? ${returnUrl} : @{/account/addresses}"
-                       class="btn btn-outline-secondary">Hủy</a>
                 </div>
             </form>
         </div>
     </div>
-
-</div>
 </div>
 
-</div>
+<!-- Leaflet CSS/JS - CDN miễn phí, không cần API key -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script th:inline="javascript">
+    /* Giá trị hiện có khi SỬA địa chỉ (rỗng khi thêm mới) */
+    const currentProvinceName = /*[[${address.tinhThanh}]]*/ '';
+    const currentWardName = /*[[${address.phuongXa}]]*/ '';
+    const currentLat = /*[[${address.latitude}]]*/ null;
+    const currentLng = /*[[${address.longitude}]]*/ null;
+
+    /* =========================================================
+       PHẦN 1 — ĐỊA CHỈ THẬT VIỆT NAM (2 CẤP): TỈNH/THÀNH -> XÃ/PHƯỜNG
+       ========================================================= */
+    const provinceSelect = document.getElementById('provinceSelect');
+    const wardSelect = document.getElementById('wardSelect');
+    const tinhThanhInput = document.getElementById('tinhThanhInput');
+    const phuongXaInput = document.getElementById('phuongXaInput');
+
+    async function loadProvinces() {
+        try {
+            const res = await fetch('https://provinces.open-api.vn/api/v2/p/');
+            const data = await res.json();
+            data.sort((a, b) => a.name.localeCompare(b.name, 'vi'));
+            data.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.code;
+                opt.textContent = p.name;
+                if (currentProvinceName && p.name === currentProvinceName) opt.selected = true;
+                provinceSelect.appendChild(opt);
+            });
+            if (provinceSelect.value) {
+                await loadWards(provinceSelect.value, currentWardName);
+            }
+        } catch (e) {
+            console.error('Không tải được danh sách Tỉnh/Thành phố:', e);
+            provinceSelect.innerHTML = '<option value="">Lỗi tải dữ liệu, thử lại sau</option>';
+        }
+    }
+
+    async function loadWards(provinceCode, preselectWardName) {
+        wardSelect.innerHTML = '<option value="">Đang tải...</option>';
+        wardSelect.disabled = true;
+        try {
+            const res = await fetch(`https://provinces.open-api.vn/api/v2/p/${provinceCode}?depth=2`);
+            const data = await res.json();
+            wardSelect.innerHTML = '<option value="">-- Chọn Phường/Xã/Đặc khu --</option>';
+            (data.wards || []).sort((a, b) => a.name.localeCompare(b.name, 'vi'))
+                .forEach(w => {
+                    const opt = document.createElement('option');
+                    opt.value = w.code;
+                    opt.textContent = w.name;
+                    if (preselectWardName && w.name === preselectWardName) opt.selected = true;
+                    wardSelect.appendChild(opt);
+                });
+            wardSelect.disabled = false;
+            syncHiddenFields();
+        } catch (e) {
+            console.error('Không tải được danh sách Phường/Xã:', e);
+            wardSelect.innerHTML = '<option value="">Lỗi tải dữ liệu, thử lại sau</option>';
+        }
+    }
+
+    function syncHiddenFields() {
+        tinhThanhInput.value = provinceSelect.selectedOptions[0] ? provinceSelect.selectedOptions[0].textContent : '';
+        phuongXaInput.value = wardSelect.selectedOptions[0] && wardSelect.value ? wardSelect.selectedOptions[0].textContent : '';
+    }
+
+    provinceSelect.addEventListener('change', () => {
+        syncHiddenFields();
+        if (provinceSelect.value) {
+            loadWards(provinceSelect.value);
+            const provinceName = provinceSelect.selectedOptions[0].textContent;
+            geocodeAndZoom(`${provinceName}, Việt Nam`, 11);
+        } else {
+            wardSelect.innerHTML = '<option value="">-- Chọn Tỉnh/Thành phố trước --</option>';
+            wardSelect.disabled = true;
+        }
+    });
+    wardSelect.addEventListener('change', () => {
+        syncHiddenFields();
+        if (wardSelect.value) {
+            const wardName = wardSelect.selectedOptions[0].textContent;
+            const provinceName = provinceSelect.selectedOptions[0] ? provinceSelect.selectedOptions[0].textContent : '';
+            geocodeAndZoom(`${wardName}, ${provinceName}, Việt Nam`, 14);
+        }
+    });
+
+    loadProvinces();
+
+    /* =========================================================
+       PHẦN 2 — BẢN ĐỒ: Leaflet + OpenStreetMap (miễn phí, không cần key)
+       Tìm kiếm & reverse geocode qua Nominatim (miễn phí, giới hạn ~1 request/giây)
+       ========================================================= */
+    const defaultCenter = [21.028511, 105.804817]; // Hà Nội
+    const startCenter = (currentLat && currentLng) ? [currentLat, currentLng] : defaultCenter;
+    const startZoom = (currentLat && currentLng) ? 17 : 13;
+
+    const map = L.map('map').setView(startCenter, startZoom);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(map);
+
+    const marker = L.marker(startCenter, { draggable: true }).addTo(map);
+
+    updateCoordText(startCenter[0], startCenter[1]);
+    if (currentLat && currentLng) {
+        document.getElementById('latitudeInput').value = currentLat;
+        document.getElementById('longitudeInput').value = currentLng;
+    }
+
+    marker.on('dragend', () => {
+        const pos = marker.getLatLng();
+        handleNewPosition(pos.lat, pos.lng);
+    });
+
+    map.on('click', (e) => {
+        marker.setLatLng(e.latlng);
+        handleNewPosition(e.latlng.lat, e.latlng.lng);
+    });
+
+    function handleNewPosition(lat, lng, formattedAddress) {
+        updateCoordText(lat, lng);
+        document.getElementById('latitudeInput').value = lat;
+        document.getElementById('longitudeInput').value = lng;
+        if (formattedAddress) {
+            fillAddressDetail(formattedAddress);
+        } else {
+            reverseGeocode(lat, lng);
+        }
+    }
+
+    async function reverseGeocode(lat, lng) {
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=vi`);
+            const data = await res.json();
+            if (data && data.display_name) fillAddressDetail(data.display_name);
+        } catch (e) {
+            console.error('Reverse geocode lỗi:', e);
+        }
+    }
+
+    /* ---- Zoom bản đồ dần theo mức độ chi tiết đã nhập: Tỉnh -> Phường -> Số nhà/đường ---- */
+    let geocodeZoomTimer = null;
+
+    async function geocodeAndZoom(query, zoomLevel) {
+        if (!query) return;
+        try {
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=vn&limit=1&accept-language=vi`;
+            const res = await fetch(url);
+            const results = await res.json();
+            if (results && results.length > 0) {
+                const lat = parseFloat(results[0].lat);
+                const lng = parseFloat(results[0].lon);
+                map.setView([lat, lng], zoomLevel);
+                marker.setLatLng([lat, lng]);
+                updateCoordText(lat, lng);
+                document.getElementById('latitudeInput').value = lat;
+                document.getElementById('longitudeInput').value = lng;
+            }
+        } catch (e) {
+            console.error('Zoom theo địa chỉ lỗi:', e);
+        }
+    }
+
+    function buildFullAddressQuery() {
+        const detail = document.getElementById('addressDetail').value.trim();
+        const ward = phuongXaInput.value;
+        const province = tinhThanhInput.value;
+        return [detail, ward, province, 'Việt Nam'].filter(Boolean).join(', ');
+    }
+
+    function fillAddressDetail(text) {
+        const field = document.getElementById('addressDetail');
+        if (!field.dataset.userEdited) field.value = text;
+    }
+
+    document.getElementById('addressDetail').addEventListener('input', function () {
+        this.dataset.userEdited = 'true';
+        clearTimeout(geocodeZoomTimer);
+        if (this.value.trim().length < 6) return;
+        geocodeZoomTimer = setTimeout(() => geocodeAndZoom(buildFullAddressQuery(), 17), 800);
+    });
+
+    function updateCoordText(lat, lng) {
+        document.getElementById('coordText').textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+    }
+
+    document.getElementById('useMyLocationBtn').addEventListener('click', () => {
+        if (!navigator.geolocation) { alert('Trình duyệt không hỗ trợ định vị.'); return; }
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                const { latitude, longitude } = pos.coords;
+                map.setView([latitude, longitude], 17);
+                marker.setLatLng([latitude, longitude]);
+                handleNewPosition(latitude, longitude);
+            },
+            () => alert('Không lấy được vị trí hiện tại. Vui lòng cho phép quyền truy cập vị trí.')
+        );
+    });
+
+    /* ---- Ô tìm kiếm địa chỉ: gợi ý theo Nominatim, debounce 600ms ---- */
+    const searchBox = document.getElementById('mapSearchBox');
+    const suggestionsBox = document.getElementById('searchSuggestions');
+    let searchTimer = null;
+
+    searchBox.addEventListener('input', () => {
+        clearTimeout(searchTimer);
+        const q = searchBox.value.trim();
+        if (q.length < 3) {
+            suggestionsBox.style.display = 'none';
+            return;
+        }
+        searchTimer = setTimeout(() => runSearch(q), 600);
+    });
+
+    async function runSearch(q) {
+        try {
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&countrycodes=vn&addressdetails=1&limit=6&accept-language=vi`;
+            const res = await fetch(url);
+            const results = await res.json();
+            renderSuggestions(results);
+        } catch (e) {
+            console.error('Tìm kiếm địa chỉ lỗi:', e);
+        }
+    }
+
+    function renderSuggestions(results) {
+        if (!results || results.length === 0) {
+            suggestionsBox.style.display = 'none';
+            return;
+        }
+        suggestionsBox.innerHTML = '';
+        results.forEach(r => {
+            const item = document.createElement('div');
+            item.className = 'sug-item';
+            item.textContent = r.display_name;
+            item.addEventListener('click', () => {
+                const lat = parseFloat(r.lat);
+                const lng = parseFloat(r.lon);
+                map.setView([lat, lng], 17);
+                marker.setLatLng([lat, lng]);
+                handleNewPosition(lat, lng, r.display_name);
+                searchBox.value = r.display_name;
+                suggestionsBox.style.display = 'none';
+            });
+            suggestionsBox.appendChild(item);
+        });
+        suggestionsBox.style.display = 'block';
+    }
+
+    document.addEventListener('click', (e) => {
+        if (!suggestionsBox.contains(e.target) && e.target !== searchBox) {
+            suggestionsBox.style.display = 'none';
+        }
+    });
+
+    // Bản đồ được chèn vào DOM sau khi Leaflet đã khởi tạo kích thước ban đầu có thể bị lệch
+    // (thường gặp khi nằm trong card/tab ẩn) -> ép tính lại kích thước cho chắc.
+    setTimeout(() => map.invalidateSize(), 200);
+</script>
