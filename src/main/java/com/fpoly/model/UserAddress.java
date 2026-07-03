@@ -23,23 +23,28 @@ public class UserAddress {
     @Column(name = "address", nullable = false)
     private String diaChiCuThe;
 
+    // Tỉnh/Thành phố (chuẩn hành chính 2 cấp áp dụng từ 1/7/2025)
     @Column(name = "province", nullable = false)
     private String tinhThanh;
 
-    @Column(name = "district", nullable = false)
-    private String quanHuyen;
-
+    // Phường/Xã/Đặc khu - trực thuộc thẳng Tỉnh/Thành phố, không còn qua Quận/Huyện
     @Column(name = "ward", nullable = false)
     private String phuongXa;
 
     @Column(name = "is_default", nullable = false)
     private Boolean isDefault = false;
 
+    // Toạ độ ghim vị trí trên Google Maps, dùng để hỗ trợ shipper định vị chính xác
+    @Column(name = "latitude")
+    private Double latitude;
+
+    @Column(name = "longitude")
+    private Double longitude;
+
     public String getDiaChiDayDu() {
         StringBuilder sb = new StringBuilder();
         if (diaChiCuThe != null) sb.append(diaChiCuThe);
         if (phuongXa != null) sb.append(", ").append(phuongXa);
-        if (quanHuyen != null) sb.append(", ").append(quanHuyen);
         if (tinhThanh != null) sb.append(", ").append(tinhThanh);
         return sb.toString();
     }
@@ -62,12 +67,15 @@ public class UserAddress {
     public String getTinhThanh() { return tinhThanh; }
     public void setTinhThanh(String tinhThanh) { this.tinhThanh = tinhThanh; }
 
-    public String getQuanHuyen() { return quanHuyen; }
-    public void setQuanHuyen(String quanHuyen) { this.quanHuyen = quanHuyen; }
-
     public String getPhuongXa() { return phuongXa; }
     public void setPhuongXa(String phuongXa) { this.phuongXa = phuongXa; }
 
     public Boolean getIsDefault() { return isDefault; }
     public void setIsDefault(Boolean isDefault) { this.isDefault = isDefault; }
+
+    public Double getLatitude() { return latitude; }
+    public void setLatitude(Double latitude) { this.latitude = latitude; }
+
+    public Double getLongitude() { return longitude; }
+    public void setLongitude(Double longitude) { this.longitude = longitude; }
 }

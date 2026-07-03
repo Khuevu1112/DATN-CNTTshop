@@ -42,15 +42,16 @@ public class AddressController {
                             @RequestParam String soDienThoai,
                             @RequestParam String diaChiCuThe,
                             @RequestParam String tinhThanh,
-                            @RequestParam String quanHuyen,
                             @RequestParam String phuongXa,
+                            @RequestParam(required = false) Double latitude,
+                            @RequestParam(required = false) Double longitude,
                             @RequestParam(required = false, defaultValue = "false") boolean isDefault,
                             @RequestParam(required = false) String returnUrl,
                             Principal principal,
                             RedirectAttributes ra) {
         try {
             addressService.them(principal.getName(), tenNguoiNhan, soDienThoai,
-                    diaChiCuThe, tinhThanh, quanHuyen, phuongXa, isDefault);
+                    diaChiCuThe, tinhThanh, phuongXa, latitude, longitude, isDefault);
             ra.addFlashAttribute("success", "Đã thêm địa chỉ mới");
         } catch (RuntimeException e) {
             ra.addFlashAttribute("error", e.getMessage());
@@ -82,15 +83,16 @@ public class AddressController {
                            @RequestParam String soDienThoai,
                            @RequestParam String diaChiCuThe,
                            @RequestParam String tinhThanh,
-                           @RequestParam String quanHuyen,
                            @RequestParam String phuongXa,
+                           @RequestParam(required = false) Double latitude,
+                           @RequestParam(required = false) Double longitude,
                            @RequestParam(required = false, defaultValue = "false") boolean isDefault,
                            @RequestParam(required = false) String returnUrl,
                            Principal principal,
                            RedirectAttributes ra) {
         try {
             addressService.sua(id, principal.getName(), tenNguoiNhan, soDienThoai,
-                    diaChiCuThe, tinhThanh, quanHuyen, phuongXa, isDefault);
+                    diaChiCuThe, tinhThanh, phuongXa, latitude, longitude, isDefault);
             ra.addFlashAttribute("success", "Đã cập nhật địa chỉ");
         } catch (RuntimeException e) {
             ra.addFlashAttribute("error", e.getMessage());
