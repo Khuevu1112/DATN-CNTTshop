@@ -31,6 +31,9 @@ public class Product {
     @Column(name = "is_active")
     private Boolean isActive;
 
+    @Column(name = "warranty_months")
+    private Integer warrantyMonths;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -45,6 +48,12 @@ public class Product {
 
     @OneToMany(mappedBy = "product")
     private List<ProductOption> options;
+
+    @OneToMany(mappedBy = "product")
+    private List<ProductPromotion> promotions;
+
+    @OneToMany(mappedBy = "product")
+    private List<ProductBundle> bundles;
 
     public Integer getId() {
         return id;
@@ -102,6 +111,14 @@ public class Product {
         this.isActive = isActive;
     }
 
+    public Integer getWarrantyMonths() {
+        return warrantyMonths;
+    }
+
+    public void setWarrantyMonths(Integer warrantyMonths) {
+        this.warrantyMonths = warrantyMonths;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
@@ -140,5 +157,21 @@ public class Product {
 
     public void setOptions(List<ProductOption> options) {
         this.options = options;
+    }
+
+    public List<ProductPromotion> getPromotions() {
+        return promotions;
+    }
+
+    public void setPromotions(List<ProductPromotion> promotions) {
+        this.promotions = promotions;
+    }
+
+    public List<ProductBundle> getBundles() {
+        return bundles;
+    }
+
+    public void setBundles(List<ProductBundle> bundles) {
+        this.bundles = bundles;
     }
 }

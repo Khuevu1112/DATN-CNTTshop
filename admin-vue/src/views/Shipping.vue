@@ -1,357 +1,298 @@
 <template>
-  <div
-    style="
-      animation: fadeUp 0.35s ease;
-      display: grid;
-      grid-template-columns: 340px 1fr;
-      gap: 14px;
-      align-items: start;
-    "
-  >
-    <div
-      style="
-        background: var(--card);
-        border: 1px solid var(--line);
-        border-radius: 14px;
-        padding: 18px;
-      "
-    >
-      <div
-        style="
-          font-size: 14.5px;
-          font-weight: 600;
-          color: var(--text);
-          margin-bottom: 16px;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        "
-      >
-        <i class="bi bi-calculator" style="color: var(--acc)"></i> Tính thử phí
-        giao
+  <div style="animation: fadeUp 0.35s ease; display: flex; flex-direction: column; gap: 14px">
+    <!-- Phí nội thành Hải Phòng -->
+    <div style="background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px">
+      <div style="font-size: 14.5px; font-weight: 600; color: var(--text); margin-bottom: 4px; display: flex; align-items: center; gap: 8px">
+        <i class="bi bi-geo-alt-fill" style="color: var(--acc)"></i> Phí giao nội thành Hải Phòng
       </div>
-      <label
-        style="
-          font-size: 11px;
-          font-weight: 600;
-          color: var(--muted);
-          text-transform: uppercase;
-          display: block;
-          margin-bottom: 6px;
-        "
-        >Khu vực</label
-      >
-      <select
-        v-model.number="zoneIdx"
-        style="
-          width: 100%;
-          height: 40px;
-          padding: 0 10px;
-          border-radius: 9px;
-          background: var(--card2);
-          border: 1px solid var(--line2);
-          color: var(--text);
-          font-size: 13px;
-          margin-bottom: 14px;
-          cursor: pointer;
-        "
-      >
-        <option v-for="(z, i) in raw" :key="z[0]" :value="i">{{ z[0] }}</option>
-      </select>
-      <div
-        style="
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 10px;
-          margin-bottom: 16px;
-        "
-      >
-        <div>
-          <label
-            style="
-              font-size: 11px;
-              font-weight: 600;
-              color: var(--muted);
-              text-transform: uppercase;
-              display: block;
-              margin-bottom: 6px;
-            "
-            >Khối lượng (kg)</label
-          ><input
-            v-model.number="kg"
-            type="number"
-            step="0.1"
-            style="
-              width: 100%;
-              height: 40px;
-              padding: 0 12px;
-              border-radius: 9px;
-              background: var(--card2);
-              border: 1px solid var(--line2);
-              color: var(--text);
-              font-size: 13px;
-            "
-          />
+      <div style="font-size: 12px; color: var(--muted); margin-bottom: 16px; line-height: 1.6">
+        Mốc tính: <b style="color: var(--muted2)">118 Cát Bi, Phường Hải An, Hải Phòng</b>. Đơn nội thành tính phí theo
+        <b style="color: var(--muted2)">quãng đường thực tế</b> từ kho tới điểm khách cắm trên bản đồ — bảng phí phẳng
+        bên dưới chỉ là phương án dự phòng cho địa chỉ chưa có toạ độ.
+      </div>
+
+      <!-- A. Cách tính CHÍNH: luỹ tiến theo km (hằng số trong ShippingService, không sửa ở đây) -->
+      <div style="background: var(--card2); border-radius: 11px; padding: 15px 16px; margin-bottom: 18px">
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px">
+          <span style="font-size: 13px; font-weight: 600; color: var(--text)">Cách tính chính — luỹ tiến theo quãng đường</span>
+          <span style="font-size: 10px; font-weight: 700; color: var(--amber); background: color-mix(in srgb, var(--amber) 16%, transparent); padding: 2px 8px; border-radius: 20px">CHỈ ĐỌC</span>
+          <div style="flex: 1"></div>
+          <span class="mono" style="font-size: 11px; color: var(--muted)">Sửa trong mã nguồn: ShippingService</span>
         </div>
-        <div>
-          <label
-            style="
-              font-size: 11px;
-              font-weight: 600;
-              color: var(--muted);
-              text-transform: uppercase;
-              display: block;
-              margin-bottom: 6px;
-            "
-            >Giá trị đơn</label
-          ><input
-            v-model.number="orderVal"
-            type="number"
-            style="
-              width: 100%;
-              height: 40px;
-              padding: 0 12px;
-              border-radius: 9px;
-              background: var(--card2);
-              border: 1px solid var(--line2);
-              color: var(--text);
-              font-size: 13px;
-            "
-          />
+
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px">
+          <div v-for="b in KM_BRACKETS" :key="b.range" style="background: var(--card); border: 1px solid var(--line2); border-radius: 9px; padding: 11px 13px">
+            <div style="font-size: 11.5px; color: var(--muted)">{{ b.range }}</div>
+            <div class="mono" style="font-size: 17px; font-weight: 700; color: var(--text); margin-top: 3px">
+              {{ b.price }}<span style="font-size: 11.5px; font-weight: 500; color: var(--muted)">/km</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="font-size: 11.5px; color: var(--muted2); line-height: 1.7">
+          Luỹ tiến như bậc thuế — mỗi km chỉ tính theo đơn giá của vòng chứa chính km đó.
+          VD 15km = 10km đầu × 250 + 5km sau × 500 = <b style="color: var(--text)">5.000đ</b>, không phải 15 × 500.
+        </div>
+        <div style="display: flex; gap: 16px; flex-wrap: wrap; margin-top: 9px">
+          <span v-for="e in KM_EXAMPLES" :key="e.km" class="mono" style="font-size: 11.5px; color: var(--muted)">
+            {{ e.km }} → <b style="color: var(--text)">{{ e.fee }}</b>
+          </span>
         </div>
       </div>
-      <div style="background: var(--card2); border-radius: 11px; padding: 14px">
-        <div
-          style="
-            display: flex;
-            justify-content: space-between;
-            font-size: 12.5px;
-            margin-bottom: 9px;
-          "
-        >
-          <span style="color: var(--muted)">Phí cơ bản</span
-          ><span class="mono" style="color: var(--text)">{{
-            money(base)
-          }}</span>
+
+      <!-- B. Phí DỰ PHÒNG (đây mới là phần sửa được ở trang này) -->
+      <div style="font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px">
+        Phí dự phòng — địa chỉ chưa cắm mốc bản đồ
+      </div>
+      <div style="font-size: 11.5px; color: var(--muted); margin-bottom: 12px; line-height: 1.6">
+        Chỉ dùng khi địa chỉ của khách không có toạ độ (địa chỉ cũ tạo trước tính năng bản đồ, hoặc tạo qua
+        trang quản trị Thymeleaf cũ). Đơn đã cắm mốc luôn dùng cách tính theo km ở trên, không đụng tới 2 ô này.
+      </div>
+      <div v-if="hpLoading" class="spin"></div>
+      <div v-else style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
+        <div v-for="t in hpTiers" :key="t.id" style="background: var(--card2); border-radius: 11px; padding: 14px">
+          <div style="font-size: 12.5px; color: var(--muted); margin-bottom: 8px">{{ t.label }}</div>
+          <div style="display: flex; gap: 8px">
+            <input
+              v-model.number="t.fee" type="number"
+              style="flex: 1; height: 38px; padding: 0 12px; border-radius: 8px; background: var(--card); border: 1px solid var(--line2); color: var(--text); font-size: 13px"
+            />
+            <button
+              @click="saveHpTier(t)" :disabled="savingHpTierId === t.id"
+              style="height: 38px; padding: 0 14px; border-radius: 8px; border: none; background: var(--acc); color: var(--acc-ink); font-weight: 700; font-size: 12.5px; cursor: pointer"
+            >
+              {{ savingHpTierId === t.id ? '...' : 'Lưu' }}
+            </button>
+          </div>
         </div>
-        <div
-          style="
-            display: flex;
-            justify-content: space-between;
-            font-size: 12.5px;
-            margin-bottom: 9px;
-          "
-        >
-          <span style="color: var(--muted)"
-            >Phụ phí {{ extraKg.toFixed(1) }}kg</span
-          ><span class="mono" style="color: var(--text)">{{
-            money(extra)
-          }}</span>
-        </div>
-        <div
-          style="
-            display: flex;
-            justify-content: space-between;
-            font-size: 15px;
-            font-weight: 700;
-            padding-top: 9px;
-            border-top: 1px solid var(--line);
-          "
-        >
-          <span style="color: var(--text)">{{
-            freeShip ? 'Miễn phí' : 'Tổng phí'
-          }}</span
-          ><span class="mono" style="color: var(--acc)">{{
-            freeShip ? money(0) : money(base + extra)
-          }}</span>
+      </div>
+
+      <!-- Những thứ tác động lên phí cuối cùng mà trang này không quyết định -->
+      <div style="margin-top: 16px; padding-top: 13px; border-top: 1px solid var(--line); font-size: 11.5px; color: var(--muted); line-height: 1.8">
+        <div><b style="color: var(--muted2)">Hoả tốc</b> = phí thường × 1.3 (làm tròn) — áp cho cả hai cách tính trên.</div>
+        <div>
+          <b style="color: var(--muted2)">Ưu đãi có thể đưa phí về 0đ:</b>
+          hạng thành viên từ Bạc trở lên miễn phí nội thành; gói CNTT Care miễn phí ship nội thành (mọi gói)
+          và miễn phí cả hoả tốc (Plus / Pro).
         </div>
       </div>
     </div>
-    <div
-      style="
-        background: var(--card);
-        border: 1px solid var(--line);
-        border-radius: 14px;
-        overflow: hidden;
-      "
-    >
-      <div
-        style="
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 14px 18px;
-          border-bottom: 1px solid var(--line);
-        "
-      >
-        <div style="font-size: 14.5px; font-weight: 600; color: var(--text)">
-          Cấu hình vùng giao hàng
+
+    <!-- Đơn vị vận chuyển ngoài Hải Phòng -->
+    <div style="display: grid; grid-template-columns: 340px 1fr; gap: 14px; align-items: start">
+      <div style="background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px">
+        <div style="font-size: 14.5px; font-weight: 600; color: var(--text); margin-bottom: 16px; display: flex; align-items: center; gap: 8px">
+          <i class="bi bi-truck" style="color: var(--acc)"></i> Thêm đơn vị vận chuyển
         </div>
+        <label class="lbl2">Mã (vd: spx)</label>
+        <input v-model="form.code" class="fld2 block" />
+        <label class="lbl2">Tên hãng</label>
+        <input v-model="form.name" class="fld2 block" />
+        <label class="lbl2">Phí liên tỉnh/liên miền</label>
+        <input v-model.number="form.feeLienTinh" type="number" class="fld2 block" />
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px">
+          <div>
+            <label class="lbl2">Thời gian cùng miền</label>
+            <input v-model="form.timeCungMien" placeholder="VD: 1-2 ngày" class="fld2 block" />
+          </div>
+          <div>
+            <label class="lbl2">Thời gian khác miền</label>
+            <input v-model="form.timeKhacMien" placeholder="VD: 3-4 ngày" class="fld2 block" />
+          </div>
+        </div>
+        <div v-if="error" style="color: var(--sale); font-size: 12px; margin-bottom: 10px">{{ error }}</div>
         <button
-          style="
-            display: flex;
-            align-items: center;
-            gap: 7px;
-            height: 34px;
-            padding: 0 14px;
-            border-radius: 9px;
-            border: none;
-            background: var(--acc);
-            color: #04121f;
-            font-size: 12.5px;
-            font-weight: 700;
-            cursor: pointer;
-          "
+          @click="addCarrierRow" :disabled="saving"
+          style="width: 100%; height: 42px; border-radius: 10px; border: none; background: var(--acc); color: var(--acc-ink); font-weight: 700; font-size: 13px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 7px"
         >
-          <i class="bi bi-plus-lg"></i> Thêm vùng
+          <i class="bi bi-plus-circle"></i> {{ saving ? 'Đang thêm...' : 'Thêm đơn vị' }}
         </button>
       </div>
-      <table style="width: 100%; border-collapse: collapse; font-size: 13px">
-        <thead>
-          <tr style="background: var(--card2)">
-            <th
-              v-for="h in heads"
-              :key="h.t"
-              :style="{
-                textAlign: h.a || 'left',
-                padding: '10px 18px',
-                fontSize: '11px',
-                fontWeight: 600,
-                color: 'var(--muted)',
-                textTransform: 'uppercase',
-                letterSpacing: '.4px',
-              }"
-            >
-              {{ h.t }}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="z in rows"
-            :key="z.key"
-            style="border-top: 1px solid var(--line)"
-          >
-            <td style="padding: 12px 18px">
-              <div style="display: flex; align-items: center; gap: 10px">
-                <i
-                  class="bi bi-geo-alt-fill"
-                  style="color: var(--acc); font-size: 14px"
-                ></i>
-                <div>
-                  <div
-                    style="
-                      font-size: 13px;
-                      color: var(--text);
-                      font-weight: 500;
-                    "
-                  >
-                    {{ z.name }}
-                  </div>
-                  <div
-                    class="mono"
-                    style="font-size: 11px; color: var(--muted)"
-                  >
-                    {{ z.key }}
-                  </div>
-                </div>
-              </div>
-            </td>
-            <td
-              class="mono"
-              style="
-                padding: 12px 12px;
-                text-align: right;
-                color: var(--text);
-                font-weight: 600;
-              "
-            >
-              {{ z.base }}
-            </td>
-            <td
-              class="mono"
-              style="
-                padding: 12px 12px;
-                text-align: right;
-                color: var(--muted2);
-              "
-            >
-              {{ z.kg }}
-            </td>
-            <td
-              class="mono"
-              style="
-                padding: 12px 12px;
-                text-align: right;
-                color: var(--muted2);
-              "
-            >
-              {{ z.free }}
-            </td>
-            <td style="padding: 12px 18px">
-              <span
-                style="
-                  display: inline-flex;
-                  align-items: center;
-                  gap: 5px;
-                  font-size: 11.5px;
-                  font-weight: 600;
-                  padding: 3px 9px;
-                  border-radius: 20px;
-                "
-                :style="{ background: z.stBg, color: z.stColor }"
-                ><span
-                  style="width: 6px; height: 6px; border-radius: 50%"
-                  :style="{ background: z.stColor }"
-                ></span
-                >{{ z.stText }}</span
-              >
-            </td>
-          </tr>
-        </tbody>
-      </table>
+
+      <div style="background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden">
+        <div style="padding: 14px 18px; font-size: 14.5px; font-weight: 600; color: var(--text); border-bottom: 1px solid var(--line)">
+          Danh sách đơn vị vận chuyển ({{ carriers.length }})
+        </div>
+        <div v-if="carriersLoading" class="spin"></div>
+        <table v-else style="width: 100%; border-collapse: collapse; font-size: 13px">
+          <thead>
+            <tr style="background: var(--card2)">
+              <th v-for="h in heads" :key="h.t" :style="{ textAlign: h.a || 'left', padding: '10px 14px', fontSize: '11px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.4px' }">
+                {{ h.t }}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="c in carriers" :key="c.id" style="border-top: 1px solid var(--line)">
+              <td style="padding: 10px 14px">
+                <div class="mono" style="color: var(--acc); font-weight: 700; font-size: 12px">{{ c.code }}</div>
+                <div style="color: var(--text); margin-top: 2px">{{ c.name }}</div>
+              </td>
+              <td style="padding: 10px 10px">
+                <input v-model.number="c.feeLienTinh" type="number" class="fld2" style="width: 100px" />
+              </td>
+              <td style="padding: 10px 10px">
+                <input v-model="c.timeCungMien" class="fld2" style="width: 90px" />
+              </td>
+              <td style="padding: 10px 10px">
+                <input v-model="c.timeKhacMien" class="fld2" style="width: 90px" />
+              </td>
+              <td style="padding: 10px 10px; text-align: center">
+                <input type="checkbox" v-model="c.isActive" style="cursor: pointer" />
+              </td>
+              <td style="padding: 10px 14px; text-align: right; white-space: nowrap">
+                <button
+                  @click="saveCarrierRow(c)" :disabled="savingCarrierId === c.id"
+                  style="height: 30px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--line2); background: var(--card2); color: var(--acc); cursor: pointer; font-size: 11.5px; margin-right: 6px"
+                >{{ savingCarrierId === c.id ? '...' : 'Lưu' }}</button>
+                <button
+                  @click="removeCarrier(c)"
+                  style="width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--line2); background: var(--card); color: var(--sale); cursor: pointer"
+                >
+                  <i class="bi bi-trash3" style="font-size: 12px"></i>
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
-import { money } from '../data/adminData';
+import { ref, onMounted } from 'vue';
+import {
+  getHpTiers, updateHpTier, getCarriers, createCarrier, updateCarrier, deleteCarrier,
+} from '../api/admin';
+
+// Chép lại hằng số bên ShippingService (GIA_VONG_1/2/3, MOC_VONG_1/2_KM) để admin thấy phí nội
+// thành thực sự được tính thế nào — phần này CHỈ HIỂN THỊ, không phải nguồn sự thật. Đổi đơn giá
+// hay mốc km bên backend thì phải sửa cả ở đây, nếu không trang sẽ mô tả sai giống lần trước.
+const KM_BRACKETS = [
+  { range: '0 → 10 km', price: '250đ' },
+  { range: '10 → 20 km', price: '500đ' },
+  { range: 'Trên 20 km', price: '1.000đ' },
+];
+const KM_EXAMPLES = [
+  { km: '5km', fee: '1.250đ' },
+  { km: '10km', fee: '2.500đ' },
+  { km: '15km', fee: '5.000đ' },
+  { km: '20km', fee: '7.500đ' },
+  { km: '30km', fee: '17.500đ' },
+];
+
+const hpTiers = ref([]);
+const hpLoading = ref(true);
+const savingHpTierId = ref(null);
+
+const carriers = ref([]);
+const carriersLoading = ref(true);
+const savingCarrierId = ref(null);
+const saving = ref(false);
+const error = ref('');
+
 const heads = [
-  { t: 'Vùng giao hàng' },
-  { t: 'Phí cơ bản', a: 'right' },
-  { t: 'Phí / kg thêm', a: 'right' },
-  { t: 'Miễn phí từ', a: 'right' },
-  { t: 'Trạng thái' },
+  { t: 'Đơn vị' },
+  { t: 'Phí liên tỉnh' },
+  { t: 'TG cùng miền' },
+  { t: 'TG khác miền' },
+  { t: 'Bật', a: 'center' },
+  { t: '' },
 ];
-const raw = [
-  ['Nội thành TP.HCM', 'hcm-noi-thanh', 15000, 5000, 500000, true],
-  ['Nội thành Hà Nội', 'hn-noi-thanh', 18000, 5000, 500000, true],
-  ['Các tỉnh miền Nam', 'mien-nam', 25000, 7000, 1000000, true],
-  ['Các tỉnh miền Bắc', 'mien-bac', 28000, 7000, 1000000, true],
-  ['Miền Trung & Tây Nguyên', 'mien-trung', 30000, 8000, 1500000, true],
-  ['Vùng sâu, hải đảo', 'vung-xa', 45000, 12000, 2000000, false],
-];
-const rows = raw.map((r) => {
-  const [name, key, base, kg, free, active] = r;
-  return {
-    name,
-    key,
-    base: money(base),
-    kg: money(kg),
-    free: money(free),
-    stText: active ? 'Bật' : 'Tắt',
-    stColor: active ? 'var(--green)' : 'var(--muted)',
-    stBg: active
-      ? 'color-mix(in srgb,var(--green) 16%,transparent)'
-      : 'var(--card2)',
-  };
+
+const form = ref({ code: '', name: '', feeLienTinh: 20000, timeCungMien: '', timeKhacMien: '' });
+
+async function loadHpTiers() {
+  hpLoading.value = true;
+  try {
+    hpTiers.value = await getHpTiers();
+  } finally {
+    hpLoading.value = false;
+  }
+}
+
+async function saveHpTier(t) {
+  savingHpTierId.value = t.id;
+  try {
+    await updateHpTier(t.id, { fee: t.fee });
+  } finally {
+    savingHpTierId.value = null;
+  }
+}
+
+async function loadCarriers() {
+  carriersLoading.value = true;
+  try {
+    carriers.value = await getCarriers();
+  } finally {
+    carriersLoading.value = false;
+  }
+}
+
+async function addCarrierRow() {
+  error.value = '';
+  if (!form.value.code.trim() || !form.value.name.trim()) {
+    error.value = 'Vui lòng nhập mã và tên hãng';
+    return;
+  }
+  saving.value = true;
+  try {
+    await createCarrier({ ...form.value });
+    await loadCarriers();
+    form.value = { code: '', name: '', feeLienTinh: 20000, timeCungMien: '', timeKhacMien: '' };
+  } catch (e) {
+    error.value = e.response?.data?.message || 'Có lỗi khi thêm đơn vị vận chuyển';
+  } finally {
+    saving.value = false;
+  }
+}
+
+async function saveCarrierRow(c) {
+  savingCarrierId.value = c.id;
+  try {
+    await updateCarrier(c.id, {
+      name: c.name, feeLienTinh: c.feeLienTinh, timeCungMien: c.timeCungMien,
+      timeKhacMien: c.timeKhacMien, isActive: c.isActive,
+    });
+  } finally {
+    savingCarrierId.value = null;
+  }
+}
+
+async function removeCarrier(c) {
+  if (!window.confirm(`Xoá đơn vị "${c.name}"?`)) return;
+  await deleteCarrier(c.id);
+  await loadCarriers();
+}
+
+onMounted(() => {
+  loadHpTiers();
+  loadCarriers();
 });
-const zoneIdx = ref(0);
-const kg = ref(2.5);
-const orderVal = ref(850000);
-const base = computed(() => raw[zoneIdx.value][2]);
-const extraKg = computed(() => Math.max(0, (kg.value || 0) - 1));
-const extra = computed(() => Math.round(extraKg.value) * raw[zoneIdx.value][3]);
-const freeShip = computed(() => (orderVal.value || 0) >= raw[zoneIdx.value][4]);
 </script>
+
+<style scoped>
+.fld2 {
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: var(--card2);
+  border: 1px solid var(--line2);
+  color: var(--text);
+  font-size: 12.5px;
+}
+.block {
+  width: 100%;
+  display: block;
+  margin-bottom: 14px;
+}
+.lbl2 {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 6px;
+}
+</style>

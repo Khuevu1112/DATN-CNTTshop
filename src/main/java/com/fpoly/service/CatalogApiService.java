@@ -24,6 +24,7 @@ import com.fpoly.model.OptionValue;
 import com.fpoly.model.Product;
 import com.fpoly.model.ProductImage;
 import com.fpoly.model.ProductOption;
+import com.fpoly.model.ProductPromotion;
 import com.fpoly.model.ProductSpec;
 import com.fpoly.model.ProductVariant;
 import com.fpoly.repository.CategoryRepository;
@@ -73,9 +74,30 @@ public class CatalogApiService {
                     : productRepo.findByIsActiveTrue();
         }
 
-        sortProducts(products, sort);
         Map<Integer, double[]> ratingMap = loadRatingMap();
-        return products.stream().map(p -> toSummary(p, ratingMap)).toList();
+        Map<Integer, Integer> salesMap = loadSalesMap();
+        sortProducts(products, sort, salesMap);
+        return products.stream().map(p -> toSummary(p, ratingMap, salesMap)).toList();
+    }
+
+    /** Top sản phẩm bán chạy nhất (theo tổng số lượng đã bán, đơn không huỷ). */
+    public List<ProductSummaryDto> getBestSellers(int limit) {
+        Map<Integer, Integer> salesMap = loadSalesMap();
+        Map<Integer, double[]> ratingMap = loadRatingMap();
+
+        return productRepo.findByIsActiveTrue().stream()
+                .filter(p -> salesMap.getOrDefault(p.getId(), 0) > 0)
+                .sorted(Comparator.comparing((Product p) -> salesMap.getOrDefault(p.getId(), 0)).reversed())
+                .limit(limit)
+                .map(p -> toSummary(p, ratingMap, salesMap))
+                .toList();
+    }
+
+    /** Map danh sách Product (đã có sẵn) sang ProductSummaryDto — dùng cho tính năng so sánh sản phẩm. */
+    public List<ProductSummaryDto> toSummaries(List<Product> products) {
+        Map<Integer, double[]> ratingMap = loadRatingMap();
+        Map<Integer, Integer> salesMap = loadSalesMap();
+        return products.stream().map(p -> toSummary(p, ratingMap, salesMap)).toList();
     }
 
     public ProductDetailDto getProductBySlug(String slug) {
@@ -87,10 +109,7 @@ public class CatalogApiService {
                     .map(i -> new ImageDto(i.getUrl(), i.getIsPrimary()))
                     .toList();
 
-        List<SpecDto> specs = p.getSpecs() == null ? List.of()
-                : p.getSpecs().stream()
-                    .map(s -> new SpecDto(s.getSpecKey(), s.getSpecValue()))
-                    .toList();
+        List<SpecDto> specs = fullSpecs(p);
 
         List<OptionDto> options = new ArrayList<>();
         if (p.getOptions() != null) {
@@ -99,7 +118,7 @@ public class CatalogApiService {
                 if (o.getValues() != null) {
                     for (OptionValue ov : o.getValues()) vals.add(ov.getValue());
                 }
-                options.add(new OptionDto(o.getOptionName(), vals));
+                options.add(new OptionDto(o.getOptionName(), vals, o.getLinkedGroup()));
             }
         }
 
@@ -120,14 +139,42 @@ public class CatalogApiService {
             }
         }
 
+        List<String> promotions = fullPromotions(p);
+
+        Map<Integer, double[]> ratingMap = loadRatingMap();
+        Map<Integer, Integer> salesMap = loadSalesMap();
+        List<ProductSummaryDto> bundles = p.getBundles() == null ? List.of()
+                : p.getBundles().stream()
+                    .map(b -> toSummary(b.getBundleProduct(), ratingMap, salesMap))
+                    .toList();
+
         return new ProductDetailDto(
                 p.getId(), p.getName(), p.getSlug(), p.getDescription(),
                 p.getCategory() != null ? p.getCategory().getName() : null,
                 p.getCategory() != null ? p.getCategory().getSlug() : null,
-                images, specs, variants, options);
+                images, specs, variants, options, promotions, bundles,
+                p.getWarrantyMonths());
     }
 
     // ===== helpers =====
+
+    /** Toàn bộ thông số của sản phẩm, theo đúng thứ tự sort_order — dùng chung cho cả trang
+     * chi tiết (specs) và trang danh sách (chips rút gọn + lọc theo cấu hình). */
+    private List<SpecDto> fullSpecs(Product p) {
+        if (p.getSpecs() == null) return List.of();
+        return p.getSpecs().stream()
+                .sorted(Comparator.comparing((ProductSpec s) -> s.getSortOrder() == null ? 0 : s.getSortOrder()))
+                .map(s -> new SpecDto(s.getSpecKey(), s.getSpecValue()))
+                .toList();
+    }
+
+    private List<String> fullPromotions(Product p) {
+        if (p.getPromotions() == null) return List.of();
+        return p.getPromotions().stream()
+                .sorted(Comparator.comparing((ProductPromotion pr) -> pr.getSortOrder() == null ? 0 : pr.getSortOrder()))
+                .map(ProductPromotion::getContent)
+                .toList();
+    }
 
     /** Trả map: productId -> [điểm trung bình, số lượt đánh giá] từ bảng REVIEW. */
     private Map<Integer, double[]> loadRatingMap() {
@@ -149,17 +196,32 @@ public class CatalogApiService {
         return map;
     }
 
-    private ProductSummaryDto toSummary(Product p, Map<Integer, double[]> ratingMap) {
+    /** Trả map: productId -> tổng số lượng đã bán (loại đơn 'cancelled'). */
+    private Map<Integer, Integer> loadSalesMap() {
+        Map<Integer, Integer> map = new HashMap<>();
+        List<?> rows = em.createNativeQuery(
+            "SELECT v.product_id, SUM(oi.quantity) " +
+            "FROM ORDER_ITEM oi " +
+            "JOIN PRODUCT_VARIANT v ON oi.variant_id = v.id " +
+            "JOIN [ORDER] o ON oi.order_id = o.id " +
+            "WHERE o.status != 'cancelled' " +
+            "GROUP BY v.product_id"
+        ).getResultList();
+        for (Object row : rows) {
+            Object[] r = (Object[]) row;
+            Integer pid = ((Number) r[0]).intValue();
+            int qty = r[1] == null ? 0 : ((Number) r[1]).intValue();
+            map.put(pid, qty);
+        }
+        return map;
+    }
+
+    private ProductSummaryDto toSummary(Product p, Map<Integer, double[]> ratingMap, Map<Integer, Integer> salesMap) {
         ProductVariant v = pickVariant(p);
 
-        // 3 thông số nổi bật làm chip
-        List<String> chips = new ArrayList<>();
-        if (p.getSpecs() != null) {
-            p.getSpecs().stream()
-                    .sorted(Comparator.comparing((ProductSpec s) -> s.getSortOrder() == null ? 0 : s.getSortOrder()))
-                    .limit(3)
-                    .forEach(s -> chips.add(s.getSpecValue()));
-        }
+        List<SpecDto> specs = fullSpecs(p);
+        // 3 thông số nổi bật làm chip trên card
+        List<String> chips = specs.stream().limit(3).map(SpecDto::value).toList();
 
         double[] r = ratingMap.get(p.getId());
         Double rating = (r != null) ? Math.round(r[0] * 10) / 10.0 : null;
@@ -172,7 +234,10 @@ public class CatalogApiService {
                 pickImageUrl(p),
                 v != null ? v.getPrice() : null,
                 v != null ? v.getOriginalPrice() : null,
-                chips, rating, reviewCount);
+                chips, rating, reviewCount,
+                salesMap.getOrDefault(p.getId(), 0),
+                v != null ? v.getStock() : 0,
+                specs, fullPromotions(p), p.getWarrantyMonths());
     }
 
     private String pickImageUrl(Product p) {
@@ -196,15 +261,17 @@ public class CatalogApiService {
         return (v != null && v.getPrice() != null) ? v.getPrice() : BigDecimal.ZERO;
     }
 
-    private void sortProducts(List<Product> products, String sort) {
+    private void sortProducts(List<Product> products, String sort, Map<Integer, Integer> salesMap) {
         if (sort == null) return;
         switch (sort) {
-            case "name_asc"   -> products.sort(Comparator.comparing(Product::getName));
-            case "name_desc"  -> products.sort(Comparator.comparing(Product::getName).reversed());
-            case "price_asc"  -> products.sort(Comparator.comparing((Product p) -> priceOf(p)));
-            case "price_desc" -> products.sort(Comparator.comparing((Product p) -> priceOf(p)).reversed());
-            case "newest"     -> products.sort(Comparator.comparing(Product::getCreatedAt,
-                                    Comparator.nullsLast(Comparator.naturalOrder())).reversed());
+            case "name_asc"    -> products.sort(Comparator.comparing(Product::getName));
+            case "name_desc"   -> products.sort(Comparator.comparing(Product::getName).reversed());
+            case "price_asc"   -> products.sort(Comparator.comparing((Product p) -> priceOf(p)));
+            case "price_desc"  -> products.sort(Comparator.comparing((Product p) -> priceOf(p)).reversed());
+            case "newest"      -> products.sort(Comparator.comparing(Product::getCreatedAt,
+                                     Comparator.nullsLast(Comparator.naturalOrder())).reversed());
+            case "bestseller"  -> products.sort(Comparator.comparing(
+                                     (Product p) -> salesMap.getOrDefault(p.getId(), 0)).reversed());
             default -> { }
         }
     }

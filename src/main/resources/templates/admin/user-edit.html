@@ -56,10 +56,12 @@
                     th:selected="${user.vaiTro.name() == 'admin'}">
                 admin
             </option>
-<option value="staff"
-            th:selected="${user.vaiTro.name() == 'staff'}">
-        staff
-    </option>
+            <option value="ke_toan" th:selected="${user.vaiTro.name() == 'ke_toan'}">Kế toán</option>
+            <option value="kho" th:selected="${user.vaiTro.name() == 'kho'}">Kho</option>
+            <option value="ky_thuat" th:selected="${user.vaiTro.name() == 'ky_thuat'}">Kỹ thuật</option>
+            <option value="cskh" th:selected="${user.vaiTro.name() == 'cskh'}">Chăm sóc khách hàng</option>
+            <option value="giao_hang" th:selected="${user.vaiTro.name() == 'giao_hang'}">Giao hàng</option>
+            <option value="kinh_doanh" th:selected="${user.vaiTro.name() == 'kinh_doanh'}">Kinh doanh</option>
             <option value="customer"
                     th:selected="${user.vaiTro.name() == 'customer'}">
                 user

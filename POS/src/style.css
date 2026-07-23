@@ -1,0 +1,100 @@
+/* ===== Theme tokens — DÙNG CHUNG hệ với cnttshop-vue và admin-vue =====
+   Ba app (khách :5173, admin :5174, POS :5175) chung một bộ biến và một bộ font, để đổi màu
+   thương hiệu ở một nơi là cả ba nơi theo. Tên biến giữ y hệt admin-vue (--bg/--card/--acc/...)
+   nên copy component qua lại không phải sửa gì.
+
+   POS mặc định chạy chế độ SÁNG: màn hình quầy thường đặt nơi nhiều ánh sáng, và hoá đơn in ra
+   giấy trắng nên nền sáng cho cảm giác liền mạch hơn. Vẫn hỗ trợ tối qua <html data-mode="dark">
+   giống hai app kia. */
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Chakra+Petch:wght@500;600;700&display=swap');
+
+:root {
+  --page: #f0f0f0;
+  --bg: #ffffff;
+  --card: #ffffff;
+  --card2: #f5f5f5;
+  --line: rgba(20, 20, 20, 0.14);
+  --line2: rgba(20, 20, 20, 0.22);
+  --text: #18181b;
+  --muted: #6b6b70;
+  --muted2: #3a3a3d;
+  --green: #0f9d6b;
+  --sale: #e02447;
+  --amber: #d98218;
+  /* Xanh nõn chuối là màu nhận diện của shop (trùng --acc bên admin-vue). Chữ đặt trên nền này
+     PHẢI dùng --acc-ink, KHÔNG dùng trắng — trắng trên #c6ff4a gần như không đọc được. */
+  --acc: #c6ff4a;
+  --acc-ink: #101114;
+}
+
+:root[data-mode='dark'] {
+  --page: #0d0e10;
+  --bg: #101114;
+  --card: #17181c;
+  --card2: #1c1e22;
+  --line: rgba(255, 255, 255, 0.14);
+  --line2: rgba(255, 255, 255, 0.22);
+  --text: #f2f3f5;
+  --muted: #7d818a;
+  --muted2: #aeb2ba;
+  --green: #2bd47e;
+  --sale: #ff5d7a;
+  --amber: #ffb43b;
+  --acc: #c6ff4a;
+  --acc-ink: #101114;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body, #app { margin: 0; height: 100%; }
+
+body {
+  font-family: 'Be Vietnam Pro', Arial, sans-serif;
+  color: var(--text);
+  background: var(--page);
+  -webkit-font-smoothing: antialiased;
+}
+
+input, button, select, textarea { font-family: inherit; }
+button { cursor: pointer; }
+a { color: var(--acc); text-decoration: none; }
+a:hover { filter: brightness(0.92); }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--line2); border-radius: 6px; }
+
+/* Số tiền / số lượng / đồng hồ: Chakra Petch + tabular-nums để các chữ số không nhảy ngang khi
+   giá trị đổi — quan trọng ở quầy vì tổng tiền cập nhật liên tục trong lúc quét hàng. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-family: 'Chakra Petch', 'Be Vietnam Pro', sans-serif;
+}
+
+.field {
+  width: 100%; height: 44px; padding: 0 13px;
+  background: var(--card);
+  color: var(--text);
+  border: 1.5px solid var(--line); border-radius: 9px;
+  font-size: 15px; outline: none;
+  transition: border-color 0.15s ease;
+}
+.field:focus { border-color: var(--acc); }
+.field::placeholder { color: var(--muted); }
+
+.section-label {
+  font-size: 12px; font-weight: 700; color: var(--muted);
+  letter-spacing: .4px; text-transform: uppercase; margin-bottom: 8px;
+}
+
+/* Hoá đơn in — khổ 80mm. Giữ monospace + đen trắng tuyệt đối: máy in nhiệt chỉ in đơn sắc, và
+   font Chakra Petch không có sẵn trên mọi driver in. */
+@media screen { #print-invoice { display: none; } }
+@media print {
+  body { background: #fff; }
+  body * { visibility: hidden; }
+  #print-invoice, #print-invoice * { visibility: visible; }
+  #print-invoice {
+    position: absolute; left: 0; top: 0; width: 80mm; padding: 4mm;
+    font-family: "Courier New", monospace; color: #000;
+  }
+  @page { size: 80mm auto; margin: 0; }
+}

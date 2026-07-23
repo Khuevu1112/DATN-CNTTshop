@@ -1,19 +1,16 @@
 <script setup>
-import { state, accent } from '../store.js';
+import { state, accent, themeStyle } from '../store.js';
+import AppLogo from './AppLogo.vue';
 </script>
 
 <template>
   <div
     v-if="state.loading"
+    :style="{ background: themeStyle.pageBg }"
     style="
       position: fixed;
       inset: 0;
       z-index: 120;
-      background: radial-gradient(
-        900px 500px at 50% 35%,
-        #0c2c52 0%,
-        #061427 70%
-      );
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -41,22 +38,13 @@ import { state, accent } from '../store.js';
           position: absolute;
           inset: 0;
           border-radius: 50%;
-          border: 3px solid rgba(120, 170, 230, 0.14);
+          border: 3px solid rgba(var(--line-rgb), 0.14);
           animation: spin 0.8s linear infinite;
         "
       ></div>
-      <div
-        :style="{
-          background: 'linear-gradient(135deg, ' + accent + ', #0b4f9e)',
-        }"
-        style="
-          width: 30px;
-          height: 30px;
-          transform: rotate(45deg);
-          border-radius: 8px;
-          animation: pulseGlow 1.1s ease-in-out infinite;
-        "
-      ></div>
+      <div style="animation: spin 1.6s linear infinite">
+        <AppLogo :size="30" :on-light="state.mode === 'light'" :accent-color="accent" />
+      </div>
     </div>
     <div style="text-align: center">
       <div
@@ -65,12 +53,12 @@ import { state, accent } from '../store.js';
           font-weight: 700;
           font-size: 20px;
           letter-spacing: 0.5px;
-          color: #e8f1fc;
+          color: var(--text);
         "
       >
         CNTT<span :style="{ color: accent }">shop</span>
       </div>
-      <div style="font-size: 13px; color: #7e98b6; margin-top: 6px">
+      <div style="font-size: 13px; color: var(--muted); margin-top: 6px">
         {{ state.loadingMsg }}
       </div>
     </div>
@@ -79,7 +67,7 @@ import { state, accent } from '../store.js';
         width: 180px;
         height: 3px;
         border-radius: 3px;
-        background: rgba(120, 170, 230, 0.14);
+        background: rgba(var(--line-rgb), 0.14);
         overflow: hidden;
       "
     >

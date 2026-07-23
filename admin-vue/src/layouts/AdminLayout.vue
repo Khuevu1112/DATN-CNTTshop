@@ -21,16 +21,7 @@
           padding: 18px 20px 16px;
         "
       >
-        <div
-          style="
-            width: 30px;
-            height: 30px;
-            transform: rotate(45deg);
-            border-radius: 7px;
-            background: linear-gradient(135deg, var(--acc), #0b4f9e);
-            box-shadow: 0 0 18px color-mix(in srgb, var(--acc) 55%, transparent);
-          "
-        ></div>
+        <AppLogo :size="28" :on-light="ui.mode === 'light'" />
         <div>
           <div
             class="mono"
@@ -104,7 +95,7 @@
             ></i>
             <span style="flex: 1">{{ it[1] }}</span>
             <span
-              v-if="it[3]"
+              v-if="badgeOf(it)"
               class="mono"
               style="
                 font-size: 11px;
@@ -114,7 +105,7 @@
                 background: color-mix(in srgb, var(--acc) 18%, transparent);
                 color: var(--acc);
               "
-              >{{ it[3] }}</span
+              >{{ badgeOf(it) }}</span
             >
           </button>
         </template>
@@ -137,8 +128,8 @@
               width: 34px;
               height: 34px;
               border-radius: 9px;
-              background: linear-gradient(135deg, var(--acc), #0b4f9e);
-              color: #04121f;
+              background: linear-gradient(135deg, var(--acc), #1c1d21);
+              color: var(--acc-ink);
               display: flex;
               align-items: center;
               justify-content: center;
@@ -462,9 +453,16 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { NAV_GROUPS, initials as initialsOf } from '../data/adminData';
+import {
+  NAV_GROUPS,
+  ORDERS,
+  initials as initialsOf,
+  loadAdminData,
+} from '../data/adminData';
 import { ui, toggleMode } from '../uiState';
 import { useAuthStore } from '../stores/auth';
+import { usePermissionsStore } from '../stores/permissions';
+import AppLogo from '../components/AppLogo.vue';
 import {
   getNotifications,
   getUnreadCount,
@@ -475,16 +473,33 @@ import {
 const route = useRoute();
 const router = useRouter();
 const auth = useAuthStore();
-const groups = NAV_GROUPS;
+const permissions = usePermissionsStore();
+
+// Ẩn nav item/nhóm mà phòng ban hiện tại không có quyền nào — tra feature key qua chính định
+// nghĩa route (meta.feature) thay vì lặp lại danh sách feature ở đây lần nữa.
+const groups = computed(() =>
+  NAV_GROUPS.map((grp) => ({
+    title: grp.title,
+    items: grp.items.filter((it) => {
+      const r = router.getRoutes().find((rt) => rt.name === it[0]);
+      const feature = r?.meta?.feature;
+      return !feature || permissions.canAccess(feature);
+    }),
+  })).filter((grp) => grp.items.length > 0),
+);
 
 const go = (name) => router.push('/' + name);
 const active = (name) => route.name === name;
+// Số đơn hàng mới (chờ xác nhận) — badge thật thay cho số tĩnh cũ, chỉ áp cho mục "Đơn hàng".
+const newOrderCount = computed(() => ORDERS.filter((o) => o.st === 'pending').length);
+const badgeOf = (it) => (it[0] === 'orders' ? newOrderCount.value || '' : it[3]);
 const initials = computed(() =>
   initialsOf(auth.displayName || 'Quản trị viên'),
 );
 
 function logout() {
   auth.logout();
+  usePermissionsStore().reset();
   router.push('/login');
 }
 
@@ -543,6 +558,7 @@ function timeAgo(iso) {
 
 let pollTimer = null;
 onMounted(() => {
+  loadAdminData();
   refreshUnreadCount();
   pollTimer = setInterval(refreshUnreadCount, 30000);
 });

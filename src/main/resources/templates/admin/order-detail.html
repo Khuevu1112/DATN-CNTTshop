@@ -16,9 +16,9 @@
             <div class="card-header bg-white fw-bold">Khách hàng & Giao hàng</div>
             <div class="card-body">
                 <p><strong>Email:</strong> <span th:text="${order.nguoiDung.email}"></span></p>
-                <p><strong>Người nhận:</strong> <span th:text="${order.diaChiGiao.tenNguoiNhan}"></span></p>
-                <p><strong>SĐT:</strong> <span th:text="${order.diaChiGiao.soDienThoai}"></span></p>
-                <p><strong>Địa chỉ:</strong> <span th:text="${order.diaChiGiao.diaChiDayDu}"></span></p>
+                <p><strong>Người nhận:</strong> <span th:text="${order.diaChiGiao != null ? order.diaChiGiao.tenNguoiNhan : 'Mua tại showroom'}"></span></p>
+                <p><strong>SĐT:</strong> <span th:text="${order.diaChiGiao != null ? order.diaChiGiao.soDienThoai : (order.nguoiDung != null ? order.nguoiDung.soDienThoai : '-')}"></span></p>
+                <p><strong>Địa chỉ:</strong> <span th:text="${order.diaChiGiao != null ? order.diaChiGiao.diaChiDayDu : 'Khách nhận trực tiếp tại showroom'}"></span></p>
                 <p><strong>Ngày đặt:</strong>
                     <span th:text="${#temporals.format(order.createdAt,'dd/MM/yyyy HH:mm')}"></span></p>
             </div>

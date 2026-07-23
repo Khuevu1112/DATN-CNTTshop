@@ -37,6 +37,11 @@ public class CatalogApiController {
         return catalogService.getProducts(categorySlug, keyword, sort);
     }
 
+    @GetMapping("/products/bestsellers")
+    public List<ProductSummaryDto> bestsellers(@RequestParam(defaultValue = "8") int limit) {
+        return catalogService.getBestSellers(limit);
+    }
+
     @GetMapping("/products/{slug}")
     public ProductDetailDto productDetail(@PathVariable String slug) {
         return catalogService.getProductBySlug(slug);

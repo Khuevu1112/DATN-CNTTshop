@@ -6,12 +6,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -19,13 +18,23 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.fpoly.security.JwtAuthFilter;
+import com.fpoly.security.OAuth2SuccessHandler;
 import com.fpoly.service.CustomUserDetailsService;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import jakarta.servlet.http.HttpServletResponse;
 
 @Configuration
 public class SecurityConfig {
+
+    /** 6 phòng ban thay cho "STAFF" chung chung trước đây — quyền chi tiết theo từng trang
+     * được PermissionAspect kiểm tra riêng, các matcher này chỉ cần loại "customer" ra. */
+    private static final String[] STAFF_ROLES =
+            { "ADMIN", "KE_TOAN", "KHO", "KY_THUAT", "CSKH", "GIAO_HANG", "KINH_DOANH" };
+    private static final String[] STAFF_AND_CUSTOMER_ROLES =
+            { "ADMIN", "KE_TOAN", "KHO", "KY_THUAT", "CSKH", "GIAO_HANG", "KINH_DOANH", "CUSTOMER" };
 
     private static void writeJsonError(HttpServletResponse res, int status, String message) throws IOException {
         res.setStatus(status);
@@ -39,16 +48,18 @@ public class SecurityConfig {
     @Autowired
     private JwtAuthFilter jwtAuthFilter;
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+    @Autowired
+    private OAuth2SuccessHandler oAuth2SuccessHandler;
 
-    /** Cho phép Vue dev server (Vite :5173 và :5174) gọi API. */
+    @org.springframework.beans.factory.annotation.Value("${app.frontendUrl}")
+    private String frontendUrl;
+
+    /** Cho phép 3 Vue dev server gọi API: :5173 khách, :5174 admin, :5175 POS showroom. */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:5174"));
+        config.setAllowedOrigins(List.of(
+                "http://localhost:5173", "http://localhost:5174", "http://localhost:5175"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
@@ -74,9 +85,19 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
+                    .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/forgot-password/**").permitAll()
                     .requestMatchers("/api/categories/**", "/api/products/**").permitAll()
-                    .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "STAFF")
+                    .requestMatchers("/api/contact").permitAll()
+                    .requestMatchers("/api/compare").permitAll()
+                    .requestMatchers("/api/provinces/**").permitAll()
+                    .requestMatchers("/api/shipping/**").permitAll()
+                    .requestMatchers("/api/membership/tiers").permitAll()
+                    .requestMatchers("/api/subscription/plans").permitAll()
+                    .requestMatchers("/api/geocoding/**").permitAll()
+                    // Chỉ ĐỌC banner đang chạy là công khai; /api/flash-sale/admin/** rơi xuống
+                    // anyRequest().authenticated() rồi qua @RequirePermission("coupons").
+                    .requestMatchers(HttpMethod.GET, "/api/flash-sale").permitAll()
+                    .requestMatchers("/api/admin/**").hasAnyRole(STAFF_ROLES)
                     .anyRequest().authenticated()
             )
             // API JSON không bao giờ redirect sang trang đăng nhập Thymeleaf.
@@ -90,6 +111,23 @@ public class SecurityConfig {
             .userDetailsService(userDetailsService)
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
+        return http.build();
+    }
+
+    // ============================================================
+    //  Chain 1b: Callback cổng thanh toán (Stripe redirect + webhook) — browser
+    //  quay lại đây sau khi thanh toán trên trang Stripe (hoặc Stripe gọi server-to-
+    //  server), không kèm JWT nên phải permitAll riêng, tách khỏi chain 2 (anyRequest
+    //  authenticated()). Không cần nới lỏng iframe như VNPay trước đây vì Stripe
+    //  Checkout dùng redirect toàn trang, không nhúng iframe.
+    // ============================================================
+    @Bean
+    @Order(0)
+    public SecurityFilterChain paymentGatewaySecurityChain(HttpSecurity http) throws Exception {
+        http
+            .securityMatcher("/payment/**")
+            .csrf(csrf -> csrf.disable())
+            .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
         return http.build();
     }
 
@@ -109,13 +147,16 @@ public class SecurityConfig {
                             "/DustNovel/forgot-password",
                             "/css/**",
                             "/js/**",
-                            "/images/**"
+                            "/images/**",
+                            "/uploads/**",
+                            "/oauth2/**",
+                            "/login/oauth2/**"
                     ).permitAll()
                     .requestMatchers("/admin/users/**").hasRole("ADMIN")
-                    .requestMatchers("/admin/products/**", "/admin/categories/**").hasAnyRole("ADMIN", "STAFF")
-                    .requestMatchers("/account/**").hasAnyRole("ADMIN", "STAFF", "CUSTOMER")
-                    .requestMatchers("/cart/**", "/orders/**", "/account/addresses/**").hasAnyRole("ADMIN", "STAFF", "CUSTOMER")
-                    .requestMatchers("/admin/orders/**", "/admin/gio-hang/**").hasAnyRole("ADMIN", "STAFF")
+                    .requestMatchers("/admin/products/**", "/admin/categories/**").hasAnyRole(STAFF_ROLES)
+                    .requestMatchers("/account/**").hasAnyRole(STAFF_AND_CUSTOMER_ROLES)
+                    .requestMatchers("/cart/**", "/orders/**", "/account/addresses/**").hasAnyRole(STAFF_AND_CUSTOMER_ROLES)
+                    .requestMatchers("/admin/orders/**", "/admin/gio-hang/**").hasAnyRole(STAFF_ROLES)
                     .anyRequest().authenticated()
             )
             .userDetailsService(userDetailsService)
@@ -132,6 +173,15 @@ public class SecurityConfig {
                 .logoutUrl("/logout")
                 .logoutSuccessUrl("/DustNovel/login?logout")
                 .permitAll()
+            )
+            // Đăng nhập Google / Facebook — thành công thì phát JWT và chuyển thẳng về Vue SPA
+            // (xem OAuth2SuccessHandler), thất bại (vd chưa cấu hình Client ID/Secret thật) thì
+            // quay lại trang đăng nhập kèm thông báo lỗi thay vì trang lỗi trắng mặc định.
+            .oauth2Login(oauth2 -> oauth2
+                .successHandler(oAuth2SuccessHandler)
+                .failureHandler((req, res, ex) -> res.sendRedirect(
+                        frontendUrl + "/?oauthError=" + URLEncoder.encode(
+                                "Đăng nhập mạng xã hội thất bại: " + ex.getMessage(), StandardCharsets.UTF_8)))
             );
 
         return http.build();

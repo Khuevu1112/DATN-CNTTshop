@@ -3,6 +3,8 @@ package com.fpoly.repository;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.fpoly.model.Category;
@@ -11,6 +13,13 @@ import com.fpoly.model.Product;
 public interface ProductRepository extends JpaRepository<Product, Integer> {
 
     Optional<Product> findBySlug(String slug);
+
+    List<Product> findByIdIn(List<Integer> ids);
+
+    Page<Product> findByCategorySlugAndIsActiveTrue(String slug, Pageable pageable);
+
+    Page<Product> findByCategorySlugAndNameContainingIgnoreCaseAndIsActiveTrue(
+            String slug, String name, Pageable pageable);
 
     List<Product> findByIsActiveTrue();
 

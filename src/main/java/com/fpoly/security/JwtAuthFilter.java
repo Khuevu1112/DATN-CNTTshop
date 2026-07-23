@@ -11,6 +11,8 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import com.fpoly.repository.NguoiDungRepository;
+
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,6 +23,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     @Autowired
     private JwtService jwtService;
+
+    @Autowired
+    private NguoiDungRepository nguoiDungRepo;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -36,14 +41,19 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             try {
                 io.jsonwebtoken.Claims claims = jwtService.parse(token);
                 String email = claims.getSubject();
-                Object role = claims.get("role");
-                String roleName = role != null ? role.toString().toUpperCase() : "CUSTOMER";
 
+                // Tra lại DB mỗi request thay vì tin thẳng role/trạng thái nhúng trong token — token
+                // cũ cấp trước khi tài khoản bị khoá (hoặc đổi phòng ban) sẽ mất hiệu lực ngay lập
+                // tức thay vì phải đợi hết hạn (JWT không có cơ chế thu hồi token đang lưu hành).
                 if (email != null) {
-                    var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + roleName));
-                    var authentication = new UsernamePasswordAuthenticationToken(email, null, authorities);
-                    authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                    nguoiDungRepo.findByEmail(email).ifPresent(u -> {
+                        if (Boolean.TRUE.equals(u.getIsActive())) {
+                            var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + u.getVaiTro().name().toUpperCase()));
+                            var authentication = new UsernamePasswordAuthenticationToken(email, null, authorities);
+                            authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                            SecurityContextHolder.getContext().setAuthentication(authentication);
+                        }
+                    });
                 }
             } catch (Exception ignored) {
                 // token sai / hết hạn -> để request là anonymous, không chặn ở filter

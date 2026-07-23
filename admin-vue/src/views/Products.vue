@@ -55,6 +55,89 @@
         </div>
       </div>
     </div>
+    <!-- Danh mục (gộp từ Quản lý danh mục): bấm 1 thẻ để lọc danh sách sản phẩm bên dưới -->
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px">
+      <div style="font-size: 13.5px; color: var(--muted)">{{ categoryCards.length }} danh mục đang hoạt động</div>
+      <button
+        @click="showAddCategory = !showAddCategory"
+        style="display: flex; align-items: center; gap: 7px; height: 36px; padding: 0 15px; border-radius: 9px; border: none; background: var(--acc); color: var(--acc-ink); font-size: 12.5px; font-weight: 700; cursor: pointer"
+      >
+        <i class="bi bi-plus-lg"></i> Thêm danh mục
+      </button>
+    </div>
+    <div
+      v-if="showAddCategory"
+      style="display: flex; gap: 8px; align-items: center; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-bottom: 14px"
+    >
+      <input
+        v-model="newCategoryName"
+        @keyup.enter="addCategory"
+        placeholder="Tên danh mục mới, VD: Điện thoại"
+        style="flex: 1; height: 36px; padding: 0 12px; border-radius: 8px; background: var(--card2); border: 1px solid var(--line2); color: var(--text); font-size: 13px"
+      />
+      <button
+        @click="addCategory"
+        :disabled="savingCategory"
+        style="height: 36px; padding: 0 16px; border-radius: 8px; border: none; background: var(--acc); color: var(--acc-ink); font-weight: 700; font-size: 12.5px; cursor: pointer"
+      >
+        {{ savingCategory ? 'Đang thêm...' : 'Lưu' }}
+      </button>
+    </div>
+    <div v-if="categoryError" style="color: var(--sale); font-size: 12.5px; margin-bottom: 12px">{{ categoryError }}</div>
+
+    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px">
+      <div
+        @click="cat = 'all'"
+        :style="{ boxShadow: cat === 'all' ? '0 0 0 2px var(--acc)' : 'none' }"
+        style="background: var(--card); border: 1px solid var(--line); border-radius: 15px; overflow: hidden; cursor: pointer"
+      >
+        <div style="height: 78px; position: relative; display: flex; align-items: flex-end; padding: 12px 14px; overflow: hidden; background: linear-gradient(135deg, hsl(220 14% 30%), hsl(220 18% 14%))">
+          <div style="position: absolute; inset: 0; background: repeating-linear-gradient(125deg, rgba(255,255,255,.05) 0 2px, transparent 2px 13px)"></div>
+          <div style="position: relative; font-size: 15.5px; font-weight: 700; color: #fff">Tất cả</div>
+        </div>
+        <div style="padding: 12px 14px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px">
+          <div>
+            <div class="mono" style="font-size: 15px; font-weight: 700; color: var(--text)">{{ PRODUCTS.length }}</div>
+            <div style="font-size: 10px; color: var(--muted); margin-top: 2px">Sản phẩm</div>
+          </div>
+          <div>
+            <div class="mono" style="font-size: 15px; font-weight: 700; color: var(--text)">{{ PRODUCTS.reduce((a, p) => a + p.stock, 0) }}</div>
+            <div style="font-size: 10px; color: var(--muted); margin-top: 2px">Tồn kho</div>
+          </div>
+          <div>
+            <div class="mono" style="font-size: 15px; font-weight: 700; color: var(--acc)">{{ short(PRODUCTS.reduce((a, p) => a + p.price * p.stock, 0)) }}</div>
+            <div style="font-size: 10px; color: var(--muted); margin-top: 2px">Giá trị</div>
+          </div>
+        </div>
+      </div>
+      <div
+        v-for="c in categoryCards"
+        :key="c.key"
+        @click="cat = c.key"
+        :style="{ boxShadow: cat === c.key ? '0 0 0 2px var(--acc)' : 'none' }"
+        style="background: var(--card); border: 1px solid var(--line); border-radius: 15px; overflow: hidden; cursor: pointer"
+      >
+        <div style="height: 78px; position: relative; display: flex; align-items: flex-end; padding: 12px 14px; overflow: hidden" :style="{ background: c.bg }">
+          <div style="position: absolute; inset: 0; background: repeating-linear-gradient(125deg, rgba(255,255,255,.05) 0 2px, transparent 2px 13px)"></div>
+          <div style="position: relative; font-size: 15.5px; font-weight: 700; color: #fff">{{ c.name }}</div>
+        </div>
+        <div style="padding: 12px 14px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px">
+          <div>
+            <div class="mono" style="font-size: 15px; font-weight: 700; color: var(--text)">{{ c.count }}</div>
+            <div style="font-size: 10px; color: var(--muted); margin-top: 2px">Sản phẩm</div>
+          </div>
+          <div>
+            <div class="mono" style="font-size: 15px; font-weight: 700; color: var(--text)">{{ c.stock }}</div>
+            <div style="font-size: 10px; color: var(--muted); margin-top: 2px">Tồn kho</div>
+          </div>
+          <div>
+            <div class="mono" style="font-size: 15px; font-weight: 700" :style="{ color: c.color }">{{ c.value }}</div>
+            <div style="font-size: 10px; color: var(--muted); margin-top: 2px">Giá trị</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div
       style="
         background: var(--card);
@@ -67,47 +150,93 @@
         style="
           display: flex;
           align-items: center;
-          gap: 8px;
-          padding: 14px 16px;
+          gap: 10px;
+          padding: 12px 16px;
           border-bottom: 1px solid var(--line);
           flex-wrap: wrap;
         "
       >
+        <select
+          v-model="brandFilter"
+          style="
+            height: 32px;
+            padding: 0 10px;
+            border-radius: 8px;
+            border: 1px solid var(--line2);
+            background: var(--card2);
+            color: var(--text);
+            font-size: 12.5px;
+            cursor: pointer;
+          "
+        >
+          <option value="all">Tất cả thương hiệu</option>
+          <option v-for="b in brandOptions" :key="b" :value="b">{{ b }}</option>
+        </select>
+        <select
+          v-model="statusFilter"
+          style="
+            height: 32px;
+            padding: 0 10px;
+            border-radius: 8px;
+            border: 1px solid var(--line2);
+            background: var(--card2);
+            color: var(--text);
+            font-size: 12.5px;
+            cursor: pointer;
+          "
+        >
+          <option value="all">Mọi trạng thái</option>
+          <option value="active">Đang bán</option>
+          <option value="inactive">Ngừng bán</option>
+        </select>
+        <select
+          v-model="stockFilter"
+          style="
+            height: 32px;
+            padding: 0 10px;
+            border-radius: 8px;
+            border: 1px solid var(--line2);
+            background: var(--card2);
+            color: var(--text);
+            font-size: 12.5px;
+            cursor: pointer;
+          "
+        >
+          <option value="all">Mọi tồn kho</option>
+          <option value="in">Còn nhiều (&gt;12)</option>
+          <option value="low">Sắp hết (1–12)</option>
+          <option value="out">Hết hàng</option>
+        </select>
         <button
-          v-for="ch in chips"
-          :key="ch.key"
-          @click="cat = ch.key"
+          v-if="brandFilter !== 'all' || statusFilter !== 'all' || stockFilter !== 'all'"
+          @click="brandFilter = 'all'; statusFilter = 'all'; stockFilter = 'all'"
+          style="background: transparent; border: none; color: var(--sale); font-size: 12px; cursor: pointer"
+        >
+          Xóa lọc
+        </button>
+        <div style="flex: 1"></div>
+        <span class="mono" style="font-size: 11.5px; color: var(--muted)">{{ rows.length }} sản phẩm</span>
+        <button
+          @click="stockModalOpen = true"
           style="
             display: flex;
             align-items: center;
             gap: 7px;
-            padding: 6px 12px;
+            height: 34px;
+            padding: 0 14px;
             border-radius: 9px;
+            border: 1px solid var(--line2);
+            background: var(--card);
+            color: var(--text);
             font-size: 12.5px;
-            font-weight: 600;
+            font-weight: 700;
             cursor: pointer;
           "
-          :style="{
-            border:
-              '1px solid ' + (cat === ch.key ? 'var(--acc)' : 'var(--line2)'),
-            background: cat === ch.key ? 'var(--acc)' : 'var(--card)',
-            color: cat === ch.key ? '#04121f' : 'var(--muted2)',
-          }"
         >
-          {{ ch.label }}
-          <span
-            class="mono"
-            style="font-size: 10.5px; padding: 0 6px; border-radius: 8px"
-            :style="{
-              background:
-                cat === ch.key ? 'rgba(4,18,31,0.18)' : 'var(--card2)',
-              color: cat === ch.key ? '#04121f' : 'var(--muted)',
-            }"
-            >{{ ch.count }}</span
-          >
+          <i class="bi bi-box-arrow-in-down"></i> Nhập kho
         </button>
-        <div style="flex: 1"></div>
         <button
+          @click="openCreate"
           style="
             display: flex;
             align-items: center;
@@ -117,7 +246,7 @@
             border-radius: 9px;
             border: none;
             background: var(--acc);
-            color: #04121f;
+            color: var(--acc-ink);
             font-size: 12.5px;
             font-weight: 700;
             cursor: pointer;
@@ -150,7 +279,7 @@
           <tr
             v-for="p in rows"
             :key="p.id"
-            @click="detail = p"
+            @click="detailProductId = p.id"
             style="border-top: 1px solid var(--line); cursor: pointer"
           >
             <td style="padding: 11px 16px">
@@ -302,292 +431,68 @@
       </table>
     </div>
 
-    <template v-if="detail">
-      <div
-        @click="detail = null"
-        style="
-          position: fixed;
-          inset: 0;
-          background: rgba(2, 8, 18, 0.55);
-          backdrop-filter: blur(2px);
-          z-index: 60;
-          animation: fadeUp 0.2s ease;
-        "
-      ></div>
-      <div
-        style="
-          position: fixed;
-          top: 0;
-          right: 0;
-          width: 440px;
-          max-width: 92vw;
-          height: 100vh;
-          background: var(--bg);
-          border-left: 1px solid var(--line2);
-          z-index: 61;
-          display: flex;
-          flex-direction: column;
-          box-shadow: -20px 0 60px rgba(0, 0, 0, 0.4);
-          animation: fadeUp 0.25s ease;
-        "
-      >
-        <div
-          style="
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 18px 20px;
-            border-bottom: 1px solid var(--line);
-          "
-        >
-          <div style="font-size: 14px; font-weight: 600; color: var(--text)">
-            Chi tiết sản phẩm
-          </div>
-          <button
-            @click="detail = null"
-            style="
-              width: 32px;
-              height: 32px;
-              border-radius: 8px;
-              border: 1px solid var(--line2);
-              background: var(--card);
-              color: var(--text);
-              cursor: pointer;
-            "
-          >
-            <i class="bi bi-x-lg" style="font-size: 13px"></i>
-          </button>
-        </div>
-        <div style="flex: 1; overflow-y: auto; padding: 20px">
-          <div
-            style="
-              display: flex;
-              gap: 14px;
-              align-items: center;
-              margin-bottom: 20px;
-            "
-          >
-            <div
-              class="mono"
-              style="
-                width: 72px;
-                height: 72px;
-                border-radius: 14px;
-                flex: none;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 16px;
-                font-weight: 700;
-              "
-              :style="{
-                background: grad(detail.hue),
-                color: gradText(detail.hue),
-              }"
-            >
-              {{ detail.tag }}
-            </div>
-            <div>
-              <div
-                style="
-                  font-size: 16px;
-                  font-weight: 700;
-                  color: var(--text);
-                  line-height: 1.3;
-                "
-              >
-                {{ detail.name }}
-              </div>
-              <div
-                class="mono"
-                style="font-size: 12px; color: var(--muted); margin-top: 4px"
-              >
-                {{ detail.sku }}
-              </div>
-            </div>
-          </div>
-          <div
-            style="
-              display: grid;
-              grid-template-columns: 1fr 1fr;
-              gap: 10px;
-              margin-bottom: 18px;
-            "
-          >
-            <div
-              style="
-                background: var(--card);
-                border: 1px solid var(--line);
-                border-radius: 11px;
-                padding: 13px;
-              "
-            >
-              <div
-                style="font-size: 11px; color: var(--muted); margin-bottom: 5px"
-              >
-                Giá bán
-              </div>
-              <div
-                class="mono"
-                style="font-size: 18px; font-weight: 700; color: var(--acc)"
-              >
-                {{ detail.priceFmt }}
-              </div>
-              <span
-                v-if="detail.oldp"
-                class="mono"
-                style="
-                  font-size: 11px;
-                  color: var(--muted);
-                  text-decoration: line-through;
-                "
-                >{{ detail.oldFmt }}</span
-              >
-            </div>
-            <div
-              style="
-                background: var(--card);
-                border: 1px solid var(--line);
-                border-radius: 11px;
-                padding: 13px;
-              "
-            >
-              <div
-                style="font-size: 11px; color: var(--muted); margin-bottom: 5px"
-              >
-                Tồn kho
-              </div>
-              <div
-                class="mono"
-                style="font-size: 18px; font-weight: 700; color: var(--text)"
-              >
-                {{ detail.stock }}
-              </div>
-              <span
-                style="font-size: 11px"
-                :style="{
-                  color: detail.active ? 'var(--green)' : 'var(--muted)',
-                }"
-                >{{ detail.active ? 'Đang hiển thị' : 'Đang ẩn' }}</span
-              >
-            </div>
-          </div>
-          <div
-            style="
-              font-size: 11px;
-              font-weight: 600;
-              color: var(--muted);
-              text-transform: uppercase;
-              letter-spacing: 0.5px;
-              margin-bottom: 10px;
-            "
-          >
-            Thông tin chung
-          </div>
-          <div
-            style="
-              background: var(--card);
-              border: 1px solid var(--line);
-              border-radius: 12px;
-              overflow: hidden;
-              margin-bottom: 20px;
-            "
-          >
-            <div
-              style="
-                display: flex;
-                justify-content: space-between;
-                padding: 11px 14px;
-                font-size: 13px;
-                border-bottom: 1px solid var(--line);
-              "
-            >
-              <span style="color: var(--muted)">Danh mục</span
-              ><span style="color: var(--text); font-weight: 500">{{
-                detail.cat
-              }}</span>
-            </div>
-            <div
-              style="
-                display: flex;
-                justify-content: space-between;
-                padding: 11px 14px;
-                font-size: 13px;
-                border-bottom: 1px solid var(--line);
-              "
-            >
-              <span style="color: var(--muted)">Thương hiệu</span
-              ><span style="color: var(--text); font-weight: 500">{{
-                detail.brand
-              }}</span>
-            </div>
-            <div
-              style="
-                display: flex;
-                justify-content: space-between;
-                padding: 11px 14px;
-                font-size: 13px;
-              "
-            >
-              <span style="color: var(--muted)">Cấu hình</span
-              ><span
-                style="
-                  color: var(--text);
-                  font-weight: 500;
-                  text-align: right;
-                  max-width: 60%;
-                "
-                >{{ detail.spec }}</span
-              >
-            </div>
-          </div>
-          <div style="display: flex; gap: 10px">
-            <button
-              style="
-                flex: 1;
-                height: 42px;
-                border-radius: 10px;
-                border: none;
-                background: var(--acc);
-                color: #04121f;
-                font-weight: 700;
-                font-size: 13px;
-                cursor: pointer;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 7px;
-              "
-            >
-              <i class="bi bi-pencil-square"></i> Chỉnh sửa
-            </button>
-            <button
-              style="
-                width: 42px;
-                height: 42px;
-                border-radius: 10px;
-                border: 1px solid var(--line2);
-                background: var(--card);
-                color: var(--sale);
-                font-size: 15px;
-                cursor: pointer;
-              "
-            >
-              <i class="bi bi-trash3"></i>
-            </button>
-          </div>
-        </div>
-      </div>
-    </template>
+    <ProductDetailModal
+      v-if="detailProductId"
+      :product-id="detailProductId"
+      @close="detailProductId = null"
+      @edit="onEditFromDetail"
+      @deleted="onDeletedFromDetail"
+    />
+
+    <ProductFormModal
+      v-if="formOpen"
+      :product-id="formProductId"
+      @close="formOpen = false"
+      @saved="onSaved"
+    />
+
+    <StockMovementModal
+      v-if="stockModalOpen"
+      @close="stockModalOpen = false"
+      @saved="refreshAdminProducts"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue';
-import { PRODUCTS, CATS, short, grad, gradText } from '../data/adminData';
+import { PRODUCTS, CATS, short, grad, gradText, gradCat, refreshAdminProducts, refreshAdminCategories } from '../data/adminData';
 import { ui } from '../uiState';
+import { createCategory } from '../api/admin';
+import ProductFormModal from '../components/ProductFormModal.vue';
+import ProductDetailModal from '../components/ProductDetailModal.vue';
+import StockMovementModal from '../components/StockMovementModal.vue';
+
 const cat = ref('all');
-const detail = ref(null);
+const brandFilter = ref('all');
+const statusFilter = ref('all');
+const stockFilter = ref('all');
+const detailProductId = ref(null);
+const formOpen = ref(false);
+const formProductId = ref(null);
+const stockModalOpen = ref(false);
+
+const brandOptions = computed(() =>
+  [...new Set(PRODUCTS.map((p) => p.brand))].sort((a, b) => a.localeCompare(b)),
+);
+
+function openCreate() {
+  formProductId.value = null;
+  formOpen.value = true;
+}
+function onEditFromDetail(id) {
+  detailProductId.value = null;
+  formProductId.value = id;
+  formOpen.value = true;
+}
+async function onSaved() {
+  formOpen.value = false;
+  await refreshAdminProducts();
+}
+async function onDeletedFromDetail() {
+  detailProductId.value = null;
+  await refreshAdminProducts();
+}
 const heads = [
   { t: 'Sản phẩm' },
   { t: 'Danh mục' },
@@ -597,20 +502,57 @@ const heads = [
   { t: 'Trạng thái' },
   { t: '' },
 ];
-const chips = computed(() =>
-  [{ key: 'all', label: 'Tất cả', count: PRODUCTS.length }].concat(
-    Object.keys(CATS).map((k) => ({
+// Danh mục (gộp từ Quản lý danh mục cũ) — click 1 thẻ = lọc bảng sản phẩm bên dưới theo cat.value
+const showAddCategory = ref(false);
+const newCategoryName = ref('');
+const savingCategory = ref(false);
+const categoryError = ref('');
+
+const categoryCards = computed(() =>
+  Object.keys(CATS).map((k) => {
+    const ps = PRODUCTS.filter((p) => p.catSlug === k);
+    return {
       key: k,
-      label: CATS[k].label,
-      count: PRODUCTS.filter((p) => p.catSlug === k).length,
-    })),
-  ),
+      name: CATS[k].label,
+      bg: gradCat(CATS[k].hue),
+      color: gradText(CATS[k].hue),
+      count: ps.length + '',
+      stock: ps.reduce((a, p) => a + p.stock, 0) + '',
+      value: short(ps.reduce((a, p) => a + p.price * p.stock, 0)),
+    };
+  }),
 );
+
+async function addCategory() {
+  if (!newCategoryName.value.trim()) {
+    categoryError.value = 'Vui lòng nhập tên danh mục';
+    return;
+  }
+  categoryError.value = '';
+  savingCategory.value = true;
+  try {
+    await createCategory(newCategoryName.value.trim());
+    await refreshAdminCategories();
+    newCategoryName.value = '';
+    showAddCategory.value = false;
+  } catch (e) {
+    categoryError.value = e.response?.data?.message || 'Có lỗi khi thêm danh mục';
+  } finally {
+    savingCategory.value = false;
+  }
+}
 const rows = computed(() => {
   const q = ui.search.trim().toLowerCase();
   return PRODUCTS.filter(
     (p) =>
       (cat.value === 'all' || p.catSlug === cat.value) &&
+      (brandFilter.value === 'all' || p.brand === brandFilter.value) &&
+      (statusFilter.value === 'all' ||
+        (statusFilter.value === 'active' ? p.active : !p.active)) &&
+      (stockFilter.value === 'all' ||
+        (stockFilter.value === 'out' && p.stock === 0) ||
+        (stockFilter.value === 'low' && p.stock >= 1 && p.stock <= 12) ||
+        (stockFilter.value === 'in' && p.stock > 12)) &&
       (!q ||
         p.name.toLowerCase().includes(q) ||
         p.brand.toLowerCase().includes(q)),
@@ -618,7 +560,7 @@ const rows = computed(() => {
 });
 const stockColor = (s) =>
   s <= 5 ? 'var(--sale)' : s <= 12 ? 'var(--amber)' : 'var(--green)';
-const stats = [
+const stats = computed(() => [
   { label: 'Tổng sản phẩm', value: PRODUCTS.length + '', icon: 'bi-box-seam' },
   {
     label: 'Đang hiển thị',
@@ -635,5 +577,5 @@ const stats = [
     value: short(PRODUCTS.reduce((a, p) => a + p.price * p.stock, 0)),
     icon: 'bi-cash-stack',
   },
-];
+]);
 </script>

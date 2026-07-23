@@ -16,7 +16,8 @@ export const useAuthStore = defineStore('auth', {
     async login(username, password) {
       const { data } = await http.post('/auth/login', { username, password });
       const role = (data.user?.role || '').toLowerCase();
-      if (role !== 'admin' && role !== 'staff') {
+      const allowedRoles = ['admin', 'ke_toan', 'kho', 'ky_thuat', 'cskh', 'giao_hang', 'kinh_doanh'];
+      if (!allowedRoles.includes(role)) {
         throw new Error(
           'Tài khoản này không có quyền truy cập trang quản trị.',
         );

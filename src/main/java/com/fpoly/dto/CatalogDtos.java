@@ -28,10 +28,13 @@ public class CatalogDtos {
             String value
     ) {}
 
-    /** Một thuộc tính tuỳ chọn của sản phẩm, ví dụ "Cấu hình" -> [i5/16GB, i7/32GB]. */
+    /** Một thuộc tính tuỳ chọn của sản phẩm, ví dụ "Cấu hình" -> [i5/16GB, i7/32GB].
+     * linkedGroup: NULL = tự do phối; các nhóm cùng giá trị bị khoá cặp — chọn 1 giá trị ở nhóm
+     * này sẽ lọc nhóm kia chỉ còn giá trị nào từng xuất hiện cùng trong 1 biến thể thật. */
     public record OptionDto(
             String name,
-            List<String> values
+            List<String> values,
+            String linkedGroup
     ) {}
 
     public record VariantDto(
@@ -59,7 +62,17 @@ public class CatalogDtos {
             List<String> chips,
             /** điểm đánh giá trung bình (null nếu chưa có đánh giá). */
             Double rating,
-            Integer reviewCount
+            Integer reviewCount,
+            /** tổng số lượng đã bán (đơn không bị huỷ) — dùng cho mục Best Seller. */
+            Integer soldCount,
+            /** tồn kho của biến thể mặc định — dùng cho lọc "Còn hàng". */
+            Integer stock,
+            /** Toàn bộ thông số (không giới hạn 3 như chips) — dùng để lọc theo cấu hình
+             * (CPU/case/mainboard/tản nhiệt...) và hiển thị trong tháp xem trước khi hover. */
+            List<SpecDto> specs,
+            /** Các dòng khuyến mãi đi kèm — dùng cho tháp xem trước khi hover. */
+            List<String> promotions,
+            Integer warrantyMonths
     ) {}
 
     /** Dùng cho trang chi tiết sản phẩm. */
@@ -73,6 +86,14 @@ public class CatalogDtos {
             List<ImageDto> images,
             List<SpecDto> specs,
             List<VariantDto> variants,
-            List<OptionDto> options
+            List<OptionDto> options,
+            /** Các dòng khuyến mãi đi kèm, ví dụ "Tặng chuột không dây". */
+            List<String> promotions,
+            /** Sản phẩm gợi ý mua kèm. */
+            List<ProductSummaryDto> bundles,
+            Integer warrantyMonths
     ) {}
+
+    /** Một dòng trong bảng so sánh sản phẩm: tên thông số + giá trị của từng sản phẩm theo thứ tự. */
+    public record CompareRowDto(String specKey, List<String> values) {}
 }

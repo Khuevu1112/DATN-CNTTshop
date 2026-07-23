@@ -73,7 +73,7 @@
               >
             </div>
             <div
-              v-if="cancelled"
+              v-if="detail.st === 'refunded'"
               style="
                 padding: 14px;
                 border-radius: 10px;
@@ -87,8 +87,30 @@
                 gap: 9px;
               "
             >
-              <i class="bi bi-x-octagon-fill"></i> Đơn hàng đã bị huỷ / hoàn
-              tiền.
+              <i class="bi bi-arrow-counterclockwise"></i> Đơn hàng đã được hoàn tiền.
+            </div>
+            <div
+              v-else-if="detail.st === 'cancelled'"
+              style="
+                padding: 14px;
+                border-radius: 10px;
+                background: color-mix(in srgb, var(--sale) 12%, transparent);
+                border: 1px solid
+                  color-mix(in srgb, var(--sale) 30%, transparent);
+                color: var(--sale);
+                font-size: 13px;
+              "
+            >
+              <div style="display: flex; align-items: center; gap: 9px">
+                <i class="bi bi-x-octagon-fill"></i> Đơn hàng đã bị huỷ.
+              </div>
+              <!-- Khách hàng chỉ tự huỷ được đơn CHƯA thanh toán (xem OrderService#huyDon) — nếu
+              đơn này đã "paid" mà vẫn về "cancelled" thì chỉ có thể do ADMIN chủ động huỷ đơn đã
+              thanh toán, lúc đó mới thật sự cần hoàn tiền. Chưa có trạng thái "trả hàng" riêng
+              trong hệ thống — đây là tín hiệu gần đúng nhất hiện có. -->
+              <div v-if="detail.paymentStatus === 'paid'" style="margin-top: 6px; font-size: 12px; color: var(--muted2)">
+                Đơn đã thanh toán trước khi huỷ — kiểm tra hoàn tiền cho khách nếu cần.
+              </div>
             </div>
             <div
               v-else
@@ -139,6 +161,56 @@
               border: 1px solid var(--line);
               border-radius: 14px;
               overflow: hidden;
+              margin-bottom: 14px;
+            "
+          >
+            <div
+              style="
+                padding: 14px 18px;
+                font-size: 14px;
+                font-weight: 600;
+                color: var(--text);
+                border-bottom: 1px solid var(--line);
+              "
+            >
+              Lịch sử đơn hàng
+            </div>
+            <div v-if="loadingExtra" style="padding: 18px; font-size: 12.5px; color: var(--muted)">
+              Đang tải...
+            </div>
+            <div v-else style="padding: 16px 18px; display: flex; flex-direction: column; gap: 0">
+              <div
+                v-for="(h, hi) in historyEntries"
+                :key="hi"
+                style="display: flex; gap: 12px"
+              >
+                <div style="display: flex; flex-direction: column; align-items: center; flex: none">
+                  <span
+                    style="width: 9px; height: 9px; border-radius: 50%; flex: none"
+                    :style="{ background: h.color }"
+                  ></span>
+                  <span
+                    v-if="hi < historyEntries.length - 1"
+                    style="width: 1px; flex: 1; min-height: 22px; background: var(--line2)"
+                  ></span>
+                </div>
+                <div :style="{ paddingBottom: hi < historyEntries.length - 1 ? '18px' : '0' }">
+                  <div style="font-size: 13px; font-weight: 600; color: var(--text)">{{ h.label }}</div>
+                  <div v-if="h.note && h.note !== h.label" style="font-size: 12px; color: var(--muted2); margin-top: 2px">{{ h.note }}</div>
+                  <div style="font-size: 11.5px; color: var(--muted); margin-top: 3px">{{ h.at }}</div>
+                </div>
+              </div>
+              <div v-if="!historyEntries.length" style="font-size: 12.5px; color: var(--muted)">
+                Chưa có lịch sử.
+              </div>
+            </div>
+          </div>
+          <div
+            style="
+              background: var(--card);
+              border: 1px solid var(--line);
+              border-radius: 14px;
+              overflow: hidden;
             "
           >
             <div
@@ -152,25 +224,48 @@
             >
               Sản phẩm
             </div>
+            <div v-if="loadingExtra" style="padding: 18px; font-size: 12.5px; color: var(--muted)">
+              Đang tải...
+            </div>
             <div
+              v-for="it in detail.items"
+              v-else
+              :key="it.id"
               style="
                 display: flex;
                 align-items: center;
-                justify-content: space-between;
+                gap: 12px;
                 padding: 14px 18px;
                 border-bottom: 1px solid var(--line);
               "
             >
-              <div style="font-size: 13px; color: var(--text)">
-                {{ detail.item }}
+              <div
+                style="
+                  width: 44px;
+                  height: 44px;
+                  border-radius: 9px;
+                  background: var(--card2);
+                  flex: none;
+                  overflow: hidden;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                "
+              >
+                <img v-if="it.imageUrl" :src="resolveImageUrl(it.imageUrl)" :alt="it.productName" style="width: 100%; height: 100%; object-fit: cover" />
+                <i v-else class="bi bi-box-seam" style="color: var(--muted); font-size: 16px"></i>
+              </div>
+              <div style="flex: 1; min-width: 0">
+                <div style="font-size: 13px; color: var(--text)">{{ it.productName }}</div>
+                <div v-if="it.variantInfo" style="font-size: 11.5px; color: var(--muted); margin-top: 2px">{{ it.variantInfo }}</div>
               </div>
               <div style="display: flex; align-items: center; gap: 18px">
                 <span class="mono" style="font-size: 12px; color: var(--muted)"
-                  >x1</span
+                  >x{{ it.quantity }}</span
                 ><span
                   class="mono"
                   style="font-size: 13px; font-weight: 700; color: var(--text)"
-                  >{{ detail.totalFmt }}</span
+                  >{{ money(it.lineTotal) }}</span
                 >
               </div>
             </div>
@@ -191,7 +286,20 @@
               >
                 <span style="color: var(--muted)">Tạm tính</span
                 ><span class="mono" style="color: var(--text)">{{
-                  detail.totalFmt
+                  money(detail.subtotal ?? detail.total)
+                }}</span>
+              </div>
+              <div
+                v-if="detail.discountAmount"
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  font-size: 13px;
+                "
+              >
+                <span style="color: var(--muted)">Giảm giá</span
+                ><span class="mono" style="color: var(--sale)">-{{
+                  money(detail.discountAmount)
                 }}</span>
               </div>
               <div
@@ -201,10 +309,19 @@
                   font-size: 13px;
                 "
               >
-                <span style="color: var(--muted)">Phí vận chuyển</span
+                <span style="color: var(--muted)">Phí vận chuyển{{ detail.shippingOptionLabel ? ' (' + detail.shippingOptionLabel + ')' : '' }}</span
                 ><span class="mono" style="color: var(--text)">{{
-                  money(30000)
+                  money(detail.shippingFee ?? 0)
                 }}</span>
+              </div>
+              <!-- Quãng đường đã dùng để tính phí ship nội thành — có để admin đối chiếu được
+                   vì sao đơn này thu ngần đó tiền (xem ShippingService.phiTheoKhoangCach) -->
+              <div
+                v-if="detail.shippingDistanceKm != null"
+                style="display: flex; justify-content: space-between; font-size: 12px"
+              >
+                <span style="color: var(--muted)">Quãng đường từ kho</span
+                ><span class="mono" style="color: var(--muted)">{{ detail.shippingDistanceKm }} km</span>
               </div>
               <div
                 style="
@@ -218,8 +335,45 @@
               >
                 <span style="color: var(--text)">Tổng cộng</span
                 ><span class="mono" style="color: var(--acc)">{{
-                  money(detail.total + 30000)
+                  money(detail.totalAmount ?? detail.total)
                 }}</span>
+              </div>
+
+              <!-- Điểm giao khách tự cắm trên bản đồ lúc đặt đơn. Chụp lại vào đơn nên không đổi
+                   kể cả khi khách sửa/xoá địa chỉ sau đó. Ẩn với đơn đặt trước tính năng này. -->
+              <div
+                v-if="detail.deliveryLat != null && detail.deliveryLng != null"
+                style="
+                  margin-top: 10px;
+                  padding-top: 10px;
+                  border-top: 1px solid var(--line);
+                  display: flex;
+                  align-items: center;
+                  justify-content: space-between;
+                  gap: 10px;
+                "
+              >
+                <div style="min-width: 0">
+                  <div style="font-size: 12px; color: var(--muted)">Toạ độ điểm giao</div>
+                  <div class="mono" style="font-size: 12.5px; color: var(--text); margin-top: 2px">
+                    {{ Number(detail.deliveryLat).toFixed(6) }}, {{ Number(detail.deliveryLng).toFixed(6) }}
+                  </div>
+                </div>
+                <a
+                  :href="'https://www.google.com/maps/search/?api=1&query=' + detail.deliveryLat + ',' + detail.deliveryLng"
+                  target="_blank" rel="noopener"
+                  style="
+                    flex: none;
+                    font-size: 12px;
+                    color: var(--acc);
+                    text-decoration: none;
+                    border: 1px solid var(--line);
+                    border-radius: 8px;
+                    padding: 6px 12px;
+                  "
+                >
+                  Mở bản đồ ↗
+                </a>
               </div>
             </div>
           </div>
@@ -251,8 +405,8 @@
                   width: 44px;
                   height: 44px;
                   border-radius: 11px;
-                  background: linear-gradient(135deg, var(--acc), #0b4f9e);
-                  color: #04121f;
+                  background: linear-gradient(135deg, var(--acc), #1c1d21);
+                  color: var(--acc-ink);
                   display: flex;
                   align-items: center;
                   justify-content: center;
@@ -275,6 +429,44 @@
             </div>
           </div>
           <div
+            v-if="detail.paymentMethod"
+            style="
+              background: var(--card);
+              border: 1px solid var(--line);
+              border-radius: 14px;
+              padding: 18px;
+              margin-bottom: 14px;
+            "
+          >
+            <div style="font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 10px">
+              Thanh toán
+            </div>
+            <div style="font-size: 13px; color: var(--text); margin-bottom: 6px">
+              {{ PAYMENT_METHOD_LABEL[detail.paymentMethod] || detail.paymentMethod }}
+            </div>
+            <div style="font-size: 12.5px; margin-bottom: 12px" :style="{ color: detail.paymentStatus === 'paid' ? 'var(--green)' : 'var(--amber)' }">
+              {{ PAYMENT_STATUS_LABEL[detail.paymentStatus] || detail.paymentStatus }}
+            </div>
+            <div v-if="detail.proofImage" style="margin-bottom: 12px">
+              <div style="font-size: 11.5px; color: var(--muted); margin-bottom: 6px">Biên lai chuyển khoản</div>
+              <a :href="detail.proofImage" target="_blank" rel="noopener">
+                <img
+                  :src="detail.proofImage"
+                  alt="Biên lai chuyển khoản"
+                  style="max-width: 100%; max-height: 260px; border-radius: 10px; border: 1px solid var(--line2); display: block; cursor: zoom-in"
+                />
+              </a>
+            </div>
+            <button
+              v-if="detail.paymentStatus && detail.paymentStatus !== 'paid'"
+              @click="confirmPayment"
+              :disabled="confirmingPayment"
+              style="width: 100%; height: 38px; border-radius: 9px; border: 1px solid var(--line2); background: var(--card2); color: var(--text); font-weight: 600; font-size: 12.5px; cursor: pointer"
+            >
+              {{ confirmingPayment ? 'Đang lưu...' : 'Xác nhận đã nhận tiền' }}
+            </button>
+          </div>
+          <div
             style="
               background: var(--card);
               border: 1px solid var(--line);
@@ -293,6 +485,8 @@
               Cập nhật trạng thái
             </div>
             <select
+              v-model="statusDraft"
+              :disabled="detail.st === 'cancelled' || detail.st === 'delivered'"
               style="
                 width: 100%;
                 height: 42px;
@@ -306,28 +500,33 @@
                 cursor: pointer;
               "
             >
-              <option>Chờ xác nhận</option>
-              <option>Đã xác nhận</option>
-              <option>Đang xử lý</option>
-              <option>Đang giao</option>
-              <option>Đã giao</option>
-              <option>Đã huỷ</option>
-              <option>Hoàn tiền</option>
+              <option value="pending">Chờ xác nhận</option>
+              <option value="confirmed">Đã xác nhận</option>
+              <option value="processing">Đang xử lý</option>
+              <option value="shipped">Đang giao</option>
+              <option value="delivered">Đã giao</option>
+              <option value="cancelled">Đã huỷ</option>
+              <option value="refunded">Hoàn tiền</option>
             </select>
+            <div v-if="detail.st === 'cancelled' || detail.st === 'delivered'" style="font-size: 11.5px; color: var(--muted); margin-bottom: 10px">
+              Đơn đã {{ detail.st === 'cancelled' ? 'huỷ' : 'giao' }}, không thể đổi trạng thái.
+            </div>
             <button
+              @click="saveStatus"
+              :disabled="savingStatus || detail.st === 'cancelled' || detail.st === 'delivered'"
               style="
                 width: 100%;
                 height: 42px;
                 border-radius: 10px;
                 border: none;
                 background: var(--acc);
-                color: #04121f;
+                color: var(--acc-ink);
                 font-weight: 700;
                 font-size: 13px;
                 cursor: pointer;
               "
             >
-              Lưu thay đổi
+              {{ savingStatus ? 'Đang lưu...' : 'Lưu thay đổi' }}
             </button>
           </div>
         </div>
@@ -473,7 +672,7 @@
             <tr
               v-for="o in rows"
               :key="o.code"
-              @click="detail = o"
+              @click="openDetail(o)"
               style="border-top: 1px solid var(--line); cursor: pointer"
             >
               <td
@@ -577,10 +776,76 @@
 
 <script setup>
 import { ref, computed } from 'vue';
-import { ORDERS, money, short } from '../data/adminData';
+import { ORDERS, money, short, refreshAdminOrders } from '../data/adminData';
 import { ui } from '../uiState';
+import { updateOrderStatus, confirmOrderPayment, getAdminOrderDetail } from '../api/admin';
+import { resolveImageUrl } from '../api/http';
 const filter = ref('all');
 const detail = ref(null);
+const statusDraft = ref('pending');
+const savingStatus = ref(false);
+const confirmingPayment = ref(false);
+const loadingExtra = ref(false);
+
+// vnpay/vnpay_card/momo không còn cho chọn khi đặt hàng mới (xem PAYMENT_METHOD.is_active)
+// nhưng vẫn giữ nhãn ở đây để hiển thị đúng cho các đơn hàng cũ đã đặt bằng phương thức đó.
+const PAYMENT_METHOD_LABEL = {
+  cod: 'Thanh toán khi nhận hàng (COD)', banking: 'Chuyển khoản ngân hàng',
+  stripe_card: 'Thẻ quốc tế (Stripe)',
+  vnpay: 'VNPay', vnpay_card: 'VNPay - Thẻ quốc tế', momo: 'MoMo',
+};
+const PAYMENT_STATUS_LABEL = {
+  pending: 'Chưa thanh toán', paid: 'Đã thanh toán', failed: 'Thất bại',
+  waiting_verify: 'Chờ đối soát', refunded: 'Đã hoàn tiền',
+};
+
+async function loadDetailExtra(id) {
+  loadingExtra.value = true;
+  try {
+    const extra = await getAdminOrderDetail(id);
+    if (detail.value && detail.value.id === id) {
+      detail.value = { ...detail.value, ...extra };
+    }
+  } finally {
+    loadingExtra.value = false;
+  }
+}
+
+function openDetail(o) {
+  detail.value = { ...o };
+  statusDraft.value = o.st;
+  loadDetailExtra(o.id);
+}
+
+async function saveStatus() {
+  savingStatus.value = true;
+  try {
+    await updateOrderStatus(detail.value.id, statusDraft.value);
+    await refreshAdminOrders();
+    const fresh = ORDERS.find((o) => o.id === detail.value.id);
+    detail.value = fresh ? { ...fresh } : null;
+    if (fresh) loadDetailExtra(fresh.id);
+  } catch (e) {
+    window.alert(e.response?.data?.message || 'Có lỗi khi cập nhật trạng thái');
+  } finally {
+    savingStatus.value = false;
+  }
+}
+
+async function confirmPayment() {
+  confirmingPayment.value = true;
+  try {
+    await confirmOrderPayment(detail.value.id);
+    await refreshAdminOrders();
+    const fresh = ORDERS.find((o) => o.id === detail.value.id);
+    detail.value = fresh ? { ...fresh } : null;
+    if (fresh) loadDetailExtra(fresh.id);
+  } catch (e) {
+    window.alert(e.response?.data?.message || 'Có lỗi khi xác nhận thanh toán');
+  } finally {
+    confirmingPayment.value = false;
+  }
+}
 const heads = [
   { t: 'Mã đơn' },
   { t: 'Khách hàng' },
@@ -627,7 +892,7 @@ const rows = computed(() => {
         o.customer.toLowerCase().includes(q)),
   );
 });
-const stats = [
+const stats = computed(() => [
   {
     label: 'Tổng đơn',
     value: ORDERS.length + '',
@@ -660,12 +925,7 @@ const stats = [
     icon: 'bi-cash-stack',
     color: 'var(--green)',
   },
-];
-const cancelled = computed(
-  () =>
-    detail.value &&
-    (detail.value.st === 'cancelled' || detail.value.st === 'refunded'),
-);
+]);
 const timeline = computed(() => {
   if (!detail.value) return [];
   const steps = ['pending', 'confirmed', 'processing', 'shipped', 'delivered'];
@@ -682,4 +942,29 @@ const timeline = computed(() => {
     color: i <= cur ? 'var(--acc)' : 'var(--muted)',
   }));
 });
+
+// Nhãn cho từng mốc trong log lịch sử — khác với stLabels ở chỗ đây là tên SỰ KIỆN đã xảy ra
+// (thì quá khứ), không phải tên TRẠNG THÁI hiện tại (VD "pending" ở đây là "Đặt hàng" vì đó luôn
+// là dòng log đầu tiên, thay vì "Chờ xác nhận" như khi dùng làm trạng thái đang chờ).
+const HISTORY_EVENT_LABELS = {
+  pending: 'Đặt hàng', paid: 'Đã thanh toán', confirmed: 'Đã xác nhận',
+  processing: 'Đang xử lý', shipped: 'Bắt đầu giao hàng', delivered: 'Giao hàng thành công',
+  cancelled: 'Đã huỷ đơn', refunded: 'Đã hoàn tiền',
+};
+const HISTORY_EVENT_COLORS = {
+  cancelled: 'var(--sale)', refunded: 'var(--muted)', delivered: 'var(--green)',
+};
+function fmtLogTime(iso) {
+  const d = new Date(iso);
+  const p = (n) => String(n).padStart(2, '0');
+  return `${p(d.getHours())}:${p(d.getMinutes())} - ${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`;
+}
+const historyEntries = computed(() =>
+  (detail.value?.statusHistory || []).map((h) => ({
+    label: HISTORY_EVENT_LABELS[h.status] || h.status,
+    note: h.note,
+    at: fmtLogTime(h.changedAt),
+    color: HISTORY_EVENT_COLORS[h.status] || 'var(--acc)',
+  })),
+);
 </script>

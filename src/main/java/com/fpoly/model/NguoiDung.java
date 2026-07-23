@@ -33,8 +33,14 @@ public class NguoiDung {
     @Column(name = "is_active")
     private Boolean isActive;
 
+    @Column(name = "auth_provider", nullable = false)
+    private String authProvider = "local";
+
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
+
+    @Column(name = "note")
+    private String ghiChu;
 
     // =========================
     // GETTER SETTER
@@ -96,11 +102,27 @@ public class NguoiDung {
         this.isActive = isActive;
     }
 
+    public String getAuthProvider() {
+        return authProvider;
+    }
+
+    public void setAuthProvider(String authProvider) {
+        this.authProvider = authProvider;
+    }
+
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getGhiChu() {
+        return ghiChu;
+    }
+
+    public void setGhiChu(String ghiChu) {
+        this.ghiChu = ghiChu;
     }
 }

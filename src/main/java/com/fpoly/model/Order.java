@@ -18,9 +18,16 @@ public class Order {
     @JoinColumn(name = "user_id", nullable = false)
     private NguoiDung nguoiDung;
 
+    // NULL với đơn bán tại quầy (channel = "pos") — khách cầm hàng về ngay, không giao tận nơi.
+    // Mọi chỗ đọc phải kiểm null (xem OrderApiController.toDetail + template admin/order-*.html).
     @ManyToOne
-    @JoinColumn(name = "address_id", nullable = false)
+    @JoinColumn(name = "address_id")
     private UserAddress diaChiGiao;
+
+    /** "online" = đặt qua web, "pos" = bán tại showroom. Không suy ra từ address_id IS NULL vì
+     * đơn online lỗi dữ liệu cũng có thể thiếu địa chỉ — cột này nói rõ ý định. */
+    @Column(name = "channel", nullable = false)
+    private String kenhBan = "online";
 
     // Chưa làm module Coupon -> giữ cột thô, cho phép null
     @Column(name = "coupon_id")
@@ -37,6 +44,38 @@ public class Order {
 
     @Column(name = "shipping_fee", nullable = false)
     private BigDecimal phiVanChuyen = BigDecimal.ZERO;
+
+    // Lưu lại nhãn/thời gian giao tại thời điểm đặt hàng (không tham chiếu sống tới
+    // SHIPPING_HP_TIER/CARRIER) — giống cách OrderItem lưu tenSanPham/donGia — để lịch sử đơn
+    // không đổi theo nếu sau này admin sửa bảng giá/hãng vận chuyển.
+    @Column(name = "shipping_option_code")
+    private String maTuyChonGiaoHang;
+
+    @Column(name = "shipping_option_label")
+    private String nhanTuyChonGiaoHang;
+
+    @Column(name = "shipping_eta")
+    private String thoiGianGiaoDuKien;
+
+    // Thu cũ đổi mới: ghi RIÊNG, không gộp vào tienGiamGia — kế toán cần tách bạch "giảm giá
+    // khuyến mãi" với "trừ vào tiền thu mua máy cũ", bản chất hai khoản khác hẳn nhau.
+    @Column(name = "trade_in_credit_id")
+    private Integer tradeInCreditId;
+
+    @Column(name = "trade_in_amount", nullable = false)
+    private BigDecimal tienThuCu = BigDecimal.ZERO;
+
+    // Toạ độ điểm giao CHỤP LẠI lúc đặt đơn — cùng lý do với 3 cột trên: khách sửa/xoá địa chỉ
+    // sau khi đặt thì admin vẫn phải thấy đúng nơi cần giao đơn này. shipping_distance_km là
+    // quãng đường đã dùng để ra phí ship, lưu để admin đối chiếu (xem ShippingService).
+    @Column(name = "delivery_lat")
+    private BigDecimal viDoGiao;
+
+    @Column(name = "delivery_lng")
+    private BigDecimal kinhDoGiao;
+
+    @Column(name = "shipping_distance_km")
+    private BigDecimal khoangCachGiaoKm;
 
     @Column(name = "total_amount", nullable = false)
     private BigDecimal tongTien;
@@ -68,6 +107,12 @@ public class Order {
     public NguoiDung getNguoiDung() { return nguoiDung; }
     public void setNguoiDung(NguoiDung nguoiDung) { this.nguoiDung = nguoiDung; }
 
+    public String getKenhBan() { return kenhBan; }
+    public void setKenhBan(String kenhBan) { this.kenhBan = kenhBan; }
+
+    /** Đơn bán tại showroom — dùng để bỏ qua phần địa chỉ/vận chuyển ở mọi nơi hiển thị. */
+    public boolean laDonTaiQuay() { return "pos".equals(kenhBan); }
+
     public UserAddress getDiaChiGiao() { return diaChiGiao; }
     public void setDiaChiGiao(UserAddress diaChiGiao) { this.diaChiGiao = diaChiGiao; }
 
@@ -85,6 +130,46 @@ public class Order {
 
     public BigDecimal getPhiVanChuyen() { return phiVanChuyen; }
     public void setPhiVanChuyen(BigDecimal phiVanChuyen) { this.phiVanChuyen = phiVanChuyen; }
+
+    public String getMaTuyChonGiaoHang() { return maTuyChonGiaoHang; }
+    public void setMaTuyChonGiaoHang(String maTuyChonGiaoHang) { this.maTuyChonGiaoHang = maTuyChonGiaoHang; }
+
+    public String getNhanTuyChonGiaoHang() { return nhanTuyChonGiaoHang; }
+    public void setNhanTuyChonGiaoHang(String nhanTuyChonGiaoHang) { this.nhanTuyChonGiaoHang = nhanTuyChonGiaoHang; }
+
+    public String getThoiGianGiaoDuKien() { return thoiGianGiaoDuKien; }
+    public void setThoiGianGiaoDuKien(String thoiGianGiaoDuKien) { this.thoiGianGiaoDuKien = thoiGianGiaoDuKien; }
+
+    // Đơn đặt qua trang Thymeleaf cũ (/orders/place) hoặc địa chỉ chưa có Phường chuẩn hoá thì
+    // không có tuỳ chọn giao hàng nào được chọn -> 3 cột trên để NULL. Mọi chỗ ghép câu cho
+    // khách đọc (thông báo, mail) phải dùng 2 getter dưới đây, nếu không sẽ in ra chuỗi "null"
+    // giữa câu: "đã bàn giao cho null, dự kiến giao null".
+    public String getNhanTuyChonGiaoHangHienThi() {
+        return nhanTuyChonGiaoHang == null || nhanTuyChonGiaoHang.isBlank()
+                ? "đơn vị vận chuyển của CNTTShop"
+                : nhanTuyChonGiaoHang;
+    }
+
+    public String getThoiGianGiaoDuKienHienThi() {
+        return thoiGianGiaoDuKien == null || thoiGianGiaoDuKien.isBlank()
+                ? "trong 3-5 ngày tới"
+                : thoiGianGiaoDuKien;
+    }
+
+    public BigDecimal getViDoGiao() { return viDoGiao; }
+    public void setViDoGiao(BigDecimal viDoGiao) { this.viDoGiao = viDoGiao; }
+
+    public BigDecimal getKinhDoGiao() { return kinhDoGiao; }
+    public void setKinhDoGiao(BigDecimal kinhDoGiao) { this.kinhDoGiao = kinhDoGiao; }
+
+    public BigDecimal getKhoangCachGiaoKm() { return khoangCachGiaoKm; }
+    public void setKhoangCachGiaoKm(BigDecimal khoangCachGiaoKm) { this.khoangCachGiaoKm = khoangCachGiaoKm; }
+
+    public Integer getTradeInCreditId() { return tradeInCreditId; }
+    public void setTradeInCreditId(Integer tradeInCreditId) { this.tradeInCreditId = tradeInCreditId; }
+
+    public BigDecimal getTienThuCu() { return tienThuCu; }
+    public void setTienThuCu(BigDecimal tienThuCu) { this.tienThuCu = tienThuCu; }
 
     public BigDecimal getTongTien() { return tongTien; }
     public void setTongTien(BigDecimal tongTien) { this.tongTien = tongTien; }

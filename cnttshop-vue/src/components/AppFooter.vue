@@ -1,10 +1,11 @@
 <script setup>
-import { accent } from '../store.js';
+import { state, accent } from '../store.js';
+import AppLogo from './AppLogo.vue';
 </script>
 
 <template>
   <footer
-    style="border-top: 1px solid rgba(120, 170, 230, 0.12); background: #061427"
+    style="border-top: 1px solid rgba(var(--line-rgb), 0.12); background: var(--page)"
   >
     <div
       style="
@@ -25,17 +26,7 @@ import { accent } from '../store.js';
             margin-bottom: 14px;
           "
         >
-          <div
-            :style="{
-              background: 'linear-gradient(135deg, ' + accent + ', #0b4f9e)',
-            }"
-            style="
-              width: 26px;
-              height: 26px;
-              transform: rotate(45deg);
-              border-radius: 6px;
-            "
-          ></div>
+          <AppLogo :size="24" :on-light="state.mode === 'light'" :accent-color="accent" />
           <div
             style="
               font-family: 'Chakra Petch', sans-serif;
@@ -49,7 +40,7 @@ import { accent } from '../store.js';
         <p
           style="
             font-size: 13px;
-            color: #7e98b6;
+            color: var(--muted);
             line-height: 1.6;
             margin: 0;
             max-width: 280px;
@@ -69,7 +60,7 @@ import { accent } from '../store.js';
             flex-direction: column;
             gap: 9px;
             font-size: 13px;
-            color: #7e98b6;
+            color: var(--muted);
           "
         >
           <span>Laptop Gaming</span><span>PC dựng sẵn</span
@@ -86,7 +77,7 @@ import { accent } from '../store.js';
             flex-direction: column;
             gap: 9px;
             font-size: 13px;
-            color: #7e98b6;
+            color: var(--muted);
           "
         >
           <span>Bảo hành</span><span>Trả góp 0%</span><span>Giao hàng</span
@@ -103,21 +94,21 @@ import { accent } from '../store.js';
             flex-direction: column;
             gap: 9px;
             font-size: 13px;
-            color: #7e98b6;
+            color: var(--muted);
           "
         >
           <span>Hotline: 1900 1903</span><span>cskh@cnttshop.vn</span
-          ><span>Hà Nội · TP.HCM</span>
+          ><span>118 Cát Bi, Hải An, Hải Phòng</span>
         </div>
       </div>
     </div>
     <div
       style="
-        border-top: 1px solid rgba(120, 170, 230, 0.08);
+        border-top: 1px solid rgba(var(--line-rgb), 0.08);
         padding: 18px 24px;
         text-align: center;
         font-size: 12px;
-        color: #5f7a9c;
+        color: var(--muted);
       "
     >
       © 2026 CNTTshop · Vue prototype · Made with care

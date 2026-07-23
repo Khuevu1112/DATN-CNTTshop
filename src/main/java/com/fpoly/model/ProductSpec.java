@@ -27,19 +27,39 @@ public class ProductSpec {
         return id;
     }
 
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
     public String getSpecKey() {
         return specKey;
+    }
+
+    public void setSpecKey(String specKey) {
+        this.specKey = specKey;
     }
 
     public String getSpecValue() {
         return specValue;
     }
 
+    public void setSpecValue(String specValue) {
+        this.specValue = specValue;
+    }
+
     public Integer getSortOrder() {
         return sortOrder;
     }
 
+    public void setSortOrder(Integer sortOrder) {
+        this.sortOrder = sortOrder;
+    }
+
     public Product getProduct() {
         return product;
+    }
+
+    public void setProduct(Product product) {
+        this.product = product;
     }
 }

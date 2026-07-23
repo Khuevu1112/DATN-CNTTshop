@@ -2,36 +2,38 @@
 @import url('https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css');
 
 :root {
-  --bg: #081a2d;
-  --card: #0a2138;
-  --card2: #0c2742;
-  --line: rgba(120, 170, 230, 0.14);
-  --line2: rgba(120, 170, 230, 0.22);
-  --acc: #00e5ff;
-  --text: #e8f1fc;
-  --muted: #7e98b6;
-  --muted2: #a9c0dc;
+  --bg: #101114;
+  --card: #17181c;
+  --card2: #1c1e22;
+  --line: rgba(255, 255, 255, 0.14);
+  --line2: rgba(255, 255, 255, 0.22);
+  --acc: #c6ff4a;
+  --acc-ink: #101114;
+  --text: #f2f3f5;
+  --muted: #7d818a;
+  --muted2: #aeb2ba;
   --sale: #ff3b5c;
   --green: #22d39a;
   --amber: #ffb43b;
-  --page: #06121f;
-  --hover: rgba(120, 170, 230, 0.06);
+  --page: #0d0e10;
+  --hover: rgba(255, 255, 255, 0.06);
 }
 :root[data-mode='light'] {
   --bg: #ffffff;
   --card: #ffffff;
-  --card2: #f5f8fc;
-  --line: rgba(18, 40, 70, 0.1);
-  --line2: rgba(18, 40, 70, 0.16);
-  --acc: #0a84d8;
-  --text: #0e2236;
-  --muted: #64748b;
-  --muted2: #334155;
+  --card2: #f5f5f5;
+  --line: rgba(20, 20, 20, 0.1);
+  --line2: rgba(20, 20, 20, 0.16);
+  --acc: #4d7a1a;
+  --acc-ink: #ffffff;
+  --text: #18181b;
+  --muted: #6b6b70;
+  --muted2: #3a3a3d;
   --sale: #e02447;
   --green: #0f9d6b;
   --amber: #c77b07;
-  --page: #eef1f6;
-  --hover: rgba(18, 40, 70, 0.035);
+  --page: #f0f0f0;
+  --hover: rgba(20, 20, 20, 0.035);
 }
 * {
   box-sizing: border-box;
@@ -121,7 +123,7 @@ button {
   margin: 0 auto 12px;
   transform: rotate(45deg);
   border-radius: 11px;
-  background: linear-gradient(135deg, var(--acc), #0b4f9e);
+  background: linear-gradient(135deg, var(--acc), #1c1d21);
   box-shadow: 0 0 22px color-mix(in srgb, var(--acc) 50%, transparent);
 }
 .login-head .name {
@@ -172,7 +174,7 @@ button {
   border: none;
   border-radius: 11px;
   background: var(--acc);
-  color: #04121f;
+  color: var(--acc-ink);
   font-weight: 700;
   font-size: 15px;
   cursor: pointer;

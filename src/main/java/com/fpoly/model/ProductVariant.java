@@ -96,4 +96,8 @@ public class ProductVariant {
     public List<OptionValue> getOptionValues() {
         return optionValues;
     }
+
+    public void setOptionValues(List<OptionValue> optionValues) {
+        this.optionValues = optionValues;
+    }
 }

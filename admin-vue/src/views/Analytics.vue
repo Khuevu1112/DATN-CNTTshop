@@ -1,47 +1,10 @@
 <template>
-  <div style="animation: fadeUp 0.35s ease">
+  <div v-if="loading" class="spin"></div>
+  <div v-else style="animation: fadeUp 0.35s ease">
     <div
       style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px"
     >
-      <button
-        v-for="r in ranges"
-        :key="r.key"
-        @click="range = r.key"
-        style="
-          padding: 7px 14px;
-          border-radius: 9px;
-          font-size: 12.5px;
-          font-weight: 600;
-          cursor: pointer;
-        "
-        :style="{
-          border:
-            '1px solid ' + (range === r.key ? 'var(--acc)' : 'var(--line2)'),
-          background: range === r.key ? 'var(--acc)' : 'var(--card)',
-          color: range === r.key ? '#04121f' : 'var(--muted2)',
-        }"
-      >
-        {{ r.label }}
-      </button>
-      <div style="flex: 1"></div>
-      <button
-        style="
-          display: flex;
-          align-items: center;
-          gap: 7px;
-          height: 34px;
-          padding: 0 14px;
-          border-radius: 9px;
-          border: 1px solid var(--line2);
-          background: var(--card);
-          color: var(--text);
-          font-size: 12.5px;
-          font-weight: 600;
-          cursor: pointer;
-        "
-      >
-        <i class="bi bi-download"></i> Xuất báo cáo
-      </button>
+      <div style="font-size: 13px; color: var(--muted)">9 tháng gần nhất · dữ liệu thật từ đơn hàng</div>
     </div>
 
     <div
@@ -75,7 +38,7 @@
               line-height: 1;
             "
           >
-            {{ totSum }}
+            {{ short(metrics.totalRevenue) }}
           </div>
           <div
             style="
@@ -87,15 +50,11 @@
             "
           >
             <span
-              style="
-                display: inline-flex;
-                align-items: center;
-                gap: 2px;
-                font-weight: 600;
-                color: var(--green);
-              "
-              ><i class="bi bi-arrow-up-short"></i>18%</span
-            ><span style="color: var(--muted)">so với 9 tháng trước</span>
+              v-if="metrics.totalRevenueDeltaPct != null"
+              :style="{ color: metrics.totalRevenueDeltaPct >= 0 ? 'var(--green)' : 'var(--sale)' }"
+              style="display: inline-flex; align-items: center; gap: 2px; font-weight: 600"
+              ><i :class="metrics.totalRevenueDeltaPct >= 0 ? 'bi bi-arrow-up-short' : 'bi bi-arrow-down-short'"></i>{{ Math.abs(metrics.totalRevenueDeltaPct) }}%</span
+            ><span style="color: var(--muted)">{{ metrics.totalRevenueDeltaPct != null ? 'so với 9 tháng trước' : 'Chưa có dữ liệu kỳ trước để so sánh' }}</span>
           </div>
         </div>
         <div
@@ -186,7 +145,7 @@
       "
     >
       <div
-        v-for="m in metrics"
+        v-for="m in metricCards"
         :key="m.label"
         style="
           background: var(--card);
@@ -227,6 +186,7 @@
           {{ m.value }}
         </div>
         <div
+          v-if="m.delta != null"
           style="
             display: flex;
             align-items: center;
@@ -234,30 +194,12 @@
             margin-top: 7px;
             font-size: 11.5px;
             font-weight: 600;
-            color: var(--green);
           "
+          :style="{ color: m.delta >= 0 ? 'var(--green)' : 'var(--sale)' }"
         >
-          <i class="bi bi-arrow-up-short"></i>{{ m.delta }}
+          <i :class="m.delta >= 0 ? 'bi bi-arrow-up-short' : 'bi bi-arrow-down-short'"></i>{{ Math.abs(m.delta) }}%
         </div>
-        <svg
-          viewBox="0 0 120 34"
-          preserveAspectRatio="none"
-          style="
-            position: absolute;
-            right: 0;
-            bottom: 0;
-            width: 88px;
-            height: 30px;
-            opacity: 0.45;
-          "
-        >
-          <path
-            :d="m.spark"
-            fill="none"
-            stroke="var(--acc)"
-            stroke-width="2"
-          ></path>
-        </svg>
+        <div v-else style="margin-top: 7px; font-size: 11px; color: var(--muted)">—</div>
       </div>
     </div>
 
@@ -398,7 +340,10 @@
         >
           Sản phẩm hàng đầu theo doanh thu
         </div>
-        <div style="padding: 6px 0">
+        <div v-if="!topProducts.length" style="padding: 24px 18px; color: var(--muted); font-size: 13px">
+          Chưa có dữ liệu bán hàng trong giai đoạn này.
+        </div>
+        <div v-else style="padding: 6px 0">
           <div
             v-for="(p, i) in topProducts"
             :key="p.name"
@@ -451,7 +396,7 @@
                     color: var(--text);
                     flex: none;
                   "
-                  >{{ p.revenue }}</span
+                  >{{ p.revenueFmt }}</span
                 >
               </div>
               <div style="display: flex; align-items: center; gap: 10px">
@@ -466,7 +411,7 @@
                 >
                   <div
                     style="height: 100%; border-radius: 4px"
-                    :style="{ width: p.bar, background: p.color }"
+                    :style="{ width: p.bar, background: 'var(--acc)' }"
                   ></div>
                 </div>
                 <span
@@ -476,7 +421,7 @@
                     flex: none;
                     white-space: nowrap;
                   "
-                  >{{ p.sold }}</span
+                  >{{ p.sold }} đã bán</span
                 >
               </div>
             </div>
@@ -546,41 +491,162 @@
         </div>
       </div>
     </div>
+
+    <!-- ===================== BÁN TẠI QUẦY (POS) ===================== -->
+    <div style="display: grid; grid-template-columns: 1.4fr 1fr; gap: 14px; margin-top: 14px">
+      <!-- Biểu đồ cột doanh thu tại quầy theo tháng -->
+      <div style="background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px">
+        <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 6px; flex-wrap: wrap">
+          <div>
+            <div style="font-size: 15px; font-weight: 600; color: var(--text)">
+              <i class="bi bi-shop" style="color: var(--acc)"></i> Doanh thu bán tại quầy
+            </div>
+            <!-- Nói rõ để không ai cộng nhầm lần nữa: đây là phần BÓC TÁCH của tổng, không phải
+                 khoản thu thêm nằm ngoài. -->
+            <div style="font-size: 11.5px; color: var(--muted); margin-top: 3px">
+              Đã bao gồm trong doanh thu tổng phía trên — đây là phần bóc tách riêng của kênh showroom.
+            </div>
+          </div>
+          <div style="display: flex; gap: 16px; flex: none">
+            <div style="text-align: right">
+              <div class="mono" style="font-size: 16px; font-weight: 700; color: var(--acc)">{{ short(Number(posMetrics.revenue)) }}</div>
+              <div style="font-size: 10.5px; color: var(--muted)">Doanh thu</div>
+            </div>
+            <div style="text-align: right">
+              <div class="mono" style="font-size: 16px; font-weight: 700; color: var(--text)">{{ posMetrics.orders }}</div>
+              <div style="font-size: 10.5px; color: var(--muted)">Đơn</div>
+            </div>
+            <div style="text-align: right">
+              <div class="mono" style="font-size: 16px; font-weight: 700; color: var(--text)">{{ short(Number(posMetrics.avgOrder)) }}</div>
+              <div style="font-size: 10.5px; color: var(--muted)">TB/đơn</div>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="!posCoDuLieu" style="padding: 40px 0; text-align: center; color: var(--muted); font-size: 13px">
+          Chưa có đơn bán tại quầy nào trong giai đoạn này.
+        </div>
+        <div v-else style="display: flex; align-items: flex-end; gap: 10px; height: 190px; padding-top: 14px">
+          <div v-for="b in posBars" :key="b.label" style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%">
+            <div style="flex: 1; width: 100%; display: flex; align-items: flex-end">
+              <div
+                :style="{ height: Math.max(b.heightPct, b.value > 0 ? 4 : 0) + '%' }"
+                :title="b.valueFmt"
+                style="width: 100%; border-radius: 7px 7px 0 0; background: linear-gradient(180deg, var(--acc), color-mix(in srgb, var(--acc) 45%, transparent)); transition: height 0.4s ease"
+              ></div>
+            </div>
+            <div class="mono" style="font-size: 10px; color: var(--muted2); white-space: nowrap">{{ b.valueFmt }}</div>
+            <div style="font-size: 11px; color: var(--muted)">{{ b.label }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sản phẩm bán chạy tại quầy + doanh thu của chính sản phẩm đó -->
+      <div style="background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden">
+        <div style="padding: 15px 18px; font-size: 15px; font-weight: 600; color: var(--text); border-bottom: 1px solid var(--line)">
+          <i class="bi bi-trophy" style="color: var(--acc)"></i> Bán chạy tại quầy
+        </div>
+        <div v-if="!posTopProducts.length" style="padding: 24px 18px; color: var(--muted); font-size: 13px">
+          Chưa có dữ liệu bán tại quầy.
+        </div>
+        <div v-else style="padding: 6px 0">
+          <div v-for="(p, i) in posTopProducts" :key="p.name" style="display: flex; align-items: center; gap: 13px; padding: 11px 18px">
+            <div class="mono" style="width: 24px; font-size: 13px; font-weight: 700; color: var(--muted); flex: none; text-align: center">{{ i + 1 }}</div>
+            <div style="flex: 1; min-width: 0">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px">
+                <span style="font-size: 12.5px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{ p.name }}</span>
+                <span class="mono" style="font-size: 12.5px; font-weight: 700; color: var(--text); flex: none">{{ p.revenueFmt }}</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 10px; margin-top: 6px">
+                <div style="flex: 1; height: 5px; border-radius: 4px; background: var(--card2); overflow: hidden">
+                  <div :style="{ width: p.bar }" style="height: 100%; background: var(--acc); border-radius: 4px"></div>
+                </div>
+                <span class="mono" style="font-size: 11px; color: var(--muted); flex: none">{{ p.sold }} sp</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
-import {
-  AN_XLABELS,
-  CAT_SERIES,
-  X,
-  Y,
-  PLOT_BOTTOM,
-  CHART,
-  short,
-  statusBreak,
-} from '../data/adminData';
-const range = ref('9m');
-const ranges = [
-  { key: '7d', label: '7 ngày' },
-  { key: '28d', label: '28 ngày' },
-  { key: '90d', label: '90 ngày' },
-  { key: '9m', label: '9 tháng' },
-  { key: '12m', label: '12 tháng' },
-];
-const nX = AN_XLABELS.length;
-const xTicks = AN_XLABELS.map((l, i) => ({ label: l, x: X(i, nX) }));
-const catMax = 700,
-  totMax = 2000;
-const catYTicks = [0, 200, 400, 600].map((v) => ({
-  label: v + 'tr',
-  y: Y(v, catMax),
-}));
-const totYTicks = [0, 500, 1000, 1500, 2000].map((v) => ({
-  label: short(v * 1e6),
-  y: Y(v, totMax),
-}));
+import { ref, computed, onMounted } from 'vue';
+import { X, Y, PLOT_BOTTOM, CHART, short, statusBreak } from '../data/adminData';
+import { getAnalytics } from '../api/admin';
+
+const loading = ref(true);
+const monthLabels = ref([]);
+const totalSeries = ref([]);
+const categorySeries = ref({});
+const metrics = ref({
+  totalRevenue: 0, totalRevenueDeltaPct: 0,
+  totalOrders: 0, totalOrdersDeltaPct: 0,
+  newCustomers: 0, newCustomersDeltaPct: 0,
+  avgOrderValue: 0, avgOrderValueDeltaPct: 0,
+  deliveredRate: 0, deliveredRateDeltaPct: 0,
+});
+const topProductsRaw = ref([]);
+
+// ===== Bán tại quầy (POS) =====
+// LƯU Ý: doanh thu POS ĐÃ nằm trong totalSeries và metrics tổng ở trên (backend không lọc theo
+// kênh khi tính tổng). Các số dưới đây chỉ BÓC TÁCH RIÊNG để so sánh online / tại quầy — không
+// được cộng thêm vào tổng lần nữa.
+const posSeries = ref([]);
+const posTopRaw = ref([]);
+const posMetrics = ref({ revenue: 0, orders: 0, avgOrder: 0 });
+
+const PALETTE = ['#00e5ff', '#a855f7', '#22d39a', '#ffb43b', '#7aa2ff', '#ff6ec7', '#ff8a5b', '#5be0c1'];
+
+onMounted(async () => {
+  try {
+    const d = await getAnalytics();
+    monthLabels.value = d.monthLabels;
+    totalSeries.value = d.totalSeries.map(Number);
+    const cs = {};
+    Object.entries(d.categorySeries).forEach(([name, arr]) => {
+      cs[name] = arr.map(Number);
+    });
+    categorySeries.value = cs;
+    metrics.value = d.metrics;
+    topProductsRaw.value = d.topProducts;
+    posSeries.value = d.posSeries || [];
+    posTopRaw.value = d.posTopProducts || [];
+    posMetrics.value = d.posMetrics || { revenue: 0, orders: 0, avgOrder: 0 };
+  } finally {
+    loading.value = false;
+  }
+});
+
+const nX = computed(() => monthLabels.value.length || 1);
+const xTicks = computed(() => monthLabels.value.map((l, i) => ({ label: l, x: X(i, nX.value) })));
+
+/** Làm tròn lên một mốc "đẹp" (1/2/5 x 10^n) để chia trục Y hợp lý theo dữ liệu thật. */
+function niceMax(value) {
+  if (!value || value <= 0) return 1000000;
+  const magnitude = Math.pow(10, Math.floor(Math.log10(value)));
+  const n = value / magnitude;
+  const step = n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10;
+  return step * magnitude;
+}
+function buildTicks(max, count) {
+  const ticks = [];
+  for (let i = 0; i <= count; i++) {
+    const v = (max / count) * i;
+    ticks.push({ label: short(v), y: Y(v, max) });
+  }
+  return ticks;
+}
+
+const totMax = computed(() => niceMax(Math.max(1, ...totalSeries.value)));
+const totYTicks = computed(() => buildTicks(totMax.value, 4));
+
+const catMax = computed(() => {
+  const allValues = Object.values(categorySeries.value).flat();
+  return niceMax(Math.max(1, ...allValues, 0));
+});
+const catYTicks = computed(() => buildTicks(catMax.value, 4));
 
 const hidden = ref([]);
 const toggle = (key) => {
@@ -588,121 +654,80 @@ const toggle = (key) => {
   i >= 0 ? hidden.value.splice(i, 1) : hidden.value.push(key);
 };
 const lines = computed(() =>
-  CAT_SERIES.map((s) => {
-    const off = hidden.value.includes(s.key);
-    const path = s.data
-      .map(
-        (v, i) =>
-          (i ? 'L' : 'M') + X(i, nX).toFixed(1) + ' ' + Y(v, catMax).toFixed(1),
-      )
+  Object.entries(categorySeries.value).map(([name, data], idx) => {
+    const key = name;
+    const off = hidden.value.includes(key);
+    const path = data
+      .map((v, i) => (i ? 'L' : 'M') + X(i, nX.value).toFixed(1) + ' ' + Y(v, catMax.value).toFixed(1))
       .join(' ');
+    const color = PALETTE[idx % PALETTE.length];
     return {
-      key: s.key,
-      name: s.name,
-      color: s.color,
+      key,
+      name,
+      color,
       path,
       off,
       opacity: off ? 0.1 : 1,
       width: off ? 1.5 : 2.4,
-      dotX: X(nX - 1, nX),
-      dotY: Y(s.data[s.data.length - 1], catMax),
+      dotX: X(nX.value - 1, nX.value),
+      dotY: Y(data[data.length - 1] || 0, catMax.value),
       dotShow: !off,
-      total: short(s.data.reduce((a, b) => a + b, 0) * 1e6),
+      total: short(data.reduce((a, b) => a + b, 0)),
     };
   }),
 );
 
-const totals = AN_XLABELS.map((_, i) =>
-  CAT_SERIES.reduce((a, s) => a + s.data[i], 0),
+const totLine = computed(() =>
+  totalSeries.value
+    .map((v, i) => (i ? 'L' : 'M') + X(i, nX.value).toFixed(1) + ' ' + Y(v, totMax.value).toFixed(1))
+    .join(' '),
 );
-const totLine = totals
-  .map(
-    (v, i) =>
-      (i ? 'L' : 'M') + X(i, nX).toFixed(1) + ' ' + Y(v, totMax).toFixed(1),
-  )
-  .join(' ');
-const totArea =
-  totLine +
-  ' L' +
-  X(nX - 1, nX).toFixed(1) +
-  ' ' +
-  PLOT_BOTTOM +
-  ' L' +
-  CHART.padL +
-  ' ' +
-  PLOT_BOTTOM +
-  ' Z';
-const totSumNum = totals.reduce((a, b) => a + b, 0) * 1e6;
-const totSum = short(totSumNum);
-function spark(arr) {
-  const max = Math.max(...arr),
-    min = Math.min(...arr),
-    w = 120,
-    h = 34;
-  return arr
-    .map((v, i) => {
-      const x = (i / (arr.length - 1)) * w;
-      const y = h - 2 - ((v - min) / (max - min || 1)) * (h - 6);
-      return (i ? 'L' : 'M') + x.toFixed(1) + ' ' + y.toFixed(1);
-    })
-    .join(' ');
-}
-const metrics = [
-  {
-    label: 'Doanh thu (9 tháng)',
-    value: totSum,
-    delta: '+18%',
-    icon: 'bi-cash-stack',
-    spark: spark(totals),
-  },
-  {
-    label: 'Tổng đơn hàng',
-    value: '1.284',
-    delta: '+9.2%',
-    icon: 'bi-receipt',
-    spark: spark([88, 102, 96, 118, 130, 156, 142, 168, 184]),
-  },
-  {
-    label: 'Khách hàng mới',
-    value: '312',
-    delta: '+12%',
-    icon: 'bi-person-plus',
-    spark: spark([22, 28, 25, 31, 30, 38, 35, 42, 48]),
-  },
-  {
-    label: 'Tỷ lệ chuyển đổi',
-    value: '3.8%',
-    delta: '+0.4%',
-    icon: 'bi-graph-up',
-    spark: spark([2.9, 3.1, 3.0, 3.3, 3.4, 3.6, 3.5, 3.7, 3.8]),
-  },
-  {
-    label: 'Giá trị TB / đơn',
-    value: short(totSumNum / 1284),
-    delta: '+5.1%',
-    icon: 'bi-bag-check',
-    spark: spark([11, 12, 11.5, 13, 12.8, 14, 13.6, 14.5, 15]),
-  },
-];
-const topRaw = [
-  ['RAM Corsair Vengeance 32GB DDR5', 410, '#22d39a', 2690000],
-  ['SSD Samsung 990 Pro 2TB', 320, '#22d39a', 4290000],
-  ['CPU Intel Core i5-13400F', 265, '#22d39a', 4690000],
-  ['Màn hình Asus TUF VG27AQ', 176, '#ffb43b', 6490000],
-  ['Laptop ASUS TUF Gaming F15', 142, '#00e5ff', 22990000],
-  ['Chuột Logitech G Pro X SL2', 138, '#7aa2ff', 2890000],
-  ['PC CNTT Spark RTX 4060', 98, '#a855f7', 24900000],
-].map((r) => ({ name: r[0], sold: r[1], color: r[2], revenue: r[1] * r[3] }));
-const topMaxRev = Math.max(...topRaw.map((t) => t.revenue));
-const topProducts = topRaw
-  .slice()
-  .sort((a, b) => b.revenue - a.revenue)
-  .map((t) => ({
+const totArea = computed(() =>
+  totLine.value +
+  ' L' + X(nX.value - 1, nX.value).toFixed(1) + ' ' + PLOT_BOTTOM +
+  ' L' + CHART.padL + ' ' + PLOT_BOTTOM + ' Z',
+);
+
+const metricCards = computed(() => [
+  { label: 'Doanh thu (9 tháng)', value: short(metrics.value.totalRevenue), delta: metrics.value.totalRevenueDeltaPct, icon: 'bi-cash-stack' },
+  { label: 'Tổng đơn hàng', value: metrics.value.totalOrders + '', delta: metrics.value.totalOrdersDeltaPct, icon: 'bi-receipt' },
+  { label: 'Khách hàng mới', value: metrics.value.newCustomers + '', delta: metrics.value.newCustomersDeltaPct, icon: 'bi-person-plus' },
+  { label: 'Tỷ lệ giao thành công', value: metrics.value.deliveredRate + '%', delta: metrics.value.deliveredRateDeltaPct, icon: 'bi-check-circle' },
+  { label: 'Giá trị TB / đơn', value: short(metrics.value.avgOrderValue), delta: metrics.value.avgOrderValueDeltaPct, icon: 'bi-bag-check' },
+]);
+
+const topProducts = computed(() => {
+  const maxRev = Math.max(1, ...topProductsRaw.value.map((t) => Number(t.revenue)));
+  return topProductsRaw.value.map((t) => ({
     name: t.name,
-    sold: t.sold + ' đã bán',
-    color: t.color,
-    revenue: short(t.revenue),
-    bar: Math.round((t.revenue / topMaxRev) * 100) + '%',
+    sold: t.sold,
+    revenueFmt: short(Number(t.revenue)),
+    bar: Math.round((Number(t.revenue) / maxRev) * 100) + '%',
   }));
-const statuses = statusBreak();
+});
+
+// Biểu đồ CỘT cho doanh thu tại quầy — cố ý khác dạng đường của biểu đồ tổng để nhìn là phân
+// biệt được ngay hai thứ đang xem.
+const posMax = computed(() => Math.max(1, ...posSeries.value.map(Number)));
+const posBars = computed(() =>
+  posSeries.value.map((v, i) => ({
+    label: monthLabels.value[i] || '',
+    value: Number(v) || 0,
+    valueFmt: short(Number(v) || 0),
+    heightPct: Math.round(((Number(v) || 0) / posMax.value) * 100),
+  })),
+);
+const posCoDuLieu = computed(() => posSeries.value.some((v) => Number(v) > 0));
+
+const posTopProducts = computed(() => {
+  const maxRev = Math.max(1, ...posTopRaw.value.map((t) => Number(t.revenue)));
+  return posTopRaw.value.map((t) => ({
+    name: t.name,
+    sold: t.sold,
+    revenueFmt: short(Number(t.revenue)),
+    bar: Math.round((Number(t.revenue) / maxRev) * 100) + '%',
+  }));
+});
+
+const statuses = computed(() => statusBreak());
 </script>

@@ -44,4 +44,37 @@ public class NotificationService {
     public void danhDauTatCaDaDoc() {
         repo.danhDauTatCaDaDoc();
     }
+
+    // ===== Thông báo riêng cho khách hàng (đơn hàng, bảo hành...) =====
+
+    public void taoChoUser(Integer userId, String loai, String tieuDe, String noiDung, String link) {
+        Notification n = new Notification();
+        n.setUserId(userId);
+        n.setLoai(loai);
+        n.setTieuDe(tieuDe);
+        n.setNoiDung(noiDung);
+        n.setLink(link);
+        repo.save(n);
+    }
+
+    public List<Notification> layGanDayCuaUser(Integer userId) {
+        return repo.findTop20ByUserIdOrderByCreatedAtDesc(userId);
+    }
+
+    public long soChuaDocCuaUser(Integer userId) {
+        return repo.countByUserIdAndDaDocFalse(userId);
+    }
+
+    @Transactional
+    public void danhDauDaDocCuaUser(Integer id, Integer userId) {
+        repo.findByIdAndUserId(id, userId).ifPresent(n -> {
+            n.setDaDoc(true);
+            repo.save(n);
+        });
+    }
+
+    @Transactional
+    public void danhDauTatCaDaDocCuaUser(Integer userId) {
+        repo.danhDauTatCaDaDocCuaUser(userId);
+    }
 }

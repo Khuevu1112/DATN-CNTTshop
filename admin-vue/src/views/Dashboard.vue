@@ -491,6 +491,23 @@
             >
               {{ p.stock }}
             </div>
+            <button
+              @click="quickStockSearch = p.name; stockModalOpen = true"
+              title="Nhập kho nhanh"
+              style="
+                flex: none;
+                width: 28px;
+                height: 28px;
+                border-radius: 7px;
+                border: 1px solid var(--line2);
+                background: var(--card);
+                color: var(--acc);
+                cursor: pointer;
+                font-size: 12px;
+              "
+            >
+              <i class="bi bi-box-arrow-in-down"></i>
+            </button>
           </div>
           <p
             v-if="!lowStock.length"
@@ -502,12 +519,15 @@
       </div>
     </div>
   </div>
+
+  <StockMovementModal v-if="stockModalOpen" :initial-search-term="quickStockSearch" @close="stockModalOpen = false" @saved="load" />
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { getDashboard } from '../api/admin';
+import StockMovementModal from '../components/StockMovementModal.vue';
 import {
   money as fmtMoney,
   short,
@@ -578,7 +598,7 @@ const statuses = computed(() => {
   const rows = data.value?.statusBreakdown || [];
   const total = rows.reduce((a, r) => a + Number(r[1]), 0) || 1;
   return rows.map((r) => {
-    const meta = STATUS[r[0]] || { label: r[0], color: '#7e98b6' };
+    const meta = STATUS[r[0]] || { label: r[0], color: '#7d818a' };
     const count = Number(r[1]);
     return {
       label: meta.label,
@@ -591,7 +611,7 @@ const statuses = computed(() => {
 
 const recent = computed(() =>
   (data.value?.recentOrders || []).map((o) => {
-    const meta = STATUS[o[3]] || { label: o[3], color: '#7e98b6' };
+    const meta = STATUS[o[3]] || { label: o[3], color: '#7d818a' };
     return {
       code: o[0],
       customer: o[1],
@@ -617,7 +637,10 @@ const lowStock = computed(() =>
   }),
 );
 
-onMounted(async () => {
+const stockModalOpen = ref(false);
+const quickStockSearch = ref('');
+
+async function load() {
   try {
     data.value = await getDashboard();
   } catch (e) {
@@ -626,5 +649,6 @@ onMounted(async () => {
   } finally {
     loading.value = false;
   }
-});
+}
+onMounted(load);
 </script>

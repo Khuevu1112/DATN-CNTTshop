@@ -1,3 +1,38 @@
+@import url('https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css');
+
+/* ===== Theme tokens — cùng hệ thống với admin-vue (:root[data-mode]) để giao diện
+   sáng đồng bộ 2 bên. --line-rgb là kênh RGB thô (không kèm alpha) để các chỗ đang
+   dùng nhiều mức rgba(120,170,230,X) khác nhau vẫn giữ được sắc thái viền/alpha
+   riêng sau khi đổi màu nền, chỉ cần rgba(var(--line-rgb), X). */
+:root {
+  --page: #101114;
+  --card: #17181c;
+  --card2: #1c1e22;
+  --line-rgb: 255, 255, 255;
+  --text: #f2f3f5;
+  --muted: #7d818a;
+  --muted2: #aeb2ba;
+  --green: #2bd47e;
+  --sale: #ff5d7a;
+  --sale-rgb: 255, 93, 122;
+  --amber: #ffb43b;
+  --acc-ink: #101114;
+}
+:root[data-mode='light'] {
+  --page: #f0f0f0;
+  --card: #ffffff;
+  --card2: #f5f5f5;
+  --line-rgb: 20, 20, 20;
+  --text: #18181b;
+  --muted: #6b6b70;
+  --muted2: #3a3a3d;
+  --green: #0f9d6b;
+  --sale: #e02447;
+  --sale-rgb: 224, 36, 71;
+  --amber: #c77b07;
+  --acc-ink: #ffffff;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -5,15 +40,15 @@ html,
 body {
   margin: 0;
   padding: 0;
-  background: #081a2d;
+  background: var(--page);
 }
 body {
   font-family: 'Be Vietnam Pro', sans-serif;
   -webkit-font-smoothing: antialiased;
-  color: #e8f1fc;
+  color: var(--text);
 }
 input::placeholder {
-  color: #5f7a9c;
+  color: var(--muted);
 }
 input:focus,
 select:focus,
@@ -21,19 +56,19 @@ button:focus {
   outline: none;
 }
 select option {
-  background: #0c2742;
-  color: #e8f1fc;
+  background: var(--card2);
+  color: var(--text);
 }
 ::-webkit-scrollbar {
   width: 11px;
   height: 11px;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1a3a5c;
+  background: rgba(var(--line-rgb), 0.35);
   border-radius: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #081a2d;
+  background: var(--page);
 }
 
 @keyframes floatBlob {
@@ -60,20 +95,135 @@ select option {
     transform: rotate(360deg);
   }
 }
-@keyframes pulseGlow {
-  0%,
-  100% {
-    opacity: 0.5;
-  }
-  50% {
-    opacity: 1;
-  }
-}
 @keyframes barSlide {
   0% {
     transform: translateX(-100%);
   }
   100% {
     transform: translateX(250%);
+  }
+}
+
+/* Hiệu ứng bay vào giỏ hàng khi bấm "Thêm vào giỏ" — xem src/flyToCart.js */
+.fly-to-cart-ghost {
+  position: fixed;
+  z-index: 9999;
+  border-radius: 10px;
+  background-size: cover;
+  background-position: center;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+  opacity: 1;
+  transform: translate(0, 0) scale(1);
+  transition:
+    transform 0.62s cubic-bezier(0.32, 0.72, 0.35, 1),
+    opacity 0.62s ease 0.2s;
+}
+@keyframes cartIconBump {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.18);
+  }
+  60% {
+    transform: scale(0.95);
+  }
+}
+.cart-icon-bump {
+  animation: cartIconBump 0.32s ease;
+}
+
+/* Dropdown/menu/panel bật ra (chuông thông báo, mega-menu, form địa chỉ...) — fade + trượt nhẹ.
+   Dùng <Transition name="dropdown-fade"> quanh 1 phần tử v-if duy nhất. */
+.dropdown-fade-enter-active {
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+.dropdown-fade-leave-active {
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+.dropdown-fade-enter-from,
+.dropdown-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+/* Gạch chân mục nav đang active — mọc rộng ra từ giữa thay vì hiện ngay lập tức.
+   Dùng <Transition name="underline-grow"> quanh span v-if. */
+.underline-grow-enter-active {
+  transition: transform 0.22s cubic-bezier(0.34, 1.3, 0.64, 1), opacity 0.22s ease;
+}
+.underline-grow-leave-active {
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+.underline-grow-enter-from,
+.underline-grow-leave-to {
+  opacity: 0;
+  transform: scaleX(0);
+}
+
+/* Ô vuông checkbox tuỳ biến (bộ lọc, chọn địa chỉ/thanh toán...) — nền/viền đổi màu mượt,
+   dấu ✓ (hoặc chấm active) "nảy" nhẹ khi xuất hiện thay vì hiện thẳng.
+   Thêm class "filter-checkbox" cho ô vuông, bọc dấu check bằng <Transition name="check-pop">. */
+.filter-checkbox {
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.check-pop-enter-active {
+  transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.12s ease;
+}
+.check-pop-leave-active {
+  transition: transform 0.1s ease, opacity 0.1s ease;
+}
+.check-pop-enter-from,
+.check-pop-leave-to {
+  opacity: 0;
+  transform: scale(0.3);
+}
+
+/* ===========================================================================
+   Hover feedback chung cho mọi phần tử clickable chưa có hover riêng.
+   Dự án đặt style inline gần như toàn bộ, nên bắt theo chuỗi trong thuộc tính style là cách
+   duy nhất phủ được hết mà không phải sửa hàng trăm chỗ. Trước đây khối này bị chép y hệt vào
+   <style scoped> của 10 view; gom về đây để sửa một lần ăn cả app (kể cả header/footer và các
+   component con mà scoped không với tới).
+
+   Ba điều khối cũ làm sai, đã vá:
+   1. Chỉ khớp "cursor: pointer" có dấu cách -> 14 chỗ viết liền "cursor:pointer" bị bỏ sót.
+   2. Không loại trừ nút disabled -> nút đang khoá vẫn sáng lên khi rê chuột, báo hiệu sai
+      rằng bấm được (26 nút trong dự án dính lỗi này).
+   3. brightness(1.12) làm SÁNG lên, nhưng ở light mode nền trắng vốn đã #fff, làm sáng nữa
+      không đổi gì -> light mode phải làm TỐI đi mới thấy phản hồi.
+
+   Thêm class "no-auto-hover" để tự tắt cho phần tử nào không muốn dính.
+   =========================================================================== */
+[style*="cursor: pointer"]:not(.no-auto-hover),
+[style*="cursor:pointer"]:not(.no-auto-hover) {
+  transition: filter 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+[style*="cursor: pointer"]:not(.no-auto-hover):not(:disabled):not([aria-disabled='true']):hover,
+[style*="cursor:pointer"]:not(.no-auto-hover):not(:disabled):not([aria-disabled='true']):hover {
+  filter: brightness(1.12);
+}
+
+[style*="border-radius"][style*="cursor: pointer"]:not(.no-auto-hover):not(:disabled):not([aria-disabled='true']):hover,
+[style*="border-radius"][style*="cursor:pointer"]:not(.no-auto-hover):not(:disabled):not([aria-disabled='true']):hover {
+  transform: translateY(-1px);
+}
+
+:root[data-mode='light'] [style*="cursor: pointer"]:not(.no-auto-hover):not(:disabled):not([aria-disabled='true']):hover,
+:root[data-mode='light'] [style*="cursor:pointer"]:not(.no-auto-hover):not(:disabled):not([aria-disabled='true']):hover {
+  filter: brightness(0.95);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [style*="cursor: pointer"],
+  [style*="cursor:pointer"] {
+    transition: none;
+  }
+  [style*="cursor: pointer"]:hover,
+  [style*="cursor:pointer"]:hover {
+    transform: none;
   }
 }
