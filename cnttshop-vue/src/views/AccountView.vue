@@ -571,7 +571,7 @@ onMounted(() => {
   <main style="max-width: 1320px; margin: 0 auto; padding: 24px 24px 64px">
     <button
       @click="actions.goHome"
-      style="display: inline-flex; align-items: center; gap: 6px; background: transparent; color: var(--muted2); border: 1px solid rgba(var(--line-rgb), 0.2); border-radius: 9px; padding: 8px 14px; font-size: 13px; cursor: pointer; margin-bottom: 28px; font-family: 'Be Vietnam Pro', sans-serif"
+      style="display: inline-flex; align-items: center; gap: 6px; background: transparent; color: var(--muted2); border: 1px solid rgba(var(--line-rgb), 0.2); border-radius: 9px; padding: 8px 14px; font-size: 13px; cursor: pointer; margin-bottom: 28px; font-family: 'Plus Jakarta Sans', sans-serif"
     >
       ← Quay lại trang chủ
     </button>
@@ -579,7 +579,7 @@ onMounted(() => {
     <div style="font-family: 'Chakra Petch', sans-serif; font-size: 11px; letter-spacing: 2.5px; color: var(--acc,#c6ff4a); font-weight: 600; margin-bottom: 12px">
       TÀI KHOẢN
     </div>
-    <h1 style="font-family: 'Be Vietnam Pro', sans-serif; font-weight: 800; font-size: 34px; margin: 0 0 24px; color: var(--text)">
+    <h1 style="font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; font-size: 34px; margin: 0 0 24px; color: var(--text)">
       Quản lý tài khoản
     </h1>
 
@@ -678,23 +678,23 @@ onMounted(() => {
               <div>
                 <label style="display: block; font-size: 12px; color: var(--muted2); margin-bottom: 7px">Họ và tên</label>
                 <input v-model="profile.hoTen" placeholder="Họ và tên"
-                  style="width: 100%; height: 42px; padding: 0 13px; background: var(--card2); border: 1px solid rgba(var(--line-rgb),0.22); border-radius: 9px; color: var(--text); font-size: 13.5px; font-family: 'Be Vietnam Pro', sans-serif" />
+                  style="width: 100%; height: 42px; padding: 0 13px; background: var(--card2); border: 1px solid rgba(var(--line-rgb),0.22); border-radius: 9px; color: var(--text); font-size: 13.5px; font-family: 'Plus Jakarta Sans', sans-serif" />
               </div>
               <div>
                 <label style="display: block; font-size: 12px; color: var(--muted2); margin-bottom: 7px">Số điện thoại</label>
                 <input v-model="profile.soDienThoai" placeholder="Số điện thoại"
-                  style="width: 100%; height: 42px; padding: 0 13px; background: var(--card2); border: 1px solid rgba(var(--line-rgb),0.22); border-radius: 9px; color: var(--text); font-size: 13.5px; font-family: 'Be Vietnam Pro', sans-serif" />
+                  style="width: 100%; height: 42px; padding: 0 13px; background: var(--card2); border: 1px solid rgba(var(--line-rgb),0.22); border-radius: 9px; color: var(--text); font-size: 13.5px; font-family: 'Plus Jakarta Sans', sans-serif" />
               </div>
             </div>
             <div style="margin-bottom: 18px">
               <label style="display: block; font-size: 12px; color: var(--muted2); margin-bottom: 7px">Email (Gmail)</label>
               <input :value="state.user.email" disabled
-                style="width: 100%; height: 42px; padding: 0 13px; background: var(--card2); border: 1px solid rgba(var(--line-rgb),0.14); border-radius: 9px; color: var(--muted); font-size: 13.5px; font-family: 'Be Vietnam Pro', sans-serif; cursor: not-allowed" />
+                style="width: 100%; height: 42px; padding: 0 13px; background: var(--card2); border: 1px solid rgba(var(--line-rgb),0.14); border-radius: 9px; color: var(--muted); font-size: 13.5px; font-family: 'Plus Jakarta Sans', sans-serif; cursor: not-allowed" />
             </div>
             <button
               @click="saveProfile" :disabled="savingProfile"
               :style="{ background: accent, opacity: savingProfile ? 0.7 : 1 }"
-              style="height: 42px; padding: 0 22px; border: none; border-radius: 10px; color: var(--acc-ink); font-weight: 700; font-size: 13.5px; cursor: pointer; font-family: 'Be Vietnam Pro', sans-serif"
+              style="height: 42px; padding: 0 22px; border: none; border-radius: 10px; color: var(--acc-ink); font-weight: 700; font-size: 13.5px; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif"
             >
               {{ savingProfile ? 'Đang lưu...' : 'Lưu thay đổi' }}
             </button>
@@ -723,16 +723,16 @@ onMounted(() => {
                 <div style="display: flex; gap: 6px; flex: none; flex-wrap: wrap; justify-content: flex-end">
                   <button
                     @click="openAddressForm(a)"
-                    style="background: transparent; border: 1px solid rgba(var(--line-rgb),0.25); color: var(--muted2); border-radius: 8px; padding: 6px 11px; font-size: 12px; cursor: pointer; font-family: 'Be Vietnam Pro', sans-serif"
+                    style="background: transparent; border: 1px solid rgba(var(--line-rgb),0.25); color: var(--muted2); border-radius: 8px; padding: 6px 11px; font-size: 12px; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif"
                   >Sửa</button>
                   <button
                     v-if="!a.isDefault"
                     @click="makeDefaultAddress(a.id)"
-                    style="background: transparent; border: 1px solid rgba(var(--line-rgb),0.25); color: var(--muted2); border-radius: 8px; padding: 6px 11px; font-size: 12px; cursor: pointer; font-family: 'Be Vietnam Pro', sans-serif"
+                    style="background: transparent; border: 1px solid rgba(var(--line-rgb),0.25); color: var(--muted2); border-radius: 8px; padding: 6px 11px; font-size: 12px; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif"
                   >Đặt mặc định</button>
                   <button
                     @click="removeAddress(a.id)"
-                    style="background: transparent; border: 1px solid rgba(var(--sale-rgb),0.3); color: var(--sale); border-radius: 8px; padding: 6px 11px; font-size: 12px; cursor: pointer; font-family: 'Be Vietnam Pro', sans-serif"
+                    style="background: transparent; border: 1px solid rgba(var(--sale-rgb),0.3); color: var(--sale); border-radius: 8px; padding: 6px 11px; font-size: 12px; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif"
                   >Xoá</button>
                 </div>
               </div>
@@ -741,7 +741,7 @@ onMounted(() => {
             <button
               v-if="!showAddressForm"
               @click="openAddressForm(null)"
-              style="background: transparent; border: 1px dashed rgba(var(--line-rgb),0.3); color: var(--muted2); border-radius: 9px; padding: 9px 14px; cursor: pointer; font-size: 12.5px; font-family: 'Be Vietnam Pro', sans-serif"
+              style="background: transparent; border: 1px dashed rgba(var(--line-rgb),0.3); color: var(--muted2); border-radius: 9px; padding: 9px 14px; cursor: pointer; font-size: 12.5px; font-family: 'Plus Jakarta Sans', sans-serif"
             >
               + Thêm địa chỉ mới
             </button>
@@ -754,14 +754,14 @@ onMounted(() => {
                 <button
                   type="button" @click="cheDoNhap = 'nhap'"
                   :style="{ borderColor: cheDoNhap === 'nhap' ? accent : 'rgba(var(--line-rgb),0.2)', color: cheDoNhap === 'nhap' ? 'var(--text)' : 'var(--muted2)' }"
-                  style="flex: 1; height: 38px; border: 1px solid; background: transparent; border-radius: 9px; font-size: 12.5px; cursor: pointer; font-family: 'Be Vietnam Pro', sans-serif"
+                  style="flex: 1; height: 38px; border: 1px solid; background: transparent; border-radius: 9px; font-size: 12.5px; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif"
                 >
                   Nhập địa chỉ + cắm mốc
                 </button>
                 <button
                   type="button" @click="cheDoNhap = 'mocDiem'"
                   :style="{ borderColor: cheDoNhap === 'mocDiem' ? accent : 'rgba(var(--line-rgb),0.2)', color: cheDoNhap === 'mocDiem' ? 'var(--text)' : 'var(--muted2)' }"
-                  style="flex: 1; height: 38px; border: 1px solid; background: transparent; border-radius: 9px; font-size: 12.5px; cursor: pointer; font-family: 'Be Vietnam Pro', sans-serif"
+                  style="flex: 1; height: 38px; border: 1px solid; background: transparent; border-radius: 9px; font-size: 12.5px; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif"
                 >
                   Cắm mốc + chọn Tỉnh/Phường
                 </button>
@@ -906,7 +906,7 @@ onMounted(() => {
               v-if="state.unreadNotifCount"
               @click="actions.markAllNotificationsRead"
               :style="{ color: accent }"
-              style="background: none; border: none; font-size: 12.5px; font-weight: 600; cursor: pointer; font-family: 'Be Vietnam Pro', sans-serif"
+              style="background: none; border: none; font-size: 12.5px; font-weight: 600; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif"
             >
               Đánh dấu đã đọc hết
             </button>
@@ -948,7 +948,7 @@ onMounted(() => {
             <button
               @click="pwOpen" :disabled="pw.loading"
               :style="{ background: accent, opacity: pw.loading ? 0.7 : 1 }"
-              style="height: 42px; padding: 0 22px; border: none; border-radius: 10px; color: var(--acc-ink); font-weight: 700; font-size: 13.5px; cursor: pointer; font-family: 'Be Vietnam Pro', sans-serif"
+              style="height: 42px; padding: 0 22px; border: none; border-radius: 10px; color: var(--acc-ink); font-weight: 700; font-size: 13.5px; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif"
             >
               {{ pw.loading ? 'Đang gửi mã...' : 'Đổi mật khẩu' }}
             </button>
@@ -990,25 +990,25 @@ onMounted(() => {
                 <div>
                   <label style="display: block; font-size: 12px; color: var(--muted2); margin-bottom: 7px">Mật khẩu mới</label>
                   <input v-model="pw.pw" type="password" placeholder="Ít nhất 6 ký tự"
-                    style="width: 100%; height: 42px; padding: 0 13px; background: var(--card2); border: 1px solid rgba(var(--line-rgb),0.22); border-radius: 9px; color: var(--text); font-size: 13.5px; font-family: 'Be Vietnam Pro', sans-serif" />
+                    style="width: 100%; height: 42px; padding: 0 13px; background: var(--card2); border: 1px solid rgba(var(--line-rgb),0.22); border-radius: 9px; color: var(--text); font-size: 13.5px; font-family: 'Plus Jakarta Sans', sans-serif" />
                 </div>
                 <div>
                   <label style="display: block; font-size: 12px; color: var(--muted2); margin-bottom: 7px">Nhập lại mật khẩu mới</label>
                   <input v-model="pw.pw2" type="password" placeholder="Nhập lại mật khẩu mới"
-                    style="width: 100%; height: 42px; padding: 0 13px; background: var(--card2); border: 1px solid rgba(var(--line-rgb),0.22); border-radius: 9px; color: var(--text); font-size: 13.5px; font-family: 'Be Vietnam Pro', sans-serif" />
+                    style="width: 100%; height: 42px; padding: 0 13px; background: var(--card2); border: 1px solid rgba(var(--line-rgb),0.22); border-radius: 9px; color: var(--text); font-size: 13.5px; font-family: 'Plus Jakarta Sans', sans-serif" />
                 </div>
               </div>
               <div style="display: flex; gap: 10px">
                 <button
                   @click="pwReset" :disabled="pw.loading"
                   :style="{ background: accent, opacity: pw.loading ? 0.7 : 1 }"
-                  style="height: 42px; padding: 0 22px; border: none; border-radius: 10px; color: var(--acc-ink); font-weight: 700; font-size: 13.5px; cursor: pointer; font-family: 'Be Vietnam Pro', sans-serif"
+                  style="height: 42px; padding: 0 22px; border: none; border-radius: 10px; color: var(--acc-ink); font-weight: 700; font-size: 13.5px; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif"
                 >
                   {{ pw.loading ? 'Đang lưu...' : 'Đổi mật khẩu' }}
                 </button>
                 <button
                   @click="pwCancel"
-                  style="height: 42px; padding: 0 18px; border: 1px solid rgba(var(--line-rgb),0.22); background: transparent; border-radius: 10px; color: var(--muted2); font-size: 13.5px; cursor: pointer; font-family: 'Be Vietnam Pro', sans-serif"
+                  style="height: 42px; padding: 0 18px; border: 1px solid rgba(var(--line-rgb),0.22); background: transparent; border-radius: 10px; color: var(--muted2); font-size: 13.5px; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif"
                 >
                   Hủy
                 </button>
@@ -1109,7 +1109,7 @@ onMounted(() => {
                 <textarea
                   v-model="purchaseReviewForms[selectedPurchase.orderItemId].comment"
                   rows="3" placeholder="Chia sẻ trải nghiệm của bạn về sản phẩm (không bắt buộc)"
-                  style="width: 100%; margin-top: 10px; padding: 10px 12px; background: var(--card2); border: 1px solid rgba(var(--line-rgb),0.2); border-radius: 9px; color: var(--text); font-size: 12.5px; font-family: 'Be Vietnam Pro', sans-serif; resize: vertical"
+                  style="width: 100%; margin-top: 10px; padding: 10px 12px; background: var(--card2); border: 1px solid rgba(var(--line-rgb),0.2); border-radius: 9px; color: var(--text); font-size: 12.5px; font-family: 'Plus Jakarta Sans', sans-serif; resize: vertical"
                 ></textarea>
                 <div style="display: flex; gap: 10px; margin-top: 8px; font-size: 11.5px; color: var(--muted2)">
                   <label style="display: flex; align-items: center; gap: 4px; cursor: pointer">
@@ -1154,12 +1154,12 @@ onMounted(() => {
               </div>
               <textarea
                 v-model="warrantyIssue" rows="2" placeholder="Mô tả sự cố cần bảo hành..."
-                style="width: 100%; padding: 10px 12px; background: var(--card2); border: 1px solid rgba(var(--line-rgb),0.22); border-radius: 9px; color: var(--text); font-size: 12.5px; font-family: 'Be Vietnam Pro', sans-serif; resize: vertical; margin-bottom: 10px"
+                style="width: 100%; padding: 10px 12px; background: var(--card2); border: 1px solid rgba(var(--line-rgb),0.22); border-radius: 9px; color: var(--text); font-size: 12.5px; font-family: 'Plus Jakarta Sans', sans-serif; resize: vertical; margin-bottom: 10px"
               ></textarea>
               <button
                 @click="submitWarrantyReq" :disabled="warrantySending"
                 :style="{ background: accent, opacity: warrantySending ? 0.7 : 1 }"
-                style="border: none; border-radius: 9px; height: 38px; padding: 0 18px; color: var(--acc-ink); font-weight: 700; font-size: 12.5px; cursor: pointer; font-family: 'Be Vietnam Pro', sans-serif"
+                style="border: none; border-radius: 9px; height: 38px; padding: 0 18px; color: var(--acc-ink); font-weight: 700; font-size: 12.5px; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif"
               >
                 {{ warrantySending ? 'Đang gửi...' : 'Gửi yêu cầu bảo hành' }}
               </button>

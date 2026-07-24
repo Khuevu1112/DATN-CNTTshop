@@ -94,6 +94,9 @@ public class SecurityConfig {
                     .requestMatchers("/api/membership/tiers").permitAll()
                     .requestMatchers("/api/subscription/plans").permitAll()
                     .requestMatchers("/api/geocoding/**").permitAll()
+                    // Xem kỳ hạn + tính thử khoản trả hàng tháng là công khai (hiện ngay ở trang
+                    // sản phẩm); ĐĂNG KÝ hồ sơ vẫn phải đăng nhập.
+                    .requestMatchers(HttpMethod.GET, "/api/installment/config", "/api/installment/quote").permitAll()
                     // Chỉ ĐỌC banner đang chạy là công khai; /api/flash-sale/admin/** rơi xuống
                     // anyRequest().authenticated() rồi qua @RequirePermission("coupons").
                     .requestMatchers(HttpMethod.GET, "/api/flash-sale").permitAll()

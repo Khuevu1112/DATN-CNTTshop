@@ -10,8 +10,8 @@ const mySub = ref(null);
 const loading = ref(true);
 const buying = ref('');
 
-// Nhấn nhá gói giữa (Plus) như mẫu bảng giá quen thuộc — chỉ trang trí, không đổi logic.
-const FEATURED = 'plus';
+// Nhãn nổi trên đầu thẻ theo bản thiết kế — basic không có nhãn.
+const PLAN_TAG = { plus: 'Phổ biến', pro: 'Cao cấp' };
 
 async function load() {
   loading.value = true;
@@ -111,46 +111,44 @@ async function onBuy(p) {
         <div v-else class="sub-active-note">Gói của bạn gồm các quyền lợi không giới hạn — tận hưởng nhé!</div>
       </div>
 
-      <!-- ===== Giới thiệu + bảng 3 gói ===== -->
-      <div class="sub-intro">
-        <div class="sub-intro-tag">CNTT CARE</div>
-        <h2 class="sub-intro-title">Gói hội viên dịch vụ</h2>
-        <p class="sub-intro-sub">
+      <!-- ===== Giới thiệu ===== -->
+      <header class="sub-head">
+        <div class="sub-eyebrow">CNTT CARE</div>
+        <h2 class="sub-title">Gói hội viên dịch vụ</h2>
+        <p class="sub-desc">
           Trả phí một lần, dùng cả năm. Khác với hạng thành viên (tích xu tự nhiên), gói Care mang
           lại dịch vụ tận nơi, miễn phí giao hàng và ưu tiên hỗ trợ — chọn gói hợp với bạn.
         </p>
-      </div>
+      </header>
 
+      <!-- ===== Bảng 3 gói — mỗi gói một màu riêng ===== -->
       <div class="sub-grid">
         <div
           v-for="p in plans" :key="p.code"
-          class="sub-card"
-          :class="{ 'is-featured': p.code === FEATURED, 'is-current': p.code === activePlanCode }"
+          class="plan"
+          :class="[`plan--${p.code}`, { 'is-current': p.code === activePlanCode }]"
         >
-          <div v-if="p.code === FEATURED" class="sub-ribbon">Phổ biến</div>
+          <div v-if="PLAN_TAG[p.code]" class="plan__tag">{{ PLAN_TAG[p.code] }}</div>
 
-          <div class="sub-card-name">{{ p.name }}</div>
-          <div class="sub-card-price">
-            {{ money(p.price) }}
-            <span class="sub-card-per">/ {{ p.durationMonths }} tháng</span>
+          <div class="plan__name">{{ p.name }}</div>
+          <div class="plan__price">
+            <span class="plan__amount">{{ money(p.price) }}</span>
+            <span class="plan__period">/ {{ p.durationMonths }} tháng</span>
           </div>
 
-          <div class="sub-card-benefits">
-            <div v-for="(line, i) in benefitLines(p)" :key="i" class="sub-benefit">
-              <span class="sub-benefit-check">✓</span>
-              <span>{{ line }}</span>
-            </div>
-          </div>
+          <ul class="plan__features">
+            <li v-for="(f, i) in benefitLines(p)" :key="i">
+              <span class="plan__check">✓</span><span>{{ f }}</span>
+            </li>
+          </ul>
 
           <button
             v-if="p.code === activePlanCode"
-            class="sub-btn sub-btn-current" disabled
+            class="plan__btn plan__btn--current" disabled
           >Đang sử dụng</button>
           <button
             v-else
-            class="sub-btn"
-            :class="{ 'sub-btn-primary': p.code === FEATURED }"
-            :style="p.code === FEATURED ? { background: accent, color: 'var(--acc-ink)' } : {}"
+            class="plan__btn"
             :disabled="buying === p.code"
             @click="onBuy(p)"
           >
@@ -192,53 +190,166 @@ async function onBuy(p) {
 .sub-quota-track { height: 7px; background: var(--card2); border-radius: 999px; overflow: hidden; }
 .sub-quota-fill { height: 100%; border-radius: 999px; transition: width 0.5s ease; }
 
-/* ===== Giới thiệu ===== */
-.sub-intro-tag { font-family: 'Chakra Petch', sans-serif; font-size: 11px; letter-spacing: 2.5px; color: v-bind(accent); font-weight: 600; }
-.sub-intro-title { font-size: 24px; font-weight: 800; color: var(--text); margin: 8px 0 6px; }
-.sub-intro-sub { font-size: 13.5px; color: var(--muted2); line-height: 1.6; max-width: 640px; margin: 0; }
+/* ===== Giới thiệu =====
+   Giữ biến theme cho phần chữ ngoài thẻ: bản thiết kế hardcode #1f2a24 / #5c6b60 (chỉ hợp light
+   mode), đặt lên nền tối của dark mode sẽ không đọc được. Ở light mode hai bên nhìn như nhau. */
+.sub-head { margin-bottom: 4px; }
+.sub-eyebrow {
+  font-family: 'Chakra Petch', sans-serif;
+  font-size: 11px;
+  letter-spacing: 2.5px;
+  color: v-bind(accent);
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+.sub-title { font-weight: 800; font-size: 26px; margin: 0 0 10px; color: var(--text); }
+.sub-desc { margin: 0; max-width: 660px; font-size: 14px; line-height: 1.6; color: var(--muted2); }
 
-/* ===== Bảng 3 gói ===== */
-.sub-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; align-items: stretch; }
-.sub-card {
+/* ===== Lưới 3 gói — GIỮ NGUYÊN kích cỡ hiện tại (3 cột đều, gap 16px), không dùng
+   width: 300px + gap 22px của bản thiết kế. ===== */
+.sub-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+/* ---- base card (kích cỡ giữ như cũ: padding 24px 22px, radius 16px) ---- */
+.plan {
   position: relative;
-  background: var(--card);
-  border: 1px solid rgba(var(--line-rgb), 0.14);
-  border-radius: 16px;
-  padding: 24px 22px;
   display: flex;
   flex-direction: column;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  box-sizing: border-box;
+  border-radius: 16px;
+  padding: 24px 22px;
+  background: #fff;
+  border: 1px solid rgba(20, 40, 20, 0.1);
 }
-.sub-card:hover { transform: translateY(-3px); box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1); }
-.sub-card.is-featured { border-color: color-mix(in srgb, v-bind(accent) 55%, transparent); box-shadow: 0 8px 30px color-mix(in srgb, v-bind(accent) 14%, transparent); }
-.sub-card.is-current { border-color: var(--green, #22d39a); }
-.sub-ribbon {
-  position: absolute; top: -11px; left: 50%; transform: translateX(-50%);
-  background: v-bind(accent); color: var(--acc-ink);
-  font-size: 10.5px; font-weight: 800; letter-spacing: 0.5px;
-  padding: 3px 12px; border-radius: 999px; white-space: nowrap;
+.plan__tag {
+  position: absolute;
+  top: -11px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 3px 12px;
+  border-radius: 999px;
+  white-space: nowrap;
 }
-.sub-card-name { font-size: 17px; font-weight: 800; color: var(--text); }
-.sub-card-price { font-size: 24px; font-weight: 800; color: var(--text); margin: 8px 0 18px; }
-.sub-card-per { font-size: 12.5px; font-weight: 500; color: var(--muted); }
-.sub-card-benefits { display: flex; flex-direction: column; gap: 10px; flex: 1; margin-bottom: 20px; }
-.sub-benefit { display: flex; gap: 9px; align-items: flex-start; font-size: 13px; color: var(--muted2); line-height: 1.45; }
-.sub-benefit-check { flex: none; color: v-bind(accent); font-weight: 800; }
+.plan__name { font-weight: 800; font-size: 17px; }
+.plan__price { display: flex; align-items: baseline; gap: 6px; margin: 8px 0 18px; }
+.plan__amount { font-family: 'Chakra Petch', sans-serif; font-weight: 700; font-size: 24px; }
+.plan__period { font-size: 12.5px; font-weight: 500; }
+.plan__features {
+  list-style: none;
+  margin: 0 0 20px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
+.plan__features li {
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.plan__check { font-weight: 800; flex: none; }
+.plan__btn {
+  height: 44px;
+  border-radius: 11px;
+  font-weight: 700;
+  font-size: 13.5px;
+  cursor: pointer;
+  width: 100%;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  transition: all 0.15s;
+}
+.plan__btn:disabled { cursor: default; }
+.plan__btn--current { opacity: 0.65; }
 
-.sub-btn {
-  height: 44px; border: 1px solid rgba(var(--line-rgb), 0.25); background: transparent;
-  border-radius: 11px; color: var(--text); font-weight: 700; font-size: 13.5px; cursor: pointer;
-  font-family: 'Be Vietnam Pro', sans-serif; transition: background 0.15s ease, opacity 0.15s ease;
+/* ---- basic: xanh biển nhạt ---- */
+.plan--basic {
+  background: #eef6fb;
+  border: 2px solid #7cb8dd;
 }
-.sub-btn:hover:not(:disabled) { background: rgba(var(--line-rgb), 0.08); }
-.sub-btn-primary { border: none; }
-.sub-btn-primary:hover:not(:disabled) { opacity: 0.9; }
-.sub-btn-current { border-color: var(--green, #22d39a); color: var(--green, #22d39a); cursor: default; }
-.sub-btn:disabled { cursor: default; }
+.plan--basic .plan__name { color: #1f3a4a; }
+.plan--basic .plan__amount { color: #2f77a8; }
+.plan--basic .plan__period { color: #7196ab; }
+.plan--basic .plan__features li { color: #3a4e59; }
+.plan--basic .plan__check { color: #3f92c4; }
+.plan--basic .plan__btn {
+  background: transparent;
+  color: #2f77a8;
+  border: 1.8px solid #7cb8dd;
+}
+.plan--basic .plan__btn:hover:not(:disabled) { background: rgba(63, 146, 196, 0.1); }
+
+/* ---- plus: xanh lá thương hiệu ---- */
+.plan--plus {
+  background: #f1f8ee;
+  border: 2.5px solid #3f8a3a;
+  box-shadow: 0 22px 46px rgba(63, 138, 58, 0.18);
+}
+.plan--plus .plan__tag { background: #3f8a3a; color: #fff; }
+.plan--plus .plan__name { color: #1f2a24; }
+.plan--plus .plan__amount { color: #2f7a2c; }
+.plan--plus .plan__period { color: #6b8a63; }
+.plan--plus .plan__features li { color: #3a4a37; }
+.plan--plus .plan__check { color: #3f8a3a; }
+.plan--plus .plan__btn { background: #3f8a3a; color: #fff; border: none; }
+.plan--plus .plan__btn:hover:not(:disabled) { background: #347a30; }
+
+/* ---- pro: nền tối + ánh kim ---- */
+.plan--pro {
+  background: linear-gradient(165deg, #26332b, #161f1a);
+  border: 2px solid rgba(230, 196, 119, 0.55);
+  box-shadow: 0 22px 50px rgba(0, 0, 0, 0.28);
+}
+.plan--pro .plan__tag {
+  background: linear-gradient(100deg, #d9ab52, #f7e3a1, #d9ab52);
+  color: #2b2410;
+}
+.plan--pro .plan__name { color: #f2f5f0; }
+.plan--pro .plan__amount {
+  background: linear-gradient(100deg, #a9822f 0%, #e6c477 22%, #fff6dc 42%, #e6c477 60%, #a9822f 82%, #e6c477 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: goldShimmer 3.2s linear infinite;
+}
+.plan--pro .plan__period { color: rgba(230, 240, 225, 0.5); }
+.plan--pro .plan__features li { color: rgba(233, 240, 230, 0.82); }
+.plan--pro .plan__check { color: #e6c477; }
+.plan--pro .plan__btn {
+  background: linear-gradient(100deg, #d9ab52 0%, #f7e3a1 28%, #e6c477 52%, #f7e3a1 74%, #d9ab52 100%);
+  background-size: 220% 100%;
+  color: #2b2410;
+  border: none;
+  box-shadow: 0 6px 18px rgba(214, 171, 82, 0.4);
+}
+.plan--pro .plan__btn:hover:not(:disabled) { background-position: 100% 0; }
+
+@keyframes goldShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
 
 .sub-foot { font-size: 12px; color: var(--muted); line-height: 1.6; }
 
+/* Giữ nguyên điểm gãy hiện tại: dưới 860px dồn về 1 cột. */
 @media (max-width: 860px) {
   .sub-grid { grid-template-columns: 1fr; }
+}
+
+/* Ánh kim của gói Pro chạy vô hạn — tắt theo cài đặt giảm chuyển động của hệ điều hành, đồng bộ
+   với MembershipProgress. Không đổi màu, chỉ dừng animation. */
+@media (prefers-reduced-motion: reduce) {
+  .plan--pro .plan__amount { animation: none; }
+  .sub-quota-fill, .plan__btn { transition: none; }
 }
 </style>

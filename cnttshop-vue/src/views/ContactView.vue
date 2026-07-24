@@ -19,9 +19,9 @@ const error = ref('');
 const sent = ref(false);
 
 const inputStyle =
-  "width:100%; height:42px; padding:0 14px; background:var(--card2); border:1px solid rgba(var(--line-rgb),0.22); border-radius:10px; color:var(--text); font-size:13.5px; font-family:'Be Vietnam Pro', sans-serif;";
+  "width:100%; height:42px; padding:0 14px; background:var(--card2); border:1px solid rgba(var(--line-rgb),0.22); border-radius:10px; color:var(--text); font-size:13.5px; font-family:'Plus Jakarta Sans', sans-serif;";
 const textareaStyle =
-  "width:100%; padding:12px 14px; background:var(--card2); border:1px solid rgba(var(--line-rgb),0.22); border-radius:10px; color:var(--text); font-size:13.5px; font-family:'Be Vietnam Pro', sans-serif; resize:vertical;";
+  "width:100%; padding:12px 14px; background:var(--card2); border:1px solid rgba(var(--line-rgb),0.22); border-radius:10px; color:var(--text); font-size:13.5px; font-family:'Plus Jakarta Sans', sans-serif; resize:vertical;";
 
 async function submit() {
   error.value = '';
@@ -62,7 +62,7 @@ async function submit() {
         font-size: 13px;
         cursor: pointer;
         margin-bottom: 32px;
-        font-family: 'Be Vietnam Pro', sans-serif;
+        font-family: 'Plus Jakarta Sans', sans-serif;
         transition: border-color 0.15s, color 0.15s;
       "
       onmouseover="this.style.borderColor='var(--acc,#c6ff4a)';this.style.color='var(--acc,#c6ff4a)'"
@@ -87,7 +87,7 @@ async function submit() {
       </div>
       <h1
         style="
-          font-family: 'Be Vietnam Pro', sans-serif;
+          font-family: 'Plus Jakarta Sans', sans-serif;
           font-weight: 800;
           font-size: 40px;
           line-height: 1.15;
@@ -223,7 +223,7 @@ async function submit() {
             color: #fff;
             border-radius: 12px;
             padding: 12px 24px;
-            font-family: 'Be Vietnam Pro', sans-serif;
+            font-family: 'Plus Jakarta Sans', sans-serif;
             font-weight: 700;
             font-size: 14px;
             text-decoration: none;
@@ -292,7 +292,7 @@ async function submit() {
               :style="{
                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
                 background: accent, color: 'var(--acc-ink)', border: 'none', borderRadius: '11px',
-                height: '44px', fontFamily: 'Be Vietnam Pro, sans-serif', fontWeight: '700',
+                height: '44px', fontFamily: 'Plus Jakarta Sans, sans-serif', fontWeight: '700',
                 fontSize: '14px', cursor: sending ? 'default' : 'pointer', opacity: sending ? 0.7 : 1,
               }"
             >
@@ -338,7 +338,7 @@ async function submit() {
               padding: 6px 12px;
               font-size: 12px;
               cursor: pointer;
-              font-family: 'Be Vietnam Pro', sans-serif;
+              font-family: 'Plus Jakarta Sans', sans-serif;
               transition: all 0.2s;
               white-space: nowrap;
             "
@@ -401,7 +401,7 @@ async function submit() {
               color: #fff;
               border-radius: 9px;
               padding: 8px 14px;
-              font-family: 'Be Vietnam Pro', sans-serif;
+              font-family: 'Plus Jakarta Sans', sans-serif;
               font-weight: 700;
               font-size: 12.5px;
               text-decoration: none;

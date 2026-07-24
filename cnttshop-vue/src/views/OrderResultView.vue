@@ -68,7 +68,7 @@ onMounted(load);
           <span v-else-if="banner.kind === 'pending'" class="or-pending" style="font-size: 30px">{{ banner.icon }}</span>
           <span v-else style="font-size: 30px">{{ banner.icon }}</span>
         </div>
-        <h1 class="or-text" style="font-family: 'Be Vietnam Pro', sans-serif; font-weight: 700; font-size: 24px; margin: 0; color: var(--text)">{{ banner.text }}</h1>
+        <h1 class="or-text" style="font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 24px; margin: 0; color: var(--text)">{{ banner.text }}</h1>
       </div>
 
       <div v-if="loading" style="color: var(--muted); padding: 40px; text-align: center">Đang tải...</div>

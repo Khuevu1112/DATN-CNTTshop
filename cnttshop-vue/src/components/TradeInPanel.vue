@@ -111,7 +111,7 @@ onMounted(tai);
       <button
         @click="moForm = !moForm"
         :style="{ borderColor: moForm ? accent : 'rgba(var(--line-rgb),0.22)' }"
-        style="background: transparent; border: 1px solid; border-radius: 8px; padding: 5px 12px; font-size: 12px; color: var(--muted2); cursor: pointer; font-family: 'Be Vietnam Pro', sans-serif; flex: none"
+        style="background: transparent; border: 1px solid; border-radius: 8px; padding: 5px 12px; font-size: 12px; color: var(--muted2); cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif; flex: none"
       >
         {{ moForm ? 'Đóng' : '+ Gửi máy cũ' }}
       </button>
@@ -261,6 +261,6 @@ onMounted(tai);
   border-radius: 8px;
   color: var(--text);
   font-size: 12.5px;
-  font-family: 'Be Vietnam Pro', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
 }
 </style>

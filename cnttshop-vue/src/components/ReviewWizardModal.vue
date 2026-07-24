@@ -157,7 +157,7 @@ const allProductsDone = computed(() => items.value.every((it) => productForms.va
               v-model="deliveryComment"
               rows="3"
               placeholder="Cảm nhận của bạn về quá trình giao hàng (không bắt buộc)"
-              style="width: 100%; padding: 10px 12px; background: var(--card2); border: 1px solid rgba(var(--line-rgb),0.22); border-radius: 9px; color: var(--text); font-size: 13px; font-family: 'Be Vietnam Pro', sans-serif; resize: vertical; margin-bottom: 14px"
+              style="width: 100%; padding: 10px 12px; background: var(--card2); border: 1px solid rgba(var(--line-rgb),0.22); border-radius: 9px; color: var(--text); font-size: 13px; font-family: 'Plus Jakarta Sans', sans-serif; resize: vertical; margin-bottom: 14px"
             ></textarea>
             <div style="display: flex; gap: 10px">
               <button
@@ -200,7 +200,7 @@ const allProductsDone = computed(() => items.value.every((it) => productForms.va
                     v-model="productForms[it.productId].comment"
                     rows="2"
                     placeholder="Chia sẻ trải nghiệm của bạn về sản phẩm (không bắt buộc)"
-                    style="width: 100%; margin-top: 8px; padding: 8px 10px; background: var(--card2); border: 1px solid rgba(var(--line-rgb),0.2); border-radius: 8px; color: var(--text); font-size: 12.5px; font-family: 'Be Vietnam Pro', sans-serif; resize: vertical"
+                    style="width: 100%; margin-top: 8px; padding: 8px 10px; background: var(--card2); border: 1px solid rgba(var(--line-rgb),0.2); border-radius: 8px; color: var(--text); font-size: 12.5px; font-family: 'Plus Jakarta Sans', sans-serif; resize: vertical"
                   ></textarea>
                   <div style="display: flex; gap: 8px; margin-top: 8px; font-size: 11.5px; color: var(--muted2)">
                     <label style="display: flex; align-items: center; gap: 4px; cursor: pointer">

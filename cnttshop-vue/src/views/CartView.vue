@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { fmt, silverTokensFor } from '../data/products.js';
 import { state, actions, accent } from '../store.js';
+import { resolveImageUrl } from '../api.js';
 
 const cartLines = computed(() =>
   state.cart.map((c) => ({
@@ -39,7 +40,7 @@ const tokenText = computed(() => '+' + silverTokensFor(selectedSubtotal.value) +
   <main style="max-width: 1320px; margin: 0 auto; padding: 24px 24px 70px">
     <h1
       style="
-        font-family: 'Be Vietnam Pro', sans-serif;
+        font-family: 'Plus Jakarta Sans', sans-serif;
         font-weight: 700;
         font-size: 28px;
         margin: 6px 0 22px;
@@ -112,7 +113,7 @@ const tokenText = computed(() => '+' + silverTokensFor(selectedSubtotal.value) +
               overflow: hidden;
             "
           >
-            <img v-if="line.imageUrl" :src="line.imageUrl" style="width: 100%; height: 100%; object-fit: cover" />
+            <img v-if="line.imageUrl" :src="resolveImageUrl(line.imageUrl)" style="width: 100%; height: 100%; object-fit: cover" />
             <span v-else style="font-size: 10px; color: var(--muted)">SẢN PHẨM</span>
           </div>
           <div style="flex: 1; min-width: 0">
@@ -316,7 +317,7 @@ const tokenText = computed(() => '+' + silverTokensFor(selectedSubtotal.value) +
             border: none;
             border-radius: 12px;
             color: var(--acc-ink);
-            font-family: 'Be Vietnam Pro', sans-serif;
+            font-family: 'Plus Jakarta Sans', sans-serif;
             font-weight: 700;
             font-size: 15px;
             cursor: pointer;
@@ -334,7 +335,7 @@ const tokenText = computed(() => '+' + silverTokensFor(selectedSubtotal.value) +
             border-radius: 12px;
             background: transparent;
             color: var(--muted2);
-            font-family: 'Be Vietnam Pro', sans-serif;
+            font-family: 'Plus Jakarta Sans', sans-serif;
             font-weight: 600;
             font-size: 13.5px;
             cursor: pointer;
@@ -382,7 +383,7 @@ const tokenText = computed(() => '+' + silverTokensFor(selectedSubtotal.value) +
           border: none;
           border-radius: 12px;
           color: var(--acc-ink);
-          font-family: 'Be Vietnam Pro', sans-serif;
+          font-family: 'Plus Jakarta Sans', sans-serif;
           font-weight: 700;
           font-size: 14px;
           cursor: pointer;

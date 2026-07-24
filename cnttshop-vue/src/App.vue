@@ -11,7 +11,7 @@ const rootStyle = computed(() => ({
   minHeight: '100vh',
   background: themeStyle.value.pageBg,
   color: themeStyle.value.ink,
-  fontFamily: "'Be Vietnam Pro', sans-serif",
+  fontFamily: "'Plus Jakarta Sans', sans-serif",
   WebkitFontSmoothing: 'antialiased',
 }));
 </script>

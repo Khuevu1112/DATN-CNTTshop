@@ -140,7 +140,7 @@
                 </div>
                 <a v-if="log.evidenceImage" :href="API_ORIGIN + log.evidenceImage" target="_blank" rel="noopener">
                   <img
-                    :src="API_ORIGIN + log.evidenceImage"
+                    :src="resolveImageUrl(log.evidenceImage)"
                     alt="Ảnh chứng minh"
                     style="max-width: 150px; max-height: 110px; border-radius: 8px; border: 1px solid var(--line2); margin-top: 7px; display: block; cursor: zoom-in"
                   />
@@ -160,6 +160,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { resolveImageUrl } from '../api/http';
 import { useAuthStore } from '../stores/auth';
 import { usePermissionsStore } from '../stores/permissions';
 import { getAdminCustomerDetail, updateCustomerRole, updateCustomerStatus, getCustomerActivityLog } from '../api/admin';

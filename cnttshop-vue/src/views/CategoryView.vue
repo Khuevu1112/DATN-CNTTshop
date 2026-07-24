@@ -237,7 +237,7 @@ function scrollRow(keyword, dir) {
     >
       <h1
         style="
-          font-family: 'Be Vietnam Pro', sans-serif;
+          font-family: 'Plus Jakarta Sans', sans-serif;
           font-weight: 700;
           font-size: 28px;
           margin: 0;
@@ -295,7 +295,7 @@ function scrollRow(keyword, dir) {
           font-size: 12.5px;
           font-weight: 600;
           cursor: pointer;
-          font-family: 'Be Vietnam Pro', sans-serif;
+          font-family: 'Plus Jakarta Sans', sans-serif;
           white-space: nowrap;
           transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
         "
@@ -402,7 +402,7 @@ function scrollRow(keyword, dir) {
               font-size: 12.5px;
               font-weight: 600;
               cursor: pointer;
-              font-family: 'Be Vietnam Pro', sans-serif;
+              font-family: 'Plus Jakarta Sans', sans-serif;
             "
           >
             {{ segmentExpanded ? 'Thu gọn' : 'Xem thêm (' + (currentSegments.length - SEGMENT_COLLAPSE_AT) + ')' }}
@@ -430,7 +430,7 @@ function scrollRow(keyword, dir) {
               background: var(--card2);
               color: var(--text);
               border: 1px solid rgba(var(--line-rgb), 0.2);
-              font-family: 'Be Vietnam Pro', sans-serif;
+              font-family: 'Plus Jakarta Sans', sans-serif;
               font-size: 13px;
               cursor: pointer;
             "
@@ -508,7 +508,7 @@ function scrollRow(keyword, dir) {
                 background: state.pcCpuVendor === v ? accent : 'var(--card2)',
                 color: state.pcCpuVendor === v ? 'var(--acc-ink)' : 'var(--muted2)',
               }"
-              style="flex: 1; height: 36px; border: none; border-radius: 9px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Be Vietnam Pro', sans-serif; transition: background 0.15s ease, color 0.15s ease"
+              style="flex: 1; height: 36px; border: none; border-radius: 9px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif; transition: background 0.15s ease, color 0.15s ease"
             >
               {{ v }}
             </button>
@@ -737,14 +737,14 @@ function scrollRow(keyword, dir) {
           <section v-for="sec in sections" :key="sec.keyword">
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 16px">
               <i :class="'bi ' + sec.icon" :style="{ color: accent }" style="font-size: 18px"></i>
-              <h2 style="font-family: 'Be Vietnam Pro', sans-serif; font-weight: 700; font-size: 18px; margin: 0">{{ sec.label }}</h2>
+              <h2 style="font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; font-size: 18px; margin: 0">{{ sec.label }}</h2>
               <span style="font-size: 13px; color: var(--muted)">{{ sec.count }} sản phẩm</span>
               <div style="flex: 1"></div>
               <button
                 type="button"
                 @click="actions.setSegment(sec.keyword)"
                 :style="{ color: accent }"
-                style="background: transparent; border: none; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Be Vietnam Pro', sans-serif; flex: none"
+                style="background: transparent; border: none; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif; flex: none"
               >
                 Xem tất cả »
               </button>

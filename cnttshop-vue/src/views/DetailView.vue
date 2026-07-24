@@ -306,7 +306,7 @@ async function onBuy() {
         </div>
         <h1
           style="
-            font-family: 'Be Vietnam Pro', sans-serif;
+            font-family: 'Plus Jakarta Sans', sans-serif;
             font-weight: 700;
             font-size: 30px;
             line-height: 1.25;
@@ -507,7 +507,7 @@ async function onBuy() {
               flex: 1;
               height: 54px;
               border-radius: 13px;
-              font-family: 'Be Vietnam Pro', sans-serif;
+              font-family: 'Plus Jakarta Sans', sans-serif;
               font-weight: 700;
               font-size: 15px;
               cursor: pointer;
@@ -530,7 +530,7 @@ async function onBuy() {
               border: none;
               border-radius: 13px;
               color: var(--acc-ink);
-              font-family: 'Be Vietnam Pro', sans-serif;
+              font-family: 'Plus Jakarta Sans', sans-serif;
               font-weight: 700;
               font-size: 15px;
               cursor: pointer;
@@ -584,7 +584,7 @@ async function onBuy() {
     <section style="margin-top: 50px">
       <h2
         style="
-          font-family: 'Be Vietnam Pro', sans-serif;
+          font-family: 'Plus Jakarta Sans', sans-serif;
           font-weight: 700;
           font-size: 22px;
           margin: 0 0 18px;
@@ -627,10 +627,10 @@ async function onBuy() {
           <div v-if="r.comment" style="font-size: 13px; color: var(--muted2); line-height: 1.6">{{ r.comment }}</div>
           <div v-if="r.photo1Url || r.photo2Url" style="display: flex; gap: 8px; margin-top: 10px">
             <a v-if="r.photo1Url" :href="API_ORIGIN + r.photo1Url" target="_blank" rel="noopener">
-              <img :src="API_ORIGIN + r.photo1Url" alt="Ảnh đánh giá" style="width: 84px; height: 84px; object-fit: cover; border-radius: 9px; cursor: zoom-in" />
+              <img :src="resolveImageUrl(r.photo1Url)" alt="Ảnh đánh giá" style="width: 84px; height: 84px; object-fit: cover; border-radius: 9px; cursor: zoom-in" />
             </a>
             <a v-if="r.photo2Url" :href="API_ORIGIN + r.photo2Url" target="_blank" rel="noopener">
-              <img :src="API_ORIGIN + r.photo2Url" alt="Ảnh đánh giá" style="width: 84px; height: 84px; object-fit: cover; border-radius: 9px; cursor: zoom-in" />
+              <img :src="resolveImageUrl(r.photo2Url)" alt="Ảnh đánh giá" style="width: 84px; height: 84px; object-fit: cover; border-radius: 9px; cursor: zoom-in" />
             </a>
           </div>
         </div>
@@ -641,7 +641,7 @@ async function onBuy() {
     <section v-if="bundles.length" style="margin-top: 50px">
       <h2
         style="
-          font-family: 'Be Vietnam Pro', sans-serif;
+          font-family: 'Plus Jakarta Sans', sans-serif;
           font-weight: 700;
           font-size: 22px;
           margin: 0 0 18px;
@@ -670,7 +670,7 @@ async function onBuy() {
     <section style="margin-top: 50px">
       <h2
         style="
-          font-family: 'Be Vietnam Pro', sans-serif;
+          font-family: 'Plus Jakarta Sans', sans-serif;
           font-weight: 700;
           font-size: 22px;
           margin: 0 0 18px;

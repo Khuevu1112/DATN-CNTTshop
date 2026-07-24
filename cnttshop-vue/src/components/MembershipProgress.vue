@@ -278,7 +278,7 @@ function rangeText(t) {
   font-size: 12px;
   color: var(--muted2);
   cursor: pointer;
-  font-family: 'Be Vietnam Pro', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   flex: none;
   white-space: nowrap;
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;

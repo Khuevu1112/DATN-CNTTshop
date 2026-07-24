@@ -451,7 +451,7 @@
               <div style="font-size: 11.5px; color: var(--muted); margin-bottom: 6px">Biên lai chuyển khoản</div>
               <a :href="detail.proofImage" target="_blank" rel="noopener">
                 <img
-                  :src="detail.proofImage"
+                  :src="resolveImageUrl(detail.proofImage)"
                   alt="Biên lai chuyển khoản"
                   style="max-width: 100%; max-height: 260px; border-radius: 10px; border: 1px solid var(--line2); display: block; cursor: zoom-in"
                 />

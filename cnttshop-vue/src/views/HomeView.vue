@@ -116,7 +116,7 @@ onMounted(async () => {
             </div>
             <h1
               style="
-                font-family: 'Be Vietnam Pro', sans-serif;
+                font-family: 'Plus Jakarta Sans', sans-serif;
                 font-weight: 800;
                 font-size: 32px;
                 line-height: 1.1;
@@ -155,7 +155,7 @@ onMounted(async () => {
                   border: none;
                   border-radius: 12px;
                   color: var(--acc-ink);
-                  font-family: 'Be Vietnam Pro', sans-serif;
+                  font-family: 'Plus Jakarta Sans', sans-serif;
                   font-weight: 700;
                   font-size: 14px;
                   cursor: pointer;
@@ -172,7 +172,7 @@ onMounted(async () => {
                   border-radius: 12px;
                   background: transparent;
                   color: #fff;
-                  font-family: 'Be Vietnam Pro', sans-serif;
+                  font-family: 'Plus Jakarta Sans', sans-serif;
                   font-weight: 600;
                   font-size: 14px;
                   cursor: pointer;
@@ -196,7 +196,7 @@ onMounted(async () => {
             </div>
             <h2
               style="
-                font-family: 'Be Vietnam Pro', sans-serif;
+                font-family: 'Plus Jakarta Sans', sans-serif;
                 font-weight: 700;
                 font-size: 22px;
                 margin: 6px 0 14px;
@@ -216,7 +216,7 @@ onMounted(async () => {
                 font-size: 13px;
                 font-weight: 600;
                 cursor: pointer;
-                font-family: 'Be Vietnam Pro', sans-serif;
+                font-family: 'Plus Jakarta Sans', sans-serif;
               "
             >
               Xem tất cả
@@ -342,7 +342,7 @@ onMounted(async () => {
                   padding: 6px 14px;
                   border-radius: 20px;
                   border: 1px solid;
-                  font-family: 'Be Vietnam Pro', sans-serif;
+                  font-family: 'Plus Jakarta Sans', sans-serif;
                 "
                 >{{ b }}</span
               >
@@ -356,7 +356,7 @@ onMounted(async () => {
                 font-size: 13px;
                 font-weight: 600;
                 cursor: pointer;
-                font-family: 'Be Vietnam Pro', sans-serif;
+                font-family: 'Plus Jakarta Sans', sans-serif;
                 flex: none;
               "
             >
@@ -437,7 +437,7 @@ onMounted(async () => {
           </div>
           <h2
             style="
-              font-family: 'Be Vietnam Pro', sans-serif;
+              font-family: 'Plus Jakarta Sans', sans-serif;
               font-weight: 800;
               font-size: 22px;
               line-height: 1.2;
@@ -461,7 +461,7 @@ onMounted(async () => {
           <div
             style="
               display: inline-flex;
-              font-family: 'Be Vietnam Pro', sans-serif;
+              font-family: 'Plus Jakarta Sans', sans-serif;
               font-weight: 700;
               font-size: 13.5px;
               color: #1a0f2e;
@@ -498,7 +498,7 @@ onMounted(async () => {
           </div>
           <h2
             style="
-              font-family: 'Be Vietnam Pro', sans-serif;
+              font-family: 'Plus Jakarta Sans', sans-serif;
               font-weight: 800;
               font-size: 22px;
               line-height: 1.2;
@@ -560,7 +560,7 @@ onMounted(async () => {
             @click.prevent="actions.goContact()"
             style="
               display: inline-flex;
-              font-family: 'Be Vietnam Pro', sans-serif;
+              font-family: 'Plus Jakarta Sans', sans-serif;
               font-weight: 700;
               font-size: 13.5px;
               color: #061a11;

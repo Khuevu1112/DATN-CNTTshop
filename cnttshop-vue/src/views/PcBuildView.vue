@@ -124,7 +124,7 @@ onMounted(loadList);
   <main style="max-width: 1100px; margin: 0 auto; padding: 24px 24px 64px">
     <button
       @click="build ? backToList() : actions.goHome()"
-      style="display: inline-flex; align-items: center; gap: 6px; background: transparent; border: 1px solid rgba(var(--line-rgb),0.2); color: var(--muted); border-radius: 9px; padding: 8px 14px; font-size: 13px; cursor: pointer; margin-bottom: 28px; font-family: 'Be Vietnam Pro', sans-serif"
+      style="display: inline-flex; align-items: center; gap: 6px; background: transparent; border: 1px solid rgba(var(--line-rgb),0.2); color: var(--muted); border-radius: 9px; padding: 8px 14px; font-size: 13px; cursor: pointer; margin-bottom: 28px; font-family: 'Plus Jakarta Sans', sans-serif"
     >
       ← {{ build ? 'Quay lại danh sách cấu hình' : 'Quay lại trang chủ' }}
     </button>
@@ -138,7 +138,7 @@ onMounted(loadList);
     <!-- Danh sách cấu hình đã lưu -->
     <div v-else-if="!build">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px">
-        <h1 style="font-family: 'Be Vietnam Pro', sans-serif; font-weight: 800; font-size: 30px; margin: 0; color: var(--text)">
+        <h1 style="font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; font-size: 30px; margin: 0; color: var(--text)">
           Cấu hình PC của tôi
         </h1>
         <button

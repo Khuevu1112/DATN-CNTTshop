@@ -182,7 +182,7 @@ async function confirmCancel() {
           v-model="cancelReason"
           rows="3"
           placeholder="VD: Đặt nhầm, muốn đổi cấu hình khác..."
-          style="width: 100%; padding: 10px 12px; border-radius: 9px; background: var(--card2); border: 1px solid rgba(var(--line-rgb),0.2); color: var(--text); font-size: 13px; font-family: 'Be Vietnam Pro', sans-serif; resize: vertical; margin-bottom: 18px"
+          style="width: 100%; padding: 10px 12px; border-radius: 9px; background: var(--card2); border: 1px solid rgba(var(--line-rgb),0.2); color: var(--text); font-size: 13px; font-family: 'Plus Jakarta Sans', sans-serif; resize: vertical; margin-bottom: 18px"
         ></textarea>
         <div style="display: flex; gap: 10px">
           <button

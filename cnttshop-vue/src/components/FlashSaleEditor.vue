@@ -392,7 +392,7 @@ onMounted(load);
   border-radius: 9px;
   color: var(--text);
   font-size: 13px;
-  font-family: 'Be Vietnam Pro', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
 }
 .fse-colors {
   display: flex;
@@ -549,7 +549,7 @@ onMounted(load);
   font-size: 12.5px;
   font-weight: 600;
   cursor: pointer;
-  font-family: 'Be Vietnam Pro', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   transition: color 0.15s ease, border-color 0.15s ease;
 }
 .fse-btn-ghost:hover:not(:disabled) { color: var(--text); border-color: rgba(var(--line-rgb), 0.4); }
@@ -563,7 +563,7 @@ onMounted(load);
   font-weight: 700;
   font-size: 13px;
   cursor: pointer;
-  font-family: 'Be Vietnam Pro', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
 }
 .fse-btn-primary:disabled { opacity: 0.5; cursor: default; }
 .fse-status {

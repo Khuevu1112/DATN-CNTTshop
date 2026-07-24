@@ -302,7 +302,7 @@ watch(() => props.modelValue, (v) => {
       </div>
       <button
         type="button" @click="dungViTriHienTai" :disabled="dangTraNguoc"
-        style="background: transparent; border: 1px solid rgba(var(--line-rgb),0.22); border-radius: 8px; padding: 5px 11px; font-size: 11.5px; color: var(--muted2); cursor: pointer; flex: none; font-family: 'Be Vietnam Pro', sans-serif"
+        style="background: transparent; border: 1px solid rgba(var(--line-rgb),0.22); border-radius: 8px; padding: 5px 11px; font-size: 11.5px; color: var(--muted2); cursor: pointer; flex: none; font-family: 'Plus Jakarta Sans', sans-serif"
       >
         📍 Vị trí của tôi
       </button>

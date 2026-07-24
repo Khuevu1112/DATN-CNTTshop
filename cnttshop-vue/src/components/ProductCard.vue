@@ -244,7 +244,7 @@ onBeforeUnmount(() => {
       </div>
       <div
         style="
-          font-family: 'Be Vietnam Pro', sans-serif;
+          font-family: 'Plus Jakarta Sans', sans-serif;
           font-weight: 600;
           font-size: 14.5px;
           line-height: 1.35;
@@ -265,7 +265,7 @@ onBeforeUnmount(() => {
           :key="i"
           :title="chip"
           style="
-            font-family: 'Be Vietnam Pro', sans-serif;
+            font-family: 'Plus Jakarta Sans', sans-serif;
             font-size: 10.5px;
             color: var(--muted2);
             background: rgba(var(--line-rgb), 0.08);
@@ -403,7 +403,7 @@ onBeforeUnmount(() => {
           </div>
           <div
             style="
-              font-family: 'Be Vietnam Pro', sans-serif;
+              font-family: 'Plus Jakarta Sans', sans-serif;
               font-weight: 600;
               font-size: 13.5px;
               line-height: 1.32;
@@ -471,7 +471,7 @@ onBeforeUnmount(() => {
             font-size: 12.5px;
             font-weight: 600;
             cursor: pointer;
-            font-family: 'Be Vietnam Pro', sans-serif;
+            font-family: 'Plus Jakarta Sans', sans-serif;
           "
         >
           Xem chi tiết

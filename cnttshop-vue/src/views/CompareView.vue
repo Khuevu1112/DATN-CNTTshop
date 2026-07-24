@@ -147,7 +147,7 @@ const compareRows = computed(() => {
   <main style="max-width: 1320px; margin: 0 auto; padding: 24px 24px 64px">
     <button
       @click="actions.goHome"
-      style="display: inline-flex; align-items: center; gap: 6px; background: transparent; border: 1px solid rgba(var(--line-rgb),0.2); color: var(--muted); border-radius: 9px; padding: 8px 14px; font-size: 13px; cursor: pointer; margin-bottom: 28px; font-family: 'Be Vietnam Pro', sans-serif"
+      style="display: inline-flex; align-items: center; gap: 6px; background: transparent; border: 1px solid rgba(var(--line-rgb),0.2); color: var(--muted); border-radius: 9px; padding: 8px 14px; font-size: 13px; cursor: pointer; margin-bottom: 28px; font-family: 'Plus Jakarta Sans', sans-serif"
     >
       ← Quay lại trang chủ
     </button>
@@ -155,7 +155,7 @@ const compareRows = computed(() => {
     <div style="font-family: 'Chakra Petch', sans-serif; font-size: 11px; letter-spacing: 2.5px; color: var(--acc,#c6ff4a); font-weight: 600; margin-bottom: 12px">
       SO SÁNH CẤU HÌNH
     </div>
-    <h1 style="font-family: 'Be Vietnam Pro', sans-serif; font-weight: 800; font-size: 34px; margin: 0 0 24px; color: var(--text)">
+    <h1 style="font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; font-size: 34px; margin: 0 0 24px; color: var(--text)">
       So sánh cấu hình PC
     </h1>
 

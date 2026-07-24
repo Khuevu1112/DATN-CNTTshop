@@ -316,12 +316,12 @@ onMounted(load);
   <main style="max-width: 1100px; margin: 0 auto; padding: 24px 24px 64px">
     <button
       @click="actions.goCart"
-      style="display: inline-flex; align-items: center; gap: 6px; background: transparent; border: 1px solid rgba(var(--line-rgb),0.2); color: var(--muted); border-radius: 9px; padding: 8px 14px; font-size: 13px; cursor: pointer; margin-bottom: 28px; font-family: 'Be Vietnam Pro', sans-serif"
+      style="display: inline-flex; align-items: center; gap: 6px; background: transparent; border: 1px solid rgba(var(--line-rgb),0.2); color: var(--muted); border-radius: 9px; padding: 8px 14px; font-size: 13px; cursor: pointer; margin-bottom: 28px; font-family: 'Plus Jakarta Sans', sans-serif"
     >
       ← Quay lại giỏ hàng
     </button>
 
-    <h1 style="font-family: 'Be Vietnam Pro', sans-serif; font-weight: 800; font-size: 30px; margin: 0 0 24px; color: var(--text)">
+    <h1 style="font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; font-size: 30px; margin: 0 0 24px; color: var(--text)">
       Xác nhận đặt hàng
     </h1>
 
@@ -359,14 +359,14 @@ onMounted(load);
               <button
                 type="button" @click="cheDoNhap = 'nhap'"
                 :style="{ borderColor: cheDoNhap === 'nhap' ? accent : 'rgba(var(--line-rgb),0.2)', color: cheDoNhap === 'nhap' ? 'var(--text)' : 'var(--muted2)' }"
-                style="flex: 1; height: 36px; border: 1px solid; background: transparent; border-radius: 9px; font-size: 12.5px; cursor: pointer; font-family: 'Be Vietnam Pro', sans-serif"
+                style="flex: 1; height: 36px; border: 1px solid; background: transparent; border-radius: 9px; font-size: 12.5px; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif"
               >
                 Nhập địa chỉ + cắm mốc
               </button>
               <button
                 type="button" @click="cheDoNhap = 'mocDiem'"
                 :style="{ borderColor: cheDoNhap === 'mocDiem' ? accent : 'rgba(var(--line-rgb),0.2)', color: cheDoNhap === 'mocDiem' ? 'var(--text)' : 'var(--muted2)' }"
-                style="flex: 1; height: 36px; border: 1px solid; background: transparent; border-radius: 9px; font-size: 12.5px; cursor: pointer; font-family: 'Be Vietnam Pro', sans-serif"
+                style="flex: 1; height: 36px; border: 1px solid; background: transparent; border-radius: 9px; font-size: 12.5px; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif"
               >
                 Cắm mốc + chọn Tỉnh/Phường
               </button>

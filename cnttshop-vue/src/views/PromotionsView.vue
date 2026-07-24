@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue';
 import { state, actions, accent } from '../store.js';
 import { fmt } from '../data/products.js';
+import { resolveImageUrl } from '../api.js';
 import {
   fetchWallet, fetchRedemptionCatalog, redeemCoupon, redeemGift,
   fetchCheckinStatus, doCheckin, fetchAddresses, fetchFlashSale, fetchFlashSaleAdmin,
@@ -215,7 +216,7 @@ onMounted(() => {
       TRANG KHUYẾN MÃI
     </div>
     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px">
-      <h1 style="font-family: 'Be Vietnam Pro', sans-serif; font-weight: 800; font-size: 34px; margin: 0; color: var(--text)">
+      <h1 style="font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; font-size: 34px; margin: 0; color: var(--text)">
         Đổi thưởng &amp; Điểm danh
       </h1>
       <div style="background: var(--card); border: 1px solid rgba(var(--line-rgb),0.14); border-radius: 12px; padding: 10px 18px; display: flex; align-items: center; gap: 10px">
@@ -353,7 +354,7 @@ onMounted(() => {
             style="background: var(--card); border: 1px solid rgba(var(--line-rgb),0.14); border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 10px"
           >
             <div style="aspect-ratio: 4/3; border-radius: 10px; background: var(--card2); display: flex; align-items: center; justify-content: center; overflow: hidden">
-              <img v-if="item.giftImageUrl" :src="item.giftImageUrl" style="width: 100%; height: 100%; object-fit: cover" />
+              <img v-if="item.giftImageUrl" :src="resolveImageUrl(item.giftImageUrl)" style="width: 100%; height: 100%; object-fit: cover" />
               <span v-else style="font-size: 28px">🎁</span>
             </div>
             <div style="font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.4">{{ item.name }}</div>
@@ -460,7 +461,7 @@ onMounted(() => {
   border-bottom-color: transparent;
   background: var(--card2);
   color: var(--muted2);
-  font-family: 'Be Vietnam Pro', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 13px;
   font-weight: 600;
   padding: 10px 20px;
