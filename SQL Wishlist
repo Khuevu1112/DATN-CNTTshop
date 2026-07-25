@@ -1,0 +1,21 @@
+--
+CREATE TABLE WISHLIST (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+
+    user_id INT NOT NULL,
+
+    product_id INT NOT NULL,
+
+    created_at DATETIME NOT NULL DEFAULT GETDATE(),
+
+    CONSTRAINT FK_WISHLIST_USER
+        FOREIGN KEY(user_id)
+        REFERENCES [USER](id),
+
+    CONSTRAINT FK_WISHLIST_PRODUCT
+        FOREIGN KEY(product_id)
+        REFERENCES PRODUCT(id),
+
+    CONSTRAINT UQ_WISHLIST
+        UNIQUE(user_id, product_id)
+);
