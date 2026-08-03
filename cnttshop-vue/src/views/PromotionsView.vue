@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { state, actions, accent } from '../store.js';
 import { fmt } from '../data/products.js';
 import { resolveImageUrl } from '../api.js';
@@ -42,6 +42,43 @@ const addresses = ref([]);
 
 const checkinStatus = ref(null);
 const checkinLoading = ref(false);
+
+// ===== Trạng thái từng ô ngày điểm danh + đếm ngược tới lượt tiếp theo (nửa đêm) =====
+const nowTick = ref(Date.now());
+let tickTimer = null;
+
+const pad2 = (n) => String(n).padStart(2, '0');
+// Còn bao lâu tới 00:00 hôm sau — lúc chuỗi điểm danh mở lại.
+const countdown = computed(() => {
+  const now = new Date(nowTick.value);
+  const mid = new Date(now);
+  mid.setHours(24, 0, 0, 0);
+  let s = Math.max(0, Math.floor((mid - now) / 1000));
+  const h = Math.floor(s / 3600); s %= 3600;
+  const m = Math.floor(s / 60); s %= 60;
+  return `${pad2(h)}:${pad2(m)}:${pad2(s)}`;
+});
+
+// Ô "hôm nay" theo backend (1..7). Khi đã điểm danh: ô này là ngày vừa xong; các ngày trước nó
+// đã điểm danh; ngày kế tiếp là khung sáng có đếm ngược. Khi chưa điểm danh: ô này là ngày bấm
+// điểm danh hôm nay (khung sáng, chưa mờ).
+const curSlot = computed(() => {
+  const s = checkinStatus.value ? Math.max(1, checkinStatus.value.currentStreak) : 1;
+  return ((s - 1) % 7) + 1;
+});
+/** Trạng thái ô ngày (idx 0-based): 'done' | 'next' | 'today' | 'future'. */
+function dayState(idx) {
+  const day = idx + 1;
+  const cur = curSlot.value;
+  if (checkinStatus.value?.checkedInToday) {
+    if (day <= cur) return 'done';
+    if (day === cur + 1) return 'next';
+    return 'future';
+  }
+  if (day < cur) return 'done';
+  if (day === cur) return 'today';
+  return 'future';
+}
 
 const redeemingId = ref(null);
 const giftPickerItem = ref(null);
@@ -207,7 +244,9 @@ onMounted(() => {
   // Tách riêng khỏi loadAll: flash sale là endpoint công khai, không được để lỗi/đang tải của
   // phần đổi thưởng (yêu cầu đăng nhập) chặn mất tab sale.
   loadFlashSale();
+  tickTimer = setInterval(() => (nowTick.value = Date.now()), 1000);
 });
+onUnmounted(() => clearInterval(tickTimer));
 </script>
 
 <template>
@@ -301,15 +340,17 @@ onMounted(() => {
           <div
             v-for="(reward, idx) in checkinStatus.weekRewards" :key="idx"
             class="pv-day"
-            :class="{ 'pv-day-pop': popDayIdx === idx + 1 }"
-            style="border-radius: 10px; padding: 12px 6px; text-align: center; border: 1px solid rgba(var(--line-rgb),0.14)"
-            :style="{
-              background: (idx + 1) === (((checkinStatus.currentStreak - 1) % 7) + 1) ? 'color-mix(in srgb, ' + accent + ' 14%, transparent)' : 'var(--card2)',
-              borderColor: (idx + 1) === (((checkinStatus.currentStreak - 1) % 7) + 1) ? accent : 'rgba(var(--line-rgb),0.14)',
-            }"
+            :class="['pv-' + dayState(idx), { 'pv-day-pop': popDayIdx === idx + 1 }]"
           >
-            <div style="font-size: 10.5px; color: var(--muted2); margin-bottom: 4px">Ngày {{ idx + 1 }}</div>
-            <div style="font-size: 13px; font-weight: 700; color: #c7ccd6">+{{ reward }}</div>
+            <!-- Ngày kế tiếp (đã điểm danh hôm nay rồi): khung sáng, nội dung mờ, đếm ngược phía trên -->
+            <div v-if="dayState(idx) === 'next'" class="pv-count">{{ countdown }}</div>
+            <div :class="{ 'pv-blur': dayState(idx) === 'next' }">
+              <div style="font-size: 10.5px; color: var(--muted2); margin-bottom: 4px">
+                Ngày {{ idx + 1 }}
+                <span v-if="dayState(idx) === 'done'" style="color: var(--green)">✓</span>
+              </div>
+              <div style="font-size: 13px; font-weight: 700; color: #c7ccd6">+{{ reward }}</div>
+            </div>
           </div>
         </div>
         <div style="font-size: 11.5px; color: var(--muted); margin-top: 10px">
@@ -520,7 +561,47 @@ onMounted(() => {
   animation: ck-coin-fly 620ms ease forwards;
 }
 .pv-day {
+  position: relative;
+  border-radius: 10px;
+  padding: 12px 6px;
+  text-align: center;
+  border: 1px solid rgba(var(--line-rgb), 0.14);
+  background: var(--card2);
+  overflow: hidden;
   transition: background 0.2s ease, border-color 0.2s ease;
+}
+/* Đã điểm danh: viền xanh theme NHẠT (đánh dấu ngày đã xong). */
+.pv-done {
+  border-color: color-mix(in srgb, var(--green) 45%, transparent);
+  background: color-mix(in srgb, var(--green) 8%, var(--card2));
+}
+/* Ngày bấm điểm danh hôm nay (chưa điểm danh): khung xanh RÕ. */
+.pv-today {
+  border-color: var(--acc, #c6ff4a);
+  background: color-mix(in srgb, var(--acc, #c6ff4a) 14%, transparent);
+}
+/* Ngày kế tiếp sau khi đã điểm danh: khung xanh rõ, nội dung mờ, có đếm ngược. */
+.pv-next {
+  border-color: var(--acc, #c6ff4a);
+  background: color-mix(in srgb, var(--acc, #c6ff4a) 10%, transparent);
+}
+.pv-blur {
+  filter: blur(3px);
+  opacity: 0.5;
+}
+.pv-count {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Chakra Petch', monospace;
+  font-weight: 700;
+  font-size: 12.5px;
+  letter-spacing: 0.5px;
+  color: var(--acc, #c6ff4a);
+  pointer-events: none;
 }
 .pv-day-pop {
   animation: ck-day-pop 500ms ease, ck-ring 700ms ease-out;

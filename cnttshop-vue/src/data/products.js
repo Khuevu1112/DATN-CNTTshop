@@ -109,10 +109,23 @@ export const CATEGORY_SEGMENTS = [
   {
     slug: 'ngoai-vi',
     icon: 'bi-keyboard',
+    // Ba nhóm con (chuột / bàn phím / tai nghe) kèm bộ lọc chi tiết. Dùng '+' (VÀ) để "chuột
+    // gaming" = tên chứa "chuột" VÀ "gaming" — xem matchesQuery. Segment nào không có sản phẩm
+    // sẽ tự ẩn (CategoryView + mega-menu chỉ giữ mục count > 0). "Theo hãng" đã có sẵn ở bộ lọc
+    // thương hiệu bên sidebar nên không cần segment riêng.
     items: [
-      { keyword: 'bàn phím', label: 'Bàn phím', icon: 'bi-keyboard' },
       { keyword: 'chuột', label: 'Chuột', icon: 'bi-mouse2' },
+      { keyword: 'chuột+gaming', label: 'Chuột Gaming', icon: 'bi-joystick' },
+      { keyword: 'chuột+rgb|chuột+led|chuột+đèn', label: 'Chuột có đèn', icon: 'bi-lightbulb' },
+      { keyword: 'bàn phím', label: 'Bàn phím', icon: 'bi-keyboard' },
+      { keyword: 'bàn phím cơ', label: 'Bàn phím cơ', icon: 'bi-keyboard-fill' },
+      { keyword: 'bàn phím+rgb|bàn phím+led|bàn phím+neon', label: 'Bàn phím có đèn', icon: 'bi-rainbow' },
+      { keyword: 'bàn phím+gaming', label: 'Bàn phím Gaming', icon: 'bi-joystick' },
       { keyword: 'tai nghe', label: 'Tai nghe', icon: 'bi-headset' },
+      { keyword: 'tai nghe+gaming', label: 'Tai nghe Gaming', icon: 'bi-joystick' },
+      { keyword: 'tai nghe+bluetooth|tai nghe+không dây', label: 'Tai nghe Bluetooth', icon: 'bi-bluetooth' },
+      { keyword: 'tai nghe+over|tai nghe+chụp|tai nghe+ụp', label: 'Tai nghe chụp tai', icon: 'bi-headphones' },
+      { keyword: 'tai nghe+in-ear|tai nghe+nhét|tai nghe+tai trong', label: 'Tai nghe nhét tai', icon: 'bi-earbuds' },
       { keyword: 'webcam|loa', label: 'Webcam & Loa', icon: 'bi-camera-video' },
     ],
   },
@@ -213,11 +226,16 @@ export const productById = (id) => products.find((p) => p.id === id);
 export function matchesQuery(p, q) {
   if (!q || !q.trim()) return true;
   const [includePart, excludePart] = q.split('!');
-  const terms = includePart.toLowerCase().split('|').map((s) => s.trim()).filter(Boolean);
   const name = (p.name || '').toLowerCase();
   const brand = (p.brand || '').toLowerCase();
   const specText = (p.specs || []).map((s) => s.v || '').join(' ').toLowerCase();
-  const included = terms.some((t) => name.includes(t) || brand.includes(t) || specText.includes(t));
+  const hay = (t) => name.includes(t) || brand.includes(t) || specText.includes(t);
+  // Cú pháp: "a|b" = a HOẶC b; "a+b" = a VÀ b (dùng cho lọc kiểu "chuột gaming" = chuột VÀ
+  // gaming, vì tên sản phẩm ngoại vi lẫn lộn nhiều loại trong một danh mục). Nhóm OR tách bằng
+  // '|', trong mỗi nhóm các phần AND tách bằng '+'.
+  const groups = includePart.toLowerCase().split('|').map((s) => s.trim()).filter(Boolean);
+  const included = groups.some((g) =>
+    g.split('+').map((s) => s.trim()).filter(Boolean).every((t) => hay(t)));
   if (!included) return false;
   if (excludePart) {
     const excludeTerms = excludePart.toLowerCase().split('|').map((s) => s.trim()).filter(Boolean);

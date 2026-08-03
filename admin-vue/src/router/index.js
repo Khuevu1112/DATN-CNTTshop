@@ -76,6 +76,12 @@ const routes = [
         meta: { title: 'Khuyến mãi', sub: 'Mã giảm giá & chương trình', feature: 'coupons' },
       },
       {
+        path: 'articles',
+        name: 'articles',
+        component: () => import('../views/Articles.vue'),
+        meta: { title: 'Tin tức', sub: 'Bài viết blog: review, hướng dẫn, khuyến mãi', feature: 'articles' },
+      },
+      {
         path: 'contacts',
         name: 'contacts',
         component: () => import('../views/Contacts.vue'),
@@ -96,6 +102,36 @@ const routes = [
         name: 'warranty',
         component: () => import('../views/Warranty.vue'),
         meta: { title: 'Bảo hành', sub: 'Phiếu bảo hành & yêu cầu xử lý từ khách hàng', feature: 'warranty' },
+      },
+      {
+        path: 'service-appointments',
+        name: 'service-appointments',
+        component: () => import('../views/ServiceAppointments.vue'),
+        meta: {
+          title: 'Lịch hẹn dịch vụ',
+          sub: 'Khách hẹn mang máy tới trung tâm bảo hành',
+          feature: 'service_appointment',
+        },
+      },
+      {
+        path: 'returns',
+        name: 'returns',
+        component: () => import('../views/Returns.vue'),
+        meta: {
+          title: 'Đổi trả hàng',
+          sub: 'Yêu cầu đổi trả 1-đổi-1 trong 7 ngày kèm minh chứng',
+          feature: 'return_request',
+        },
+      },
+      {
+        path: 'support-content',
+        name: 'support-content',
+        component: () => import('../views/SupportContent.vue'),
+        meta: {
+          title: 'Nội dung hỗ trợ',
+          sub: 'Trung tâm bảo hành, bảng giá sửa chữa, chính sách và FAQ',
+          feature: 'support_content',
+        },
       },
       {
         path: 'shipping',

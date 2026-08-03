@@ -93,6 +93,79 @@ export { meWithToken };
 // Liên hệ
 export const submitContact = (payload) => post('/contact', payload);
 
+// Cấu hình trả góp (kỳ hạn + lãi suất + tỷ lệ trả trước tối thiểu) — công khai, cho trang
+// "Chính sách trả góp".
+export const fetchInstallmentConfig = () => get('/installment/config');
+
+// Tin tức (blog) — công khai.
+export const fetchArticleCategories = () => get('/article-categories');
+export const fetchArticles = (category) =>
+  get('/articles' + (category ? '?category=' + encodeURIComponent(category) : ''));
+export const fetchArticle = (slug) => get('/articles/' + encodeURIComponent(slug));
+
+// Đổi trả hàng (yêu cầu đăng nhập). Gửi yêu cầu dùng multipart vì kèm video minh chứng lỗi +
+// video tự mở hàng + tối đa 3 ảnh lỗi.
+export const fetchMyReturns = () => get('/returns');
+export async function submitReturnRequest(form, files) {
+  const fd = new FormData();
+  Object.entries(form).forEach(([k, v]) => {
+    if (v !== null && v !== undefined && v !== '') fd.append(k, v);
+  });
+  if (files?.videoLoi) fd.append('videoLoi', files.videoLoi);
+  if (files?.videoMoHang) fd.append('videoMoHang', files.videoMoHang);
+  (files?.anh || []).forEach((a) => a && fd.append('anh', a));
+  const res = await fetch(BASE + '/returns', { method: 'POST', headers: { ...authHeaders() }, body: fd });
+  if (!res.ok) {
+    baoTokenHetHan(res.status);
+    let msg = 'HTTP ' + res.status;
+    try { msg = (await res.json()).message || msg; } catch (e) { /* body rỗng */ }
+    throw new Error(msg);
+  }
+  return res.json();
+}
+
+// ===== Trung tâm hỗ trợ =====
+// Gần như toàn bộ là CÔNG KHAI: khách phải tra được trung tâm bảo hành, giá sửa chữa và FAQ
+// trước cả khi có tài khoản. Chỉ "lịch hẹn của tôi" và "huỷ lịch" cần đăng nhập.
+export const fetchSupportOverview = () => get('/support/tong-quan');
+
+/** lat/lng = vị trí khách (nếu cho phép định vị) -> backend sắp xếp theo khoảng cách đường chim
+ * bay. banKinhKm chỉ có tác dụng khi đã có lat/lng. */
+export const fetchServiceCenters = (params = {}) => {
+  const q = new URLSearchParams();
+  if (params.provinceId) q.set('provinceId', params.provinceId);
+  if (params.dichVu) q.set('dichVu', params.dichVu);
+  if (params.q) q.set('q', params.q);
+  if (params.lat != null && params.lng != null) {
+    q.set('lat', params.lat);
+    q.set('lng', params.lng);
+    if (params.banKinhKm) q.set('banKinhKm', params.banKinhKm);
+  }
+  const qs = q.toString();
+  return get('/support/trung-tam' + (qs ? '?' + qs : ''));
+};
+
+export const fetchWarrantyPolicies = () => get('/support/chinh-sach-bao-hanh');
+export const lookupWarrantyBySerial = (serial) =>
+  get('/support/tra-cuu-bao-hanh?serial=' + encodeURIComponent(serial));
+
+export const fetchRepairPrices = (loaiThietBi) =>
+  get('/support/bang-gia' + (loaiThietBi ? '?loaiThietBi=' + encodeURIComponent(loaiThietBi) : ''));
+export const estimateRepairCost = (hangMucIds) => post('/support/uoc-tinh-sua-chua', { hangMucIds });
+
+export const fetchFaq = (q) => get('/support/faq' + (q ? '?q=' + encodeURIComponent(q) : ''));
+export const markFaqViewed = (id) => post('/support/faq/' + id + '/xem', {});
+
+// Đặt lịch dịch vụ. Đặt được cả khi chưa đăng nhập (khách mang máy mua nơi khác tới sửa) —
+// có token thì backend tự gắn lịch vào tài khoản.
+export const fetchServiceSlots = (centerId, ngay) =>
+  get('/support/khung-gio?centerId=' + centerId + '&ngay=' + ngay);
+export const bookServiceAppointment = (payload) => post('/support/dat-lich', payload);
+export const lookupAppointment = (maLich) =>
+  get('/support/lich-hen/tra-cuu?maLich=' + encodeURIComponent(maLich));
+export const fetchMyAppointments = () => get('/support/lich-hen/cua-toi');
+export const cancelAppointment = (id) => post('/support/lich-hen/' + id + '/huy', {});
+
 // Quên mật khẩu (OTP qua email)
 export const forgotPasswordSendOtp = (email) => post('/auth/forgot-password/send-otp', { email });
 export const forgotPasswordVerifyOtp = (email, otp) => post('/auth/forgot-password/verify-otp', { email, otp });
@@ -108,7 +181,11 @@ export const markAllNotificationsRead = () => post('/notifications/read-all');
 // Bảo hành (yêu cầu đăng nhập)
 export const fetchMyWarranties = () => get('/warranty');
 export const fetchWarrantyDetail = (id) => get('/warranty/' + id);
-export const submitWarrantyRequest = (id, issue) => post('/warranty/' + id + '/requests', { issue });
+// Gửi yêu cầu bảo hành kèm lịch hẹn. hinhThuc: 'tan_noi' | 'cua_hang'; centerId chỉ dùng khi
+// mang tới cửa hàng. Giữ tương thích lời gọi cũ (chỉ có issue) qua tham số payload gộp.
+export const submitWarrantyRequest = (id, payload) =>
+  post('/warranty/' + id + '/requests',
+    typeof payload === 'string' ? { issue: payload } : payload);
 
 // Đánh giá sản phẩm + giao hàng
 export const fetchProductReviews = (slug) => get('/products/' + slug + '/reviews');

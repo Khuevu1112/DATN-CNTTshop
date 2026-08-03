@@ -21,6 +21,11 @@ public class Warranty {
     @JoinColumn(name = "user_id")
     private NguoiDung nguoiDung;
 
+    /** Mã tra cứu bảo hành do shop cấp, cú pháp BHCNTT + 4 ký tự — luôn có (khác serial có thể
+     * trống). Là khoá khách dùng để tra cứu thông tin/tình trạng/đăng ký bảo hành. */
+    @Column(name = "ma_bao_hanh", nullable = false, unique = true)
+    private String maBaoHanh;
+
     @Column(name = "serial_number")
     private String serialNumber;
 
@@ -43,6 +48,9 @@ public class Warranty {
 
     public NguoiDung getNguoiDung() { return nguoiDung; }
     public void setNguoiDung(NguoiDung nguoiDung) { this.nguoiDung = nguoiDung; }
+
+    public String getMaBaoHanh() { return maBaoHanh; }
+    public void setMaBaoHanh(String maBaoHanh) { this.maBaoHanh = maBaoHanh; }
 
     public String getSerialNumber() { return serialNumber; }
     public void setSerialNumber(String serialNumber) { this.serialNumber = serialNumber; }

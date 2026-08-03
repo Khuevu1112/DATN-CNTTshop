@@ -26,7 +26,10 @@
         <div style="background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px; margin-bottom: 14px">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px">
             <div>
-              <div style="font-size: 16px; font-weight: 700; color: var(--text)">{{ detail.productName }}</div>
+              <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
+                <div style="font-size: 16px; font-weight: 700; color: var(--text)">{{ detail.productName }}</div>
+                <span v-if="detail.maBaoHanh" class="badge" style="background: color-mix(in srgb, var(--acc) 16%, transparent); color: var(--acc); font-family: monospace">{{ detail.maBaoHanh }}</span>
+              </div>
               <div style="font-size: 12px; color: var(--muted); margin-top: 3px">Đơn {{ detail.orderCode }} · {{ detail.customerName }} ({{ detail.customerEmail }})</div>
             </div>
             <select class="fld" v-model="statusDraft" style="width: 160px">
@@ -75,6 +78,7 @@
           <table style="width: 100%; border-collapse: collapse; font-size: 13px">
             <thead>
               <tr style="background: var(--card2)">
+                <th style="text-align:left;padding:10px 16px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase">Mã BH</th>
                 <th style="text-align:left;padding:10px 16px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase">Sản phẩm</th>
                 <th style="text-align:left;padding:10px 12px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase">Khách hàng</th>
                 <th style="text-align:left;padding:10px 12px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase">Hiệu lực</th>
@@ -83,6 +87,7 @@
             </thead>
             <tbody>
               <tr v-for="w in warranties" :key="w.id" @click="openWarrantyDetail(w.id)" style="border-top: 1px solid var(--line); cursor: pointer">
+                <td style="padding: 11px 16px; color: var(--acc); font-family: monospace; font-size: 12px">{{ w.maBaoHanh }}</td>
                 <td style="padding: 11px 16px; color: var(--text)">{{ w.productName }}</td>
                 <td style="padding: 11px 12px; color: var(--muted2); font-size: 12px">{{ w.customerName }}</td>
                 <td style="padding: 11px 12px; color: var(--muted2); font-size: 12px">{{ fmtDate(w.startDate) }} → {{ fmtDate(w.endDate) }}</td>
@@ -103,10 +108,25 @@
         </button>
         <div style="display: grid; grid-template-columns: 1.6fr 1fr; gap: 14px">
           <div style="background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px">
-            <div style="font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 6px">{{ requestDetail.productName }}</div>
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px">
+              <div style="font-size: 15px; font-weight: 700; color: var(--text)">{{ requestDetail.productName }}</div>
+              <span v-if="requestDetail.maBaoHanh" class="badge" style="background: color-mix(in srgb, var(--acc) 16%, transparent); color: var(--acc); font-family: monospace">{{ requestDetail.maBaoHanh }}</span>
+            </div>
             <div style="font-size: 12px; color: var(--muted); margin-bottom: 14px">{{ requestDetail.customerName }} ({{ requestDetail.customerEmail }}) · {{ fmtDateTime(requestDetail.createdAt) }}</div>
             <div style="background: var(--card2); border-radius: 10px; padding: 14px; font-size: 13px; color: var(--text); margin-bottom: 16px; white-space: pre-wrap">
               {{ requestDetail.issueDescription }}
+            </div>
+            <!-- Lịch hẹn khách chọn khi gửi yêu cầu (trang Quản lý bảo hành cá nhân) -->
+            <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px">
+              <span v-if="requestDetail.ngayHen" class="badge" style="background: var(--card2); color: var(--muted2)">
+                <i class="bi bi-calendar-event" style="margin-right: 5px"></i>Hẹn {{ fmtDate(requestDetail.ngayHen) }}
+              </span>
+              <span v-if="requestDetail.hinhThuc === 'tan_noi'" class="badge" style="background: color-mix(in srgb, var(--warn, #f5a524) 16%, transparent); color: var(--warn, #f5a524)">
+                Tận nơi · phụ phí {{ fmtTien(requestDetail.phuPhi) }}
+              </span>
+              <span v-else-if="requestDetail.hinhThuc === 'cua_hang'" class="badge" style="background: var(--card2); color: var(--muted2)">
+                <i class="bi bi-shop" style="margin-right: 5px"></i>{{ requestDetail.centerName || 'Mang tới cửa hàng' }}
+              </span>
             </div>
             <div style="font-size: 12px; font-weight: 600; color: var(--muted2); margin-bottom: 8px">Lịch sử xử lý</div>
             <div v-for="(h, i) in requestDetail.history" :key="i" style="display: flex; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line)">
@@ -216,6 +236,7 @@ function fmtDateTime(iso) {
   const d = new Date(iso);
   return `${fmtDate(iso)} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
+const fmtTien = (n) => (n == null ? '—' : Number(n).toLocaleString('vi-VN') + 'đ');
 
 async function loadWarranties() {
   loadingList.value = true;

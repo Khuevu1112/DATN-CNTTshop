@@ -287,12 +287,16 @@ export const NAV_GROUPS = [
       ['customers', 'Quản lý tài khoản', 'bi-people'],
       ['contacts', 'Liên hệ', 'bi-envelope-paper'],
       ['warranty', 'Bảo hành', 'bi-shield-check'],
+      ['service-appointments', 'Lịch hẹn dịch vụ', 'bi-calendar-check'],
+      ['returns', 'Đổi trả hàng', 'bi-arrow-return-left'],
+      ['support-content', 'Nội dung hỗ trợ', 'bi-life-preserver'],
     ],
   },
   {
     title: 'Marketing',
     items: [
       ['coupons', 'Khuyến mãi', 'bi-ticket-perforated'],
+      ['articles', 'Tin tức', 'bi-newspaper'],
       ['shipping', 'Phí giao hàng', 'bi-truck'],
     ],
   },

@@ -23,5 +23,10 @@ public class WebConfig implements WebMvcConfigurer {
         String reviewUploadPath = Paths.get("uploads/review").toAbsolutePath().toUri().toString();
         registry.addResourceHandler("/uploads/review/**")
                 .addResourceLocations(reviewUploadPath);
+
+        // Ảnh + video minh chứng đổi trả (video lỗi, video mở hàng, ảnh lỗi).
+        String returnUploadPath = Paths.get("uploads/return").toAbsolutePath().toUri().toString();
+        registry.addResourceHandler("/uploads/return/**")
+                .addResourceLocations(returnUploadPath);
     }
 }

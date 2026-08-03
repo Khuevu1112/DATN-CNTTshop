@@ -94,6 +94,15 @@ public class SecurityConfig {
                     .requestMatchers("/api/membership/tiers").permitAll()
                     .requestMatchers("/api/subscription/plans").permitAll()
                     .requestMatchers("/api/geocoding/**").permitAll()
+                    // Trung tâm hỗ trợ: tra trung tâm bảo hành, giá sửa chữa, FAQ và ĐẶT lịch
+                    // dịch vụ đều công khai — khách cần xem được trước khi có tài khoản, và shop
+                    // nhận sửa dịch vụ cho cả máy mua nơi khác. Hai đường liên quan tới lịch của
+                    // CHÍNH MÌNH phải khai TRƯỚC vì matcher xét theo thứ tự, /api/support/**
+                    // đứng trên sẽ nuốt mất chúng.
+                    .requestMatchers("/api/support/lich-hen/cua-toi", "/api/support/lich-hen/*/huy").authenticated()
+                    .requestMatchers("/api/support/**").permitAll()
+                    // Tin tức công khai (đọc). Biên tập nằm ở /api/admin/articles (quyền articles).
+                    .requestMatchers(HttpMethod.GET, "/api/articles/**", "/api/article-categories").permitAll()
                     // Xem kỳ hạn + tính thử khoản trả hàng tháng là công khai (hiện ngay ở trang
                     // sản phẩm); ĐĂNG KÝ hồ sơ vẫn phải đăng nhập.
                     .requestMatchers(HttpMethod.GET, "/api/installment/config", "/api/installment/quote").permitAll()

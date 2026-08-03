@@ -174,51 +174,68 @@ const activeMenu = computed(() => megaMenus.value.find((m) => m.key === openMenu
  * Mục có `go` là đã nối route thật; mục không có `go` là bài viết CHƯA CÓ TRANG — hiển thị mờ +
  * không bấm được, đúng kiểu các mục chờ bổ sung trong panel Hỗ trợ. Bổ sung sau chỉ cần thêm
  * `go:` vào đúng mục. */
+// Từ khoá phân khúc dùng lại NGUYÊN VĂN từ CATEGORY_SEGMENTS để khi mở bằng ?seg=... thì đúng
+// chip phân khúc cũng sáng lên ở CategoryView (không chỉ lọc ngầm).
+const SEG = {
+  lapGaming: 'gaming|nitro|katana|loq',
+  lapVanPhong: 'văn phòng',
+  monGaming: '144hz|165hz|180hz|240hz|360hz|odyssey|ultragear|vg27aq|rog|tuf|zowie|mobiuz',
+  monDoHoa: '4k|ultrasharp|viewfinity|proart',
+  chuotGaming: 'chuột+gaming',
+  banPhimCo: 'bàn phím cơ',
+  banPhimGaming: 'bàn phím+gaming',
+  taiNgheBt: 'tai nghe+bluetooth|tai nghe+không dây',
+  taiNghe: 'tai nghe',
+};
+const gcf = (cat, opts) => () => actions.goCatFilter(cat, opts);
+
 const EXPLORE = {
   components: [
     { label: 'Tự xây dựng cấu hình PC', go: actions.goPcBuild },
-    { label: 'Kiểm tra tương thích linh kiện' },
-    { label: 'Linh kiện bán chạy' },
-    { label: 'Tư vấn nâng cấp máy' },
-    { label: 'Hàng chính hãng 100%' },
-    { label: 'Trả góp 0%' },
+    { label: 'Kiểm tra tương thích linh kiện', go: () => actions.goFaqCat('ky_thuat') },
+    { label: 'Linh kiện bán chạy', go: gcf('linh-kien', { sold: 1 }) },
+    { label: 'Tư vấn nâng cấp máy', go: actions.goSupportChat },
+    { label: 'Hàng chính hãng 100%', go: actions.goCommitment },
+    { label: 'Trả góp 0%', go: actions.goInstallmentPolicy },
   ],
   laptop: [
-    { label: 'Tại sao chọn Laptop Gaming' },
-    { label: 'Laptop cho sinh viên' },
-    { label: 'Laptop cho dân văn phòng' },
+    { label: 'Tại sao chọn Laptop Gaming', go: gcf('laptop', { seg: SEG.lapGaming }) },
+    { label: 'Laptop cho sinh viên (≤ 20 triệu)', go: gcf('laptop', { priceMax: 20000000 }) },
+    { label: 'Laptop cho dân văn phòng', go: gcf('laptop', { seg: SEG.lapVanPhong }) },
     { label: 'So sánh laptop', go: actions.goCompare },
-    { label: 'Laptop bán chạy' },
-    { label: 'Trả góp 0%' },
+    { label: 'Laptop bán chạy', go: gcf('laptop', { sold: 1 }) },
+    { label: 'Trả góp 0%', go: actions.goInstallmentPolicy },
   ],
   'pc-may-tinh-ban': [
     { label: 'Tự build PC theo ý bạn', go: actions.goPcBuild },
-    { label: 'PC dựng sẵn bán chạy' },
-    { label: 'Tư vấn cấu hình miễn phí' },
-    { label: 'PC theo ngân sách' },
+    { label: 'PC dựng sẵn bán chạy', go: gcf('pc-may-tinh-ban', { sold: 1 }) },
+    { label: 'Tư vấn cấu hình miễn phí', go: actions.goSupportChat },
+    { label: 'PC theo ngân sách', go: actions.goInstallmentPolicy },
     { label: 'So sánh cấu hình', go: actions.goCompare },
-    { label: 'Trả góp 0%' },
   ],
   'man-hinh': [
-    { label: 'Chọn màn hình chơi game' },
-    { label: 'Màn hình cho đồ họa' },
-    { label: 'Tần số quét là gì?' },
-    { label: 'Kích thước & độ phân giải' },
-    { label: 'Màn hình bán chạy' },
+    { label: 'Chọn màn hình chơi game', go: gcf('man-hinh', { seg: SEG.monGaming }) },
+    { label: 'Màn hình cho đồ họa', go: gcf('man-hinh', { seg: SEG.monDoHoa }) },
+    { label: 'Tần số quét là gì?', go: () => actions.goFaqCat('ky_thuat') },
+    { label: 'Kích thước & độ phân giải', go: gcf('man-hinh', {}) },
+    { label: 'Màn hình bán chạy', go: gcf('man-hinh', { sold: 1 }) },
   ],
+  // Chỉ nối các mục có dữ liệu thật (kiểm tra bằng SQL): bàn phím cơ (11), bàn phím gaming (3),
+  // tai nghe bluetooth (2). Các chip chi tiết còn lại (chuột gaming, chuột có đèn, tai nghe nhét
+  // tai...) vẫn nằm trong CATEGORY_SEGMENTS và tự hiện/ẩn ở trang danh mục theo lượng hàng.
   'ngoai-vi': [
-    { label: 'Combo phím & chuột' },
-    { label: 'Bàn phím cơ' },
-    { label: 'Chuột gaming' },
-    { label: 'Tai nghe bán chạy' },
-    { label: 'Setup góc làm việc' },
+    { label: 'Chuột', go: gcf('ngoai-vi', { seg: 'chuột' }) },
+    { label: 'Bàn phím cơ', go: gcf('ngoai-vi', { seg: SEG.banPhimCo }) },
+    { label: 'Bàn phím Gaming', go: gcf('ngoai-vi', { seg: SEG.banPhimGaming }) },
+    { label: 'Tai nghe Bluetooth', go: gcf('ngoai-vi', { seg: SEG.taiNgheBt }) },
+    { label: 'Tai nghe bán chạy', go: gcf('ngoai-vi', { seg: SEG.taiNghe, sold: 1 }) },
   ],
   'phu-kien': [
-    { label: 'Phụ kiện bán chạy' },
+    { label: 'Phụ kiện bán chạy', go: gcf('phu-kien', { sold: 1 }) },
     { label: 'Quà tặng kèm' },
-    { label: 'Balo & túi laptop' },
-    { label: 'Hub & cáp chuyển' },
-    { label: 'Giá đỡ & phụ kiện bàn' },
+    { label: 'Balo & túi laptop', go: gcf('phu-kien', { seg: 'balo|túi' }) },
+    { label: 'Hub & cáp chuyển', go: gcf('phu-kien', { seg: 'hub|cáp' }) },
+    { label: 'Giá đỡ & phụ kiện bàn', go: gcf('phu-kien', { seg: 'giá đỡ' }) },
   ],
 };
 const exploreItems = computed(() => (activeMenu.value ? EXPLORE[activeMenu.value.key] || [] : []));
@@ -229,52 +246,61 @@ const plainNavItems = computed(() => [
   { label: 'Xây dựng cấu hình', icon: 'bi-tools', onClick: actions.goPcBuild, active: route.name === 'pcbuild' },
   { label: 'So sánh', icon: 'bi-layout-split', onClick: actions.goCompare, active: route.name === 'compare' },
   { label: 'Khuyến mãi', icon: 'bi-gift', onClick: actions.goPromotions, active: route.name === 'promotions' },
+  { label: 'Tin tức', icon: 'bi-newspaper', onClick: () => actions.goNews(), active: route.name === 'news' || route.name === 'article' },
 ]);
 
 /* ===== Panel Hỗ trợ = "Liên hệ" (menu cũ) GỘP với "Bảo hành" (header cũ) =====
    Mục có `go` là đã nối được route thật; mục KHÔNG có `go` là trang chưa tồn tại trong dự án —
-   để trống, hiện dạng mờ + không bấm được, chờ bổ sung. */
+   để trống, hiện dạng mờ + không bấm được, chờ bổ sung.
+
+   LƯU Ý PHÂN BIỆT hai mục dễ nhầm:
+     - goWarranty     = phiếu bảo hành CỦA TÔI (Tài khoản → Bảo hành), phải đăng nhập
+     - goWarrantyInfo = chính sách + tra cứu theo serial, công khai
+   Trước đây cả hai đều trỏ về goWarranty nên khách chưa đăng nhập bấm "Thông tin Bảo hành" là
+   bị đá sang màn hình đăng nhập, dù đó là trang lẽ ra ai cũng xem được. */
 const SUPPORT_COLUMNS = computed(() => [
   {
     title: 'Hỗ trợ sản phẩm',
     items: [
-      { label: 'Trang chủ Hỗ Trợ', go: actions.goContact },
+      { label: 'Trang chủ Hỗ Trợ', go: actions.goSupport },
       { label: 'Hướng dẫn sử dụng & Software' },
-      { label: 'Tìm kiếm' },
-      { label: 'FAQ Hỗ trợ mua trực tuyến' },
+      { label: 'Tìm kiếm', go: actions.goFaq },
+      { label: 'FAQ Hỗ trợ mua trực tuyến', go: actions.goFaq },
     ],
   },
   {
     title: 'Dịch vụ bảo hành và sửa chữa',
     items: [
-      { label: 'Thông tin Bảo hành', go: actions.goWarranty },
-      { label: 'Bảng giá linh kiện' },
-      { label: 'Tìm Trung Tâm Bảo Hành' },
-      { label: 'Tình Trạng Sửa Chữa', go: actions.goWarranty },
+      { label: 'Thông tin Bảo hành', go: actions.goWarrantyInfo },
+      { label: 'Bảng giá linh kiện', go: actions.goRepairPrice },
+      // Tìm trung tâm và đặt lịch là cùng một trang (bấm "Đặt lịch" ngay trên từng trung tâm),
+      // nên gộp làm một mục thay vì hai mục cùng trỏ về một chỗ.
+      { label: 'Trung Tâm Bảo Hành & Đặt Lịch', go: actions.goServiceCenters },
+      { label: 'Tình Trạng Sửa Chữa', go: actions.goAppointments },
+      { label: 'Chính sách đổi trả', go: actions.goReturnPolicy },
     ],
   },
   {
     title: 'Liên hệ',
     items: [
       { label: 'Tư Vấn Trực Tuyến', go: actions.goContact },
-      { label: 'Gọi Điện Thoại' },
-      { label: 'Gửi Email', go: actions.goContact },
-      { label: 'Ngôn Ngữ Ký Hiệu' },
+      { label: 'Gọi Điện Thoại', go: actions.goContactHotline },
+      { label: 'Gửi Email', go: actions.goContactEmail },
     ],
   },
   {
     title: 'Tìm thêm thông tin',
     items: [
+      { label: 'Quản lý bảo hành cá nhân', go: actions.goWarranty },
       { label: 'Tin Tức & Cảnh Báo' },
-      { label: 'Dịch Vụ Sửa Chữa Tiết Kiệm' },
-      { label: 'Gói sửa chữa màn hình' },
+      { label: 'Combo sửa chữa', go: actions.goRepairPriceCombo },
     ],
   },
 ]);
 const SUPPORT_TILES = computed(() => [
-  { label: 'Thông tin Bảo Hành', icon: 'bi-shield-check', go: actions.goWarranty },
-  { label: 'Hướng dẫn sử dụng', icon: 'bi-download' },
-  { label: 'Trung tâm bảo hành', icon: 'bi-tools' },
+  { label: 'Thông tin Bảo Hành', icon: 'bi-shield-check', go: actions.goWarrantyInfo },
+  { label: 'Bảng giá sửa chữa', icon: 'bi-receipt', go: actions.goRepairPrice },
+  { label: 'Trung tâm bảo hành', icon: 'bi-tools', go: actions.goServiceCenters },
   { label: 'Liên Hệ', icon: 'bi-headset', go: actions.goContact },
 ]);
 

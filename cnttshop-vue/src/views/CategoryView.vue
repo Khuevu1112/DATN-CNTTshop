@@ -1,7 +1,7 @@
 <script setup>
 import { computed, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import { catMeta, fmt, matchesQuery, CATEGORY_SEGMENTS } from '../data/products.js';
+import { catMeta, fmt, matchesQuery, CATEGORY_SEGMENTS, COMPONENT_SLUGS } from '../data/products.js';
 import { state, actions, accent, products } from '../store.js';
 import ProductCard from '../components/ProductCard.vue';
 
@@ -10,14 +10,26 @@ const route = useRoute();
 // khả năng lệch pha giữa lúc guard chạy và lúc component đọc, dù đến từ trang nào trước đó.
 const cat = computed(() => route.params.cat || 'all');
 
+// "linh-kien" là danh mục GỘP: gom mọi danh mục linh kiện con (cpu/gpu/ram/...) vào một trang —
+// dùng cho mục "Linh kiện bán chạy" trên menu Khám phá, vì mỗi loại linh kiện vốn là một danh
+// mục riêng, không có trang "linh kiện" chung.
+const isComponentGroup = computed(() => cat.value === 'linh-kien');
+
 const catTitle = computed(() =>
   cat.value === 'all'
     ? 'Tất cả sản phẩm'
-    : catMeta[cat.value]?.vn || 'Sản phẩm',
+    : isComponentGroup.value
+      ? 'Linh kiện máy tính'
+      : catMeta[cat.value]?.vn || 'Sản phẩm',
 );
 
 const base = computed(() =>
-  products.filter((p) => (cat.value === 'all' ? true : p.cat === cat.value)),
+  products.filter((p) =>
+    cat.value === 'all'
+      ? true
+      : isComponentGroup.value
+        ? COMPONENT_SLUGS.includes(p.cat)
+        : p.cat === cat.value),
 );
 
 const allBrands = computed(() =>
@@ -97,6 +109,23 @@ const pcCoolerBrands = computed(() => {
   return [...set].sort();
 });
 
+// ===== Bộ lọc riêng cho Màn hình: Kích thước + Độ phân giải (đọc thẳng từ spec_value thật) =====
+const isMonitorCategory = computed(() => cat.value === 'man-hinh');
+// Sắp kích thước theo số inch tăng dần thay vì chữ cái ("24 inch" < "27 inch" < "32 inch").
+const soInch = (v) => { const m = String(v).match(/\d+(\.\d+)?/); return m ? parseFloat(m[0]) : 0; };
+const monSizeOptions = computed(() => {
+  if (!isMonitorCategory.value) return [];
+  const set = new Set();
+  base.value.forEach((p) => { const v = specVal(p, 'Kích thước'); if (v) set.add(v); });
+  return [...set].sort((a, b) => soInch(a) - soInch(b));
+});
+const monResoOptions = computed(() => {
+  if (!isMonitorCategory.value) return [];
+  const set = new Set();
+  base.value.forEach((p) => { const v = specVal(p, 'Độ phân giải'); if (v) set.add(v); });
+  return [...set].sort();
+});
+
 // Phân khúc theo chức năng (chỉ hiện với danh mục có định nghĩa sẵn — xem CATEGORY_SEGMENTS),
 // mỗi mục kèm số lượng sản phẩm khớp để ẩn phân khúc rỗng.
 const currentSegments = computed(() => {
@@ -133,6 +162,7 @@ const sorters = {
   high: (a, b) => b.price - a.price,
   disc: (a, b) => phanTramGiam(b) - phanTramGiam(a),     // ưu đãi nhiều → ít
   discAsc: (a, b) => phanTramGiam(a) - phanTramGiam(b),  // ưu đãi ít → nhiều
+  sold: (a, b) => (b.soldCount || 0) - (a.soldCount || 0), // bán chạy nhất (dữ liệu đơn thật)
 };
 
 // Danh sách sau khi lọc theo mọi tiêu chí TRỪ thương hiệu — dùng để đếm số lượng sp/thương hiệu
@@ -149,6 +179,11 @@ const filteredExceptBrand = computed(() => {
   if (state.minRating) l = l.filter((p) => p.rating >= state.minRating);
   if (state.inStockOnly) l = l.filter((p) => p.stock > 0);
   if (state.onlyDeal) l = l.filter((p) => p.oldPrice && p.oldPrice > p.price);
+  if (state.onlyBestseller) l = l.filter((p) => (p.soldCount || 0) > 0);
+  if (isMonitorCategory.value) {
+    if (state.monSize.length) l = l.filter((p) => state.monSize.includes(specVal(p, 'Kích thước')));
+    if (state.monReso.length) l = l.filter((p) => state.monReso.includes(specVal(p, 'Độ phân giải')));
+  }
   if (isPcCategory.value) {
     if (state.pcCpuVendor) l = l.filter((p) => cpuVendorOf(specVal(p, 'CPU')) === state.pcCpuVendor);
     if (state.pcCpuSeries) l = l.filter((p) => cpuSeriesOf(specVal(p, 'CPU')) === state.pcCpuSeries);
@@ -185,6 +220,9 @@ const hasActiveFilters = computed(
     state.minRating > 0 ||
     state.inStockOnly ||
     state.onlyDeal ||
+    state.onlyBestseller ||
+    state.monSize.length > 0 ||
+    state.monReso.length > 0 ||
     state.sort !== 'pop' ||
     state.pcCpuVendor !== '' ||
     state.pcCpuSeries !== '' ||
@@ -436,6 +474,7 @@ function scrollRow(keyword, dir) {
             "
           >
             <option value="pop">Phổ biến nhất</option>
+            <option value="sold">Bán chạy nhất</option>
             <option value="low">Giá thấp → cao</option>
             <option value="high">Giá cao → thấp</option>
             <option value="disc">Ưu đãi nhiều → ít</option>
@@ -595,6 +634,47 @@ function scrollRow(keyword, dir) {
             </div>
           </div>
         </div>
+        <!-- Bộ lọc riêng cho Màn hình: Kích thước + Độ phân giải -->
+        <div v-if="isMonitorCategory && monSizeOptions.length" style="margin-bottom: 22px">
+          <label style="display: block; font-size: 12.5px; color: var(--muted2); margin-bottom: 10px">Kích thước</label>
+          <div style="display: flex; flex-direction: column; gap: 9px">
+            <div
+              v-for="s in monSizeOptions"
+              :key="s"
+              @click="actions.toggleMonSize(s)"
+              style="display: flex; align-items: center; gap: 10px; cursor: pointer"
+            >
+              <span
+                class="filter-checkbox"
+                :style="{ background: state.monSize.includes(s) ? accent : 'transparent' }"
+                style="width: 18px; height: 18px; border-radius: 5px; border: 1px solid rgba(var(--line-rgb), 0.3); display: flex; align-items: center; justify-content: center; flex: none"
+              >
+                <Transition name="check-pop"><span v-if="state.monSize.includes(s)" style="color: var(--acc-ink); font-size: 12px; font-weight: 700">✓</span></Transition>
+              </span>
+              <span style="font-size: 13px; color: var(--muted2); flex: 1">{{ s }}</span>
+            </div>
+          </div>
+        </div>
+        <div v-if="isMonitorCategory && monResoOptions.length" style="margin-bottom: 22px">
+          <label style="display: block; font-size: 12.5px; color: var(--muted2); margin-bottom: 10px">Độ phân giải</label>
+          <div style="display: flex; flex-direction: column; gap: 9px">
+            <div
+              v-for="rs in monResoOptions"
+              :key="rs"
+              @click="actions.toggleMonReso(rs)"
+              style="display: flex; align-items: center; gap: 10px; cursor: pointer"
+            >
+              <span
+                class="filter-checkbox"
+                :style="{ background: state.monReso.includes(rs) ? accent : 'transparent' }"
+                style="width: 18px; height: 18px; border-radius: 5px; border: 1px solid rgba(var(--line-rgb), 0.3); display: flex; align-items: center; justify-content: center; flex: none"
+              >
+                <Transition name="check-pop"><span v-if="state.monReso.includes(rs)" style="color: var(--acc-ink); font-size: 12px; font-weight: 700">✓</span></Transition>
+              </span>
+              <span style="font-size: 13px; color: var(--muted2); flex: 1">{{ rs }}</span>
+            </div>
+          </div>
+        </div>
         <div style="margin-bottom: 22px">
           <label
             style="
@@ -643,6 +723,23 @@ function scrollRow(keyword, dir) {
               </Transition>
             </span>
             <span style="font-size: 13px; color: var(--muted2)">🏷️ Chỉ chương trình ưu đãi</span>
+          </label>
+        </div>
+        <div style="margin-bottom: 12px">
+          <label
+            @click="actions.toggleOnlyBestseller"
+            style="display: flex; align-items: center; gap: 10px; cursor: pointer"
+          >
+            <span
+              class="filter-checkbox"
+              :style="{ background: state.onlyBestseller ? accent : 'transparent' }"
+              style="width: 18px; height: 18px; border-radius: 5px; border: 1px solid rgba(var(--line-rgb), 0.3); display: flex; align-items: center; justify-content: center; flex: none"
+            >
+              <Transition name="check-pop">
+              <span v-if="state.onlyBestseller" style="color: var(--acc-ink); font-size: 12px; font-weight: 700">✓</span>
+              </Transition>
+            </span>
+            <span style="font-size: 13px; color: var(--muted2)">🔥 Chỉ sản phẩm bán chạy</span>
           </label>
         </div>
         <div style="margin-bottom: 22px">

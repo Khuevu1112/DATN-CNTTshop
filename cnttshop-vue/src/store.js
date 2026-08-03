@@ -61,6 +61,9 @@ export const state = reactive({
   minRating: 0, // 0 = không lọc, 3/4/5 = từ N sao trở lên
   inStockOnly: false,
   onlyDeal: false, // true = chỉ hiện sản phẩm đang có ưu đãi/giảm giá (oldPrice > price)
+  onlyBestseller: false, // true = chỉ sản phẩm bán chạy (soldCount > 0, dữ liệu đơn hàng thật)
+  monSize: [], // lọc màn hình theo kích thước (giá trị spec "Kích thước")
+  monReso: [], // lọc màn hình theo độ phân giải (giá trị spec "Độ phân giải")
   theme: localStorage.getItem('theme') || 'cyan',
   mode: localStorage.getItem('mode') || 'dark',
   q: '',
@@ -139,11 +142,17 @@ router.beforeEach(async (to, from) => {
     state.priceMax = 70000000;
     state.minRating = 0;
     state.inStockOnly = false;
-    // Đọc từ query để link ngoài (VD nút "Xem thêm Ưu đãi" ở Flash Sale) mở thẳng trang danh
-    // mục đã bật sẵn bộ lọc ưu đãi + sắp theo mức giảm. deal=1 -> chỉ hàng đang giảm.
+    // Đọc từ query để link ngoài (VD nút "Xem thêm Ưu đãi" ở Flash Sale, hoặc các mục "Khám phá"
+    // trên menu) mở thẳng trang danh mục đã bật sẵn bộ lọc. deal=1 -> chỉ hàng đang giảm;
+    // sold=1 -> chỉ hàng bán chạy (sắp theo lượt bán); priceMax -> trần giá (VD laptop ≤20tr).
     state.onlyDeal = to.query.deal === '1';
-    state.sort = to.query.sort || 'pop';
+    state.onlyBestseller = to.query.sold === '1';
+    // Mặc định sắp theo lượt bán khi vào bằng bộ lọc bán chạy, trừ khi query chỉ định sort khác.
+    state.sort = to.query.sort || (to.query.sold === '1' ? 'sold' : 'pop');
     state.segmentKeyword = to.query.seg || '';
+    state.priceMax = to.query.priceMax ? Number(to.query.priceMax) : 70000000;
+    state.monSize = [];
+    state.monReso = [];
     state.pcCpuVendor = '';
     state.pcCpuSeries = '';
     state.pcCaseBrand = [];
@@ -191,6 +200,16 @@ export const actions = {
       params: { cat: cat || 'all' },
       query: keyword ? { seg: keyword } : {},
     }),
+  // Điều hướng danh mục kèm bộ lọc cho các mục "Khám phá" trên menu. opts: { seg, sold, priceMax,
+  // sort }. Store watch route sẽ đọc các query này để bật sẵn đúng bộ lọc.
+  goCatFilter: (cat, opts = {}) => {
+    const query = {};
+    if (opts.seg) query.seg = opts.seg;
+    if (opts.sold) query.sold = '1';
+    if (opts.priceMax) query.priceMax = String(opts.priceMax);
+    if (opts.sort) query.sort = opts.sort;
+    return router.push({ name: 'category', params: { cat: cat || 'all' }, query });
+  },
   goCatAll: () => actions.goCat('all'),
   // Mở trang tất cả danh mục đã bật sẵn bộ lọc ưu đãi + sắp theo mức giảm nhiều nhất. Store
   // watch route sẽ đọc deal/sort từ query (xem trên) để đồng bộ state — nút "Xem thêm Ưu đãi"
@@ -204,6 +223,36 @@ export const actions = {
   goCompare: () => router.push({ name: 'compare' }),
   goPcBuild: () => router.push({ name: 'pcbuild' }),
   goAccount: () => router.push({ name: 'account' }),
+
+  // ===== Trung tâm hỗ trợ =====
+  // goWarranty ở trên là phiếu bảo hành CỦA TÔI (cần đăng nhập); goWarrantyInfo dưới đây là
+  // trang chính sách + tra cứu theo serial, công khai. Hai thứ khác nhau, đừng gộp.
+  goSupport: () => router.push({ name: 'support' }),
+  goServiceCenters: () => router.push({ name: 'service-centers' }),
+  goWarrantyInfo: () => router.push({ name: 'warranty-info' }),
+  goRepairPrice: () => router.push({ name: 'repair-price' }),
+  // Vào thẳng phần "Combo sửa chữa" trên trang bảng giá — dùng query để trang tự cuộn tới đúng
+  // khối, thay vì bắt khách kéo tay xuống.
+  goRepairPriceCombo: () => router.push({ name: 'repair-price', query: { combo: '1' } }),
+  goFaq: () => router.push({ name: 'faq' }),
+  // FAQ mở thẳng một danh mục (VD 'ky_thuat') hoặc với từ khoá tìm sẵn — dùng cho các mục
+  // "Khám phá" kiểu "Tần số quét là gì?", "Kiểm tra tương thích linh kiện".
+  goFaqCat: (ma) => router.push({ name: 'faq', query: ma ? { cat: ma } : {} }),
+  goFaqSearch: (q) => router.push({ name: 'faq', query: q ? { q } : {} }),
+  // Hai trang chính sách công khai nối từ menu Khám phá.
+  goInstallmentPolicy: () => router.push({ name: 'installment-policy' }),
+  goCommitment: () => router.push({ name: 'commitment' }),
+  goReturnPolicy: () => router.push({ name: 'return-policy' }),
+  // Tin tức / blog.
+  goNews: (category) => router.push({ name: 'news', query: category ? { c: category } : {} }),
+  goArticle: (slug) => router.push({ name: 'article', params: { slug } }),
+  // Mở Trung tâm hỗ trợ và cuộn tới khối "Chat với kỹ thuật viên / tư vấn viên".
+  goSupportChat: () => router.push({ name: 'support', query: { chat: '1' } }),
+  goAppointments: () => router.push({ name: 'appointments' }),
+  // "Gọi điện thoại" / "Gửi email" trên menu Hỗ trợ đưa thẳng tới đúng thẻ trên trang Liên hệ
+  // (hotline / email) và làm nổi nó lên, thay vì chỉ mở trang rồi để khách tự tìm.
+  goContactHotline: () => router.push({ name: 'contact', query: { focus: 'hotline' } }),
+  goContactEmail: () => router.push({ name: 'contact', query: { focus: 'email' } }),
 
   // Điều hướng tới trang chi tiết — việc nạp dữ liệu thật (specs + cfg) đã chuyển vào
   // router.beforeEach ở trên, dùng chung cho cả click trong app lẫn Back/Forward/F5.
@@ -415,6 +464,19 @@ export const actions = {
   toggleOnlyDeal: () => {
     state.onlyDeal = !state.onlyDeal;
   },
+  toggleOnlyBestseller: () => {
+    state.onlyBestseller = !state.onlyBestseller;
+  },
+  toggleMonSize: (s) => {
+    state.monSize = state.monSize.includes(s)
+      ? state.monSize.filter((x) => x !== s)
+      : state.monSize.concat(s);
+  },
+  toggleMonReso: (r) => {
+    state.monReso = state.monReso.includes(r)
+      ? state.monReso.filter((x) => x !== r)
+      : state.monReso.concat(r);
+  },
   toggleBrand: (b) => {
     state.brandFilter = state.brandFilter.includes(b)
       ? state.brandFilter.filter((x) => x !== b)
@@ -453,6 +515,9 @@ export const actions = {
     state.minRating = 0;
     state.inStockOnly = false;
     state.onlyDeal = false;
+    state.onlyBestseller = false;
+    state.monSize = [];
+    state.monReso = [];
     state.pcCpuVendor = '';
     state.pcCpuSeries = '';
     state.pcCaseBrand = [];

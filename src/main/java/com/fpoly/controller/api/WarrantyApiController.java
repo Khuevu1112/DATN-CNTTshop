@@ -47,13 +47,15 @@ public class WarrantyApiController {
     @PostMapping("/{id}/requests")
     public WarrantyDetailDto createRequest(
             @PathVariable Integer id, @RequestBody CreateRequestBody body, Authentication auth) {
-        warrantyService.createRequest(id, auth.getName(), body.issue());
+        warrantyService.createRequest(id, auth.getName(), body.issue(),
+                body.ngayHen(), body.hinhThuc(), body.centerId());
         return toDetail(warrantyService.getById(id));
     }
 
     private WarrantySummaryDto toSummary(Warranty w) {
         return new WarrantySummaryDto(
                 w.getId(),
+                w.getMaBaoHanh(),
                 w.getOrderItem().getTenSanPham(),
                 w.getSerialNumber(),
                 w.getStartDate(),
@@ -69,6 +71,7 @@ public class WarrantyApiController {
                 .toList();
         return new WarrantyDetailDto(
                 w.getId(),
+                w.getMaBaoHanh(),
                 w.getOrderItem().getTenSanPham(),
                 w.getOrderItem().getOrder().getMaDonHang(),
                 w.getSerialNumber(),
@@ -86,7 +89,12 @@ public class WarrantyApiController {
                 .toList();
         return new WarrantyRequestDto(
                 r.getId(), r.getIssueDescription(), r.getRequestStatus(), r.getCreatedAt(),
-                r.getWarranty().getId(), r.getWarranty().getOrderItem().getTenSanPham(),
+                r.getNgayHen(), r.getHinhThuc(),
+                r.getCenter() != null ? r.getCenter().getId() : null,
+                r.getCenter() != null ? r.getCenter().getTen() : null,
+                r.getPhuPhi(),
+                r.getWarranty().getId(), r.getWarranty().getMaBaoHanh(),
+                r.getWarranty().getOrderItem().getTenSanPham(),
                 r.getWarranty().getNguoiDung().getHoTen(), r.getWarranty().getNguoiDung().getEmail(),
                 history);
     }

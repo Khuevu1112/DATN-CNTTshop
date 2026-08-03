@@ -3,10 +3,8 @@ import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { accent } from '../store.js';
-import {
-  dungNguonTrongNuoc, VIETMAP_STYLE_URL, OSM_TILE_URL, ATTRIBUTION,
-  ZOOM_TOI_THIEU, GIOI_HAN_VUNG, ganKeyVaoRequest, zoomToiThieuCho, VIETMAP_RASTER_URL,
-} from '../data/mapSource.js';
+import { ZOOM_TOI_THIEU, GIOI_HAN_VUNG } from '../data/mapSource.js';
+import { themLopNen } from '../utils/mapBaseLayer.js';
 
 // modelValue = { lat, lng } | null. Component chỉ lo phần bản đồ; việc BẮT BUỘC phải cắm mốc
 // trước khi lưu do form cha kiểm (xem CheckoutView/AccountView), backend kiểm lần nữa
@@ -61,139 +59,8 @@ function phatToaDo(lat, lng) {
   datGhim(lat, lng);
 }
 
-/** Vẽ lớp nền bản đồ.
- *
- * Hai đường đi khác hẳn nhau về kỹ thuật:
- *   - VietMap phát hành bản đồ đường phố dưới dạng VECTOR STYLE (style.json), Leaflet không tự
- *     đọc được -> nạp qua cầu nối maplibre-gl-leaflet. Import động để bundle chỉ kéo maplibre
- *     (~800KB) về khi thật sự có key, không bắt mọi khách tải thêm chừng đó dữ liệu vô ích.
- *   - OpenStreetMap là raster {z}/{x}/{y} -> L.tileLayer bình thường.
- *
- * Nạp VietMap hỏng (key sai/hết hạn mức/lỗi mạng) thì rơi về OSM thay vì để bản đồ trắng —
- * khách vẫn phải cắm được mốc mới đặt được hàng. */
-let daVeNen = false;
-
-/** Lớp nền OpenStreetMap — vừa là nguồn mặc định khi chưa có key, vừa là lưới an toàn khi
- * nguồn trong nước hỏng. Có chốt daVeNen để không vẽ chồng hai lớp lên nhau. */
-function veLopOsm(lyDo) {
-  if (daVeNen || !map) return;
-  daVeNen = true;
-  if (lyDo) console.warn('[MapPicker] Dùng OpenStreetMap thay thế —', lyDo);
-
-  L.tileLayer(OSM_TILE_URL, {
-    maxZoom: 19,
-    minZoom: ZOOM_TOI_THIEU,
-    bounds: GIOI_HAN_VUNG,
-    attribution: ATTRIBUTION,
-  }).addTo(map);
-}
-
-/** Chốt lại mức zoom tối thiểu theo lớp nền THỰC SỰ vẽ được. Rơi về OSM thì phải siết lại 10 để
- * vùng biển tranh chấp không lọt vào khung nhìn — xem mapSource.js. */
-function chotZoomToiThieu(nguon) {
-  const z = zoomToiThieuCho(nguon);
-  map.setMinZoom(z);
-  if (map.getZoom() < z) map.setZoom(z);
-}
-
-/** Thử raster VietMap trước: Leaflet đọc thẳng, không cần MapLibre. Trả về true nếu tile về được.
- * Dò bằng cách nghe 'tileload'/'tileerror' của chính lớp vừa thêm — endpoint sai thì mọi tile
- * đều lỗi và ta biết ngay, thay vì để bản đồ trống mà không ai báo. */
-function thuRasterVietMap() {
-  return new Promise((resolve) => {
-    const layer = L.tileLayer(VIETMAP_RASTER_URL, {
-      maxZoom: 19,
-      minZoom: zoomToiThieuCho('vietmap'),
-      bounds: GIOI_HAN_VUNG,
-      attribution: ATTRIBUTION,
-    });
-
-    let xong = false;
-    const ketThuc = (ok, lyDo) => {
-      if (xong) return;
-      xong = true;
-      if (!ok) {
-        map.removeLayer(layer);
-        console.warn('[MapPicker] Raster VietMap không dùng được —', lyDo);
-      }
-      resolve(ok);
-    };
-
-    layer.on('tileload', () => ketThuc(true));
-    layer.on('tileerror', () => ketThuc(false, 'tile trả về lỗi (endpoint hoặc quyền Tile)'));
-    layer.addTo(map);
-    setTimeout(() => ketThuc(false, 'quá 6 giây không có tile nào về'), 6000);
-  });
-}
-
-async function themLopNen() {
-  if (!dungNguonTrongNuoc) {
-    veLopOsm();
-    chotZoomToiThieu('osm');
-    return;
-  }
-
-  if (await thuRasterVietMap()) {
-    daVeNen = true;
-    chotZoomToiThieu('vietmap');
-    return;
-  }
-
-  let glLayer;
-  try {
-    // THỨ TỰ QUAN TRỌNG, không gộp vào Promise.all được: plugin cầu nối đọc biến toàn cục
-    // `maplibregl` ngay lúc nó được nạp, nên phải có maplibre-gl và gán window trước đã.
-    const { default: maplibregl } = await import('maplibre-gl');
-    await import('maplibre-gl/dist/maplibre-gl.css');
-    window.maplibregl = maplibregl;
-    await import('@maplibre/maplibre-gl-leaflet');
-
-    glLayer = L.maplibreGL({
-      style: VIETMAP_STYLE_URL,
-      attribution: ATTRIBUTION,
-      // Gắn apikey vào cả vector tiles / glyphs / sprite mà style.json trỏ tới — xem mapSource.js.
-      transformRequest: ganKeyVaoRequest,
-    });
-    glLayer.addTo(map);
-  } catch (e) {
-    veLopOsm('không nạp được thư viện MapLibre: ' + e.message);
-    chotZoomToiThieu('osm');
-    return;
-  }
-
-  /* Tới đây thư viện đã nạp xong nhưng BẢN ĐỒ CHƯA CHẮC HIỆN. MapLibre mới bắt đầu đi tải
-   * style.json, và nếu key sai / chưa bật quyền cho style này / referer bị chặn thì nó thất bại
-   * ÂM THẦM sau đó — try/catch ở trên không với tới được, kết quả là bản đồ trắng.
-   *
-   * Nên phải bắt sự kiện 'error' của chính maplibre, kèm một mốc thời gian dự phòng cho trường
-   * hợp request treo mà không bao giờ báo lỗi. */
-  const mlMap = glLayer.getMaplibreMap?.();
-  if (!mlMap) {
-    veLopOsm('không lấy được đối tượng bản đồ MapLibre');
-    chotZoomToiThieu('osm');
-    return;
-  }
-
-  let daTaiXong = false;
-  mlMap.on('load', () => { daTaiXong = true; chotZoomToiThieu('vietmap'); });
-
-  mlMap.on('error', (e) => {
-    if (daTaiXong) return; // lỗi lẻ tẻ sau khi bản đồ đã chạy thì bỏ qua, đừng đập lớp nền đi
-    const chiTiet = e?.error?.status
-      ? 'VietMap trả về HTTP ' + e.error.status + ' (kiểm tra API key, quyền style, và referer cho localhost)'
-      : 'VietMap báo lỗi: ' + (e?.error?.message || 'không rõ');
-    map.removeLayer(glLayer);
-    veLopOsm(chiTiet);
-    chotZoomToiThieu('osm');
-  });
-
-  setTimeout(() => {
-    if (daTaiXong || daVeNen) return;
-    map.removeLayer(glLayer);
-    veLopOsm('quá 8 giây chưa tải xong style VietMap');
-    chotZoomToiThieu('osm');
-  }, 8000);
-}
+/** Lớp nền (raster VietMap -> vector VietMap -> OpenStreetMap) dùng chung với các bản đồ khác
+ * trong app — xem utils/mapBaseLayer.js để biết vì sao chuỗi dự phòng này không được nhân bản. */
 
 /** Nút "Vị trí của tôi".
  *
@@ -261,7 +128,7 @@ onMounted(() => {
     maxBoundsViscosity: 1.0,
   }).setView(batDau, props.modelValue ? 17 : 13);
 
-  themLopNen();
+  themLopNen(map, 'MapPicker');
 
   if (props.modelValue) datGhim(props.modelValue.lat, props.modelValue.lng, false);
 
@@ -274,9 +141,8 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
-  // Đóng form địa chỉ rồi mở lại là component dựng mới — quên reset chốt này thì lần sau
-  // veLopOsm() tưởng đã vẽ rồi và bỏ qua, ra bản đồ trắng.
-  daVeNen = false;
+  // Không còn phải reset chốt "đã vẽ nền" ở đây: themLopNen() giữ trạng thái đó cục bộ theo
+  // từng lần gọi (xem utils/mapBaseLayer.js), nên mở lại form là có nền mới sạch sẽ.
   if (map) {
     map.remove();
     map = null;

@@ -40,8 +40,32 @@ public class WarrantyService {
     @Autowired
     private NotificationService notificationService;
 
+    @Autowired
+    private com.fpoly.repository.ServiceCenterRepository serviceCenterRepo;
+
     private static final List<String> VALID_REQUEST_STATUS =
             List.of("pending", "accepted", "processing", "resolved", "rejected");
+
+    /** Phụ phí cố định khi chọn bảo hành tận nơi thay vì mang tới cửa hàng. */
+    private static final java.math.BigDecimal PHU_PHI_TAN_NOI = new java.math.BigDecimal("150000");
+
+    /** Bỏ ký tự dễ nhìn nhầm (0/O, 1/I) khỏi phần ngẫu nhiên của mã — khách hay đọc mã qua
+     * điện thoại cho tổng đài. */
+    private static final String BANG_CHU = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    private final java.util.Random random = new java.util.Random();
+
+    /** Sinh mã bảo hành BHCNTT + 4 ký tự, kiểm trùng ở tầng CSDL. Sinh TRƯỚC khi lưu để cột
+     * ma_bao_hanh không bao giờ NULL, nhờ đó ràng buộc UNIQUE là index thường (không cần
+     * filtered index + QUOTED_IDENTIFIER cho mọi lần ghi về sau). */
+    private String sinhMaBaoHanh() {
+        for (int lan = 0; lan < 12; lan++) {
+            StringBuilder sb = new StringBuilder("BHCNTT");
+            for (int i = 0; i < 4; i++) sb.append(BANG_CHU.charAt(random.nextInt(BANG_CHU.length())));
+            String ma = sb.toString();
+            if (!warrantyRepo.existsByMaBaoHanh(ma)) return ma;
+        }
+        throw new RuntimeException("Không sinh được mã bảo hành, vui lòng thử lại.");
+    }
 
     /** Tạo phiếu bảo hành cho toàn bộ sản phẩm trong đơn (gọi khi đơn chuyển 'delivered'). */
     @Transactional
@@ -52,6 +76,7 @@ public class WarrantyService {
             Warranty w = new Warranty();
             w.setOrderItem(item);
             w.setNguoiDung(order.getNguoiDung());
+            w.setMaBaoHanh(sinhMaBaoHanh());
             w.setStartDate(LocalDate.now());
             w.setEndDate(LocalDate.now().plusMonths(12));
             w.setStatus("active");
@@ -81,6 +106,18 @@ public class WarrantyService {
 
     @Transactional
     public void createRequest(Integer warrantyId, String email, String issue) {
+        createRequest(warrantyId, email, issue, null, null, null);
+    }
+
+    /** Gửi yêu cầu bảo hành kèm lịch hẹn.
+     *
+     * @param ngayHen   ngày khách hẹn (null = chưa chọn)
+     * @param hinhThuc  "tan_noi" (tận nơi, cộng phụ phí) | "cua_hang" (mang tới cửa hàng)
+     * @param centerId  trung tâm khách chọn khi mang tới cửa hàng; bỏ qua với tận nơi
+     */
+    @Transactional
+    public void createRequest(Integer warrantyId, String email, String issue,
+                              LocalDate ngayHen, String hinhThuc, Integer centerId) {
         Warranty warranty = getById(warrantyId);
         if (!warranty.getNguoiDung().getEmail().equals(email)) {
             throw new RuntimeException("Bạn không có quyền gửi yêu cầu cho phiếu bảo hành này");
@@ -93,6 +130,23 @@ public class WarrantyService {
         request.setWarranty(warranty);
         request.setIssueDescription(issue.trim());
         request.setRequestStatus("pending");
+        request.setNgayHen(ngayHen);
+
+        // Mặc định mang tới cửa hàng nếu không khai — an toàn vì không phát sinh phụ phí ngoài ý.
+        String ht = "tan_noi".equals(hinhThuc) ? "tan_noi" : "cua_hang";
+        request.setHinhThuc(ht);
+        if ("tan_noi".equals(ht)) {
+            request.setPhuPhi(PHU_PHI_TAN_NOI);
+            request.setCenter(null);
+        } else {
+            request.setPhuPhi(java.math.BigDecimal.ZERO);
+            // Mang tới cửa hàng thì phải biết cửa hàng nào.
+            if (centerId == null) {
+                throw new RuntimeException("Vui lòng chọn cửa hàng để mang máy tới.");
+            }
+            request.setCenter(serviceCenterRepo.findById(centerId)
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy cửa hàng đã chọn.")));
+        }
         requestRepo.save(request);
     }
 

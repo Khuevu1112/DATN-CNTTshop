@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,6 +51,47 @@ public class RedemptionService {
     @Autowired private NotificationService notificationService;
     @Autowired private WalletService walletService;
     @Autowired private MailService mailService;
+    @Autowired private com.fpoly.repository.WalletTransactionRepository walletTransactionRepo;
+
+    /** Nhắc "coupon sắp hết hạn" trước khi mã hết hạn (email + thông báo trong app).
+     *
+     * Nhắc khi còn ≤ 3 ngày. Chạy mỗi 6 giờ để không phụ thuộc đúng một mốc trong ngày (lỡ server
+     * tắt đúng lúc thì lần chạy sau vẫn bắt được). Chống nhắc trùng bằng cờ coupon_reminder_sent
+     * trên chính lượt đổi. Mã đã dùng rồi thì bỏ qua (vẫn set cờ để không xét lại mỗi lần chạy). */
+    private static final int SO_NGAY_NHAC_TRUOC = 3;
+
+    @Scheduled(fixedRate = 6 * 60 * 60 * 1000)
+    @Transactional
+    public void nhacCouponSapHetHan() {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime soon = now.plusDays(SO_NGAY_NHAC_TRUOC);
+        for (WalletTransaction t : walletTransactionRepo.findCouponRemindersDue(now, soon)) {
+            Coupon coupon = t.getCouponLienQuan();
+            NguoiDung user = t.getWallet().getNguoiDung();
+            try {
+                boolean daDung = orderRepo.findByNguoiDungOrderByCreatedAtDesc(user).stream()
+                        .anyMatch(o -> coupon.getId().equals(o.getCouponId()) && !"cancelled".equals(o.getTrangThai()));
+                if (!daDung) {
+                    String han = coupon.getHetHanLuc()
+                            .format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+                    notificationService.taoChoUser(user.getId(), "coupon_expiring",
+                            "Mã giảm giá sắp hết hạn",
+                            "Mã " + coupon.getMa() + " của bạn sẽ hết hạn ngày " + han
+                                    + ". Dùng ngay trước khi hết hiệu lực nhé!",
+                            "/tai-khoan");
+                    try {
+                        mailService.sendCouponExpiringEmail(user.getEmail(), user.getHoTen(), coupon.getMa(), han);
+                    } catch (Exception mailEx) {
+                        // Gửi mail hỏng không được chặn việc set cờ — nếu không sẽ nhắc lại vô hạn.
+                    }
+                }
+                t.setCouponReminderSent(true);
+                walletTransactionRepo.save(t);
+            } catch (Exception e) {
+                // Một bản ghi lỗi không được làm hỏng cả lượt quét.
+            }
+        }
+    }
 
     /** Kho đổi thưởng hiển thị ở trang khuyến mãi — gộp quà vật lý (REDEMPTION_ITEM) với mã
      * giảm giá do admin bật đổi bằng xu (COUPON.xu_cost khác null, xem CouponRepository). */

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, onMounted, computed, watch } from 'vue';
+import { ref, reactive, onMounted, onBeforeUnmount, computed, watch, nextTick } from 'vue';
 import { useRoute } from 'vue-router';
 import { state, actions, accent } from '../store.js';
 import { fmt } from '../data/products.js';
@@ -507,6 +507,32 @@ async function submitWarrantyReq() {
   }
 }
 
+// ===== Thanh tab: pill trượt mượt giữa các mục =====
+const TABS = [
+  { key: 'profile', icon: '👤', label: 'Cá nhân' },
+  { key: 'orders', icon: '📦', label: 'Đơn hàng của tôi' },
+  { key: 'warranty', icon: '🧾', label: 'Sản phẩm đã mua' },
+  { key: 'membership', icon: '⭐', label: 'Gói hội viên' },
+];
+const tabBar = ref(null);
+const tabEls = {};
+function setTabRef(key, el) { if (el) tabEls[key] = el; }
+const indStyle = ref({ opacity: 0 });
+function moveIndicator() {
+  const el = tabEls[activeTab.value];
+  if (!el) { indStyle.value = { ...indStyle.value, opacity: 0 }; return; }
+  indStyle.value = {
+    opacity: 1,
+    left: el.offsetLeft + 'px',
+    top: el.offsetTop + 'px',
+    width: el.offsetWidth + 'px',
+    height: el.offsetHeight + 'px',
+  };
+}
+watch(activeTab, () => nextTick(moveIndicator));
+onMounted(() => { nextTick(moveIndicator); window.addEventListener('resize', moveIndicator); });
+onBeforeUnmount(() => window.removeEventListener('resize', moveIndicator));
+
 function selectTab(tab) {
   activeTab.value = tab;
   if (tab === 'orders' && !orders.value.length) loadOrders();
@@ -589,57 +615,21 @@ onMounted(() => {
     </div>
 
     <div v-else style="display: flex; flex-direction: column; gap: 20px">
-      <!-- Thanh tab ngang -->
-      <div style="background: var(--card); border: 1px solid rgba(var(--line-rgb),0.14); border-radius: 14px; padding: 8px; display: flex; align-items: center; gap: 6px; overflow-x: auto">
+      <!-- Thanh tab ngang — pill trượt mượt giữa các mục -->
+      <div ref="tabBar" class="ac-tabbar ac-rise">
+        <div class="ac-tab-ind" :style="indStyle"></div>
         <div
-          @click="selectTab('profile')"
-          :style="{
-            color: activeTab === 'profile' ? 'var(--acc-ink)' : 'var(--muted2)',
-            background: activeTab === 'profile' ? accent : 'transparent',
-            fontWeight: activeTab === 'profile' ? 700 : 500,
-          }"
-          style="display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 9px; font-size: 13.5px; cursor: pointer; white-space: nowrap"
+          v-for="t in TABS"
+          :key="t.key"
+          :ref="(el) => setTabRef(t.key, el)"
+          @click="selectTab(t.key)"
+          class="ac-tab"
+          :class="{ on: activeTab === t.key }"
         >
-          <span style="font-size: 15px">👤</span> Cá nhân
-        </div>
-        <div
-          @click="selectTab('orders')"
-          :style="{
-            color: activeTab === 'orders' ? 'var(--acc-ink)' : 'var(--muted2)',
-            background: activeTab === 'orders' ? accent : 'transparent',
-            fontWeight: activeTab === 'orders' ? 700 : 500,
-          }"
-          style="display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 9px; font-size: 13.5px; cursor: pointer; white-space: nowrap"
-        >
-          <span style="font-size: 15px">📦</span> Đơn hàng của tôi
-        </div>
-        <div
-          @click="selectTab('warranty')"
-          :style="{
-            color: activeTab === 'warranty' ? 'var(--acc-ink)' : 'var(--muted2)',
-            background: activeTab === 'warranty' ? accent : 'transparent',
-            fontWeight: activeTab === 'warranty' ? 700 : 500,
-          }"
-          style="display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 9px; font-size: 13.5px; cursor: pointer; white-space: nowrap"
-        >
-          <span style="font-size: 15px">🧾</span> Sản phẩm đã mua
-        </div>
-        <div
-          @click="selectTab('membership')"
-          :style="{
-            color: activeTab === 'membership' ? 'var(--acc-ink)' : 'var(--muted2)',
-            background: activeTab === 'membership' ? accent : 'transparent',
-            fontWeight: activeTab === 'membership' ? 700 : 500,
-          }"
-          style="display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 9px; font-size: 13.5px; cursor: pointer; white-space: nowrap"
-        >
-          <span style="font-size: 15px">⭐</span> Gói hội viên
+          <span style="font-size: 15px">{{ t.icon }}</span> {{ t.label }}
         </div>
         <div style="flex: 1"></div>
-        <div
-          @click="doLogout"
-          style="display: flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 9px; font-size: 13.5px; font-weight: 500; color: var(--sale); cursor: pointer; white-space: nowrap"
-        >
+        <div @click="doLogout" class="ac-tab" style="font-weight: 500; color: var(--sale)">
           <span style="font-size: 15px">🚪</span> Đăng xuất
         </div>
       </div>
@@ -1192,3 +1182,64 @@ onMounted(() => {
     <ReviewWizardModal :order-id="reviewWizardOrderId" @close="closeReviewWizard" />
   </main>
 </template>
+
+<style scoped>
+.ac-tabbar {
+  position: relative;
+  background: var(--card);
+  border: 1px solid rgba(var(--line-rgb), 0.14);
+  border-radius: 14px;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+}
+.ac-tab {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 9px;
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  color: var(--muted2);
+  transition: color 0.32s ease;
+}
+.ac-tab.on {
+  color: var(--acc-ink);
+  font-weight: 700;
+}
+.ac-tab-ind {
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  border-radius: 9px;
+  background: var(--acc, #c6ff4a);
+  opacity: 0;
+  pointer-events: none;
+  transition: left 0.4s cubic-bezier(0.4, 1.2, 0.5, 1),
+    width 0.4s cubic-bezier(0.4, 1.2, 0.5, 1),
+    top 0.4s cubic-bezier(0.4, 1.2, 0.5, 1),
+    height 0.4s cubic-bezier(0.4, 1.2, 0.5, 1),
+    opacity 0.25s ease;
+}
+@keyframes ac-rise {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: none; }
+}
+.ac-rise {
+  animation: ac-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ac-rise { animation: none; }
+  .ac-tab-ind { transition: none; }
+}
+</style>

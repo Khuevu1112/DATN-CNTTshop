@@ -5,6 +5,8 @@ import AppHeader from './components/AppHeader.vue';
 import AppFooter from './components/AppFooter.vue';
 import ToastMessage from './components/ToastMessage.vue';
 import LoadingOverlay from './components/LoadingOverlay.vue';
+import WelcomePopup from './components/WelcomePopup.vue';
+import ChatbotWidget from './components/ChatbotWidget.vue';
 
 const rootStyle = computed(() => ({
   '--acc': accent.value,
@@ -23,5 +25,7 @@ const rootStyle = computed(() => ({
     <LoadingOverlay />
     <router-view />
     <AppFooter />
+    <WelcomePopup />
+    <ChatbotWidget />
   </div>
 </template>

@@ -1,12 +1,12 @@
 <template>
-  <div v-if="loading || coupons.length || !hideWhenEmpty">
+  <div v-if="loading || visibleCoupons.length || !hideWhenEmpty">
     <div v-if="title" style="font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 16px">
-      {{ title }} ({{ coupons.length }})
+      {{ title }} ({{ visibleCoupons.length }})
     </div>
 
     <div v-if="loading" style="text-align: center; padding: 16px 0; color: var(--muted); font-size: 13px">Đang tải...</div>
 
-    <div v-else-if="!coupons.length" style="font-size: 13.5px; color: var(--muted)">
+    <div v-else-if="!visibleCoupons.length" style="font-size: 13.5px; color: var(--muted)">
       Bạn chưa đổi mã giảm giá nào. Ghé
       <a href="#" @click.prevent="actions.goPromotions" :style="{ color: accent }" style="text-decoration: none">trang khuyến mãi</a>
       để đổi Xu CT lấy mã giảm giá.
@@ -14,15 +14,22 @@
 
     <div v-else style="display: flex; flex-direction: column; gap: 10px">
       <div
-        v-for="c in coupons" :key="c.couponId"
+        v-for="c in visibleCoupons" :key="c.couponId"
         class="ct-ticket"
-        @click="openTicket(c)"
+        :class="{ 'ct-expired': isExpired(c) }"
+        @click="isExpired(c) ? null : openTicket(c)"
         :style="{
           overflow: tearingId === c.couponId ? 'visible' : 'hidden',
-          cursor: (c.used || isRevealed(c.couponId)) ? 'default' : 'pointer',
+          cursor: (c.used || isExpired(c) || isRevealed(c.couponId)) ? 'default' : 'pointer',
           opacity: c.used ? 0.55 : 1,
         }"
       >
+        <!-- Mã hết hạn: dấu đóng "KHÔNG CÒN KHẢ DỤNG" + nút xoá khỏi danh sách -->
+        <template v-if="isExpired(c)">
+          <div class="ct-stamp"><span>KHÔNG CÒN<br />KHẢ DỤNG</span></div>
+          <button class="ct-del" @click.stop="xoaCoupon(c)" title="Xoá khỏi danh sách">✕</button>
+        </template>
+
         <div style="flex: 1; padding: 14px 16px; min-width: 0; position: relative; z-index: 1">
           <div :style="{ color: accent }" style="font-family: 'Chakra Petch', sans-serif; font-weight: 700; font-size: 19px">
             {{ discountLabel(c) }}
@@ -92,7 +99,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { state, actions, accent } from '../store.js';
 import { fmt } from '../data/products.js';
 
@@ -111,6 +118,24 @@ function fmtDate(iso) {
   const d = new Date(iso);
   return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
 }
+
+// Mã đã quá hạn sử dụng (còn hiệu lực = chưa dùng + chưa tới HSD).
+function isExpired(c) {
+  return !c.used && c.expiresAt && new Date(c.expiresAt).getTime() < Date.now();
+}
+
+// USER tự xoá mã hết hạn khỏi danh sách. Không gọi backend: mã đổi bằng Xu là bản ghi tài chính
+// (giao dịch ví) không được xoá; ở đây chỉ ẩn khỏi VIEW của user, lưu localStorage theo email.
+function hiddenStorageKey() {
+  return 'hiddenCoupons:' + (state.user?.email || '');
+}
+const hiddenIds = ref(new Set(JSON.parse(localStorage.getItem(hiddenStorageKey()) || '[]')));
+function xoaCoupon(c) {
+  hiddenIds.value.add(c.couponId);
+  localStorage.setItem(hiddenStorageKey(), JSON.stringify([...hiddenIds.value]));
+}
+// Danh sách hiển thị = coupon truyền vào trừ các mã user đã tự ẩn.
+const visibleCoupons = computed(() => props.coupons.filter((c) => !hiddenIds.value.has(c.couponId)));
 
 function revealedStorageKey() {
   return 'revealedCoupons:' + (state.user?.email || '');
@@ -172,6 +197,66 @@ function copyCode(code) {
   border-radius: 10px;
   border: 1px solid rgba(var(--line-rgb), 0.16);
   transition: opacity 0.25s ease;
+}
+
+/* ===== Mã hết hạn: nền tối, nội dung mờ, dấu đóng chéo góc ===== */
+.ct-expired {
+  background: #14161a;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+:root[data-mode='light'] .ct-expired {
+  background: #e6e6e9;
+  border-color: rgba(0, 0, 0, 0.1);
+}
+.ct-expired > div:first-of-type,
+.ct-expired .ct-stub {
+  filter: grayscale(1) opacity(0.4);
+}
+.ct-stamp {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.ct-stamp span {
+  transform: rotate(-14deg);
+  border: 2.5px solid #e0455f;
+  color: #e0455f;
+  font-family: 'Chakra Petch', sans-serif;
+  font-weight: 800;
+  font-size: 13px;
+  line-height: 1.15;
+  letter-spacing: 1px;
+  text-align: center;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(224, 69, 95, 0.08);
+  box-shadow: 0 0 0 2px rgba(224, 69, 95, 0.12) inset;
+  opacity: 0.92;
+}
+.ct-del {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  z-index: 6;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.35);
+  color: #fff;
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+.ct-del:hover {
+  background: #e0455f;
 }
 .ct-stub {
   width: 84px;

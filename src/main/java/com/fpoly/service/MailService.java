@@ -218,6 +218,39 @@ public class MailService {
         mailSender.send(message);
     }
 
+    /** Nhắc coupon sắp hết hạn (xem RedemptionService.nhacCouponSapHetHan). */
+    public void sendCouponExpiringEmail(String toEmail, String tenKhach, String maCoupon, String hanSuDung)
+            throws MessagingException {
+        MimeMessage message = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+        helper.setTo(toEmail);
+        helper.setSubject("Mã giảm giá của bạn sắp hết hạn - CNTTShop");
+
+        String html = """
+                <div style="font-family:Arial;background:#f5f5f5;padding:30px;">
+                  <div style="max-width:600px;margin:auto;background:white;border-radius:10px;overflow:hidden;box-shadow:0 0 15px rgba(0,0,0,.08);">
+                    <div style="background:#fd7e14;color:white;padding:20px;text-align:center;">
+                      <h2 style="margin:0">CNTTShop</h2>
+                      <p style="margin:6px 0 0">Mã giảm giá sắp hết hạn</p>
+                    </div>
+                    <div style="padding:28px;">
+                      <h3>Xin chào %s,</h3>
+                      <p>Mã giảm giá dưới đây của bạn sẽ hết hạn vào <b>%s</b>. Hãy dùng trước khi hết hiệu lực nhé!</p>
+                      <div style="text-align:center;margin:20px 0;padding:16px;border:2px dashed #fd7e14;border-radius:10px;font-size:22px;font-weight:bold;letter-spacing:2px;color:#fd7e14;">
+                        %s
+                      </div>
+                      <p style="font-size:13px;color:#777">Áp dụng mã ở trang thanh toán. Mã chỉ dùng được 1 lần.</p>
+                      <hr>
+                      <p style="font-size:13px;color:#777">Email được gửi tự động từ hệ thống <b>CNTTShop</b>.</p>
+                    </div>
+                  </div>
+                </div>
+                """.formatted(tenKhach, hanSuDung, maCoupon);
+
+        helper.setText(html, true);
+        mailSender.send(message);
+    }
+
     /** Gửi khi admin khoá tài khoản (xem AdminApiController#lockCustomer). lockUntil null = khoá vĩnh viễn. */
     public void sendAccountLockedEmail(String toEmail, String tenKhach, String reason, java.time.LocalDateTime lockUntil)
             throws MessagingException {

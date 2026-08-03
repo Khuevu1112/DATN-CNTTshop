@@ -61,6 +61,11 @@ public class ServiceAppointment {
     @Column(name = "ghi_chu_ktv")
     private String ghiChuKtv;
 
+    /** Chi phí thực của lần sửa, kỹ thuật ghi lại khi hoàn thành. Là dữ liệu cho bảng "Lịch sử
+     * bảo hành" phía khách — null khi lịch chưa xong hoặc là ca bảo hành miễn phí. */
+    @Column(name = "chi_phi")
+    private java.math.BigDecimal chiPhi;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -117,6 +122,9 @@ public class ServiceAppointment {
 
     public String getGhiChuKtv() { return ghiChuKtv; }
     public void setGhiChuKtv(String ghiChuKtv) { this.ghiChuKtv = ghiChuKtv; }
+
+    public java.math.BigDecimal getChiPhi() { return chiPhi; }
+    public void setChiPhi(java.math.BigDecimal chiPhi) { this.chiPhi = chiPhi; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

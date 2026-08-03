@@ -1,10 +1,31 @@
 <script setup>
-import { ref, reactive } from 'vue';
+import { ref, reactive, onMounted, watch, nextTick } from 'vue';
+import { useRoute } from 'vue-router';
 import { actions, accent } from '../store.js';
 import { submitContact } from '../api.js';
 
 const copied = ref(false);
 const PHONE = '0835 344 974';
+
+// Menu Hỗ trợ điều hướng tới đây kèm ?focus=hotline|email (xem store.goContactHotline/Email).
+// Cuộn tới đúng thẻ và làm nó nhấp nháy để mắt bắt được ngay giữa cột thông tin. Dùng watch để
+// bấm lại cùng mục khi đã ở trang này (route đổi query mà component không dựng lại) vẫn cuộn.
+const route = useRoute();
+const focusCard = ref('');
+
+function cuonToiThe(ten) {
+  if (!ten) return;
+  nextTick(() => {
+    const el = document.getElementById('lien-he-' + ten);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    focusCard.value = ten;
+    setTimeout(() => (focusCard.value = ''), 1800);
+  });
+}
+
+onMounted(() => cuonToiThe(route.query.focus));
+watch(() => route.query.focus, (v) => cuonToiThe(v));
 
 function copyPhone() {
   navigator.clipboard.writeText('0835344974').then(() => {
@@ -12,6 +33,36 @@ function copyPhone() {
     setTimeout(() => (copied.value = false), 2000);
   });
 }
+
+// Ô dịch vụ đặt TRÊN form: phần lớn khách vào trang liên hệ là để tự làm một việc cụ thể (tra
+// bảo hành, tìm trung tâm, xem giá sửa) chứ không phải để chờ người gọi lại. Đưa lối tắt lên
+// trước giúp họ xong việc ngay, form vẫn còn nguyên bên dưới cho ai thật sự cần hỏi người thật.
+const O_DICH_VU = [
+  {
+    icon: '📍',
+    ten: 'Trung tâm bảo hành',
+    mo: 'Tìm điểm dịch vụ gần bạn và đặt lịch trước.',
+    di: () => actions.goServiceCenters(),
+  },
+  {
+    icon: '🛡️',
+    ten: 'Tra cứu bảo hành',
+    mo: 'Kiểm tra thời hạn bằng số serial trên tem máy.',
+    di: () => actions.goWarrantyInfo(),
+  },
+  {
+    icon: '🧾',
+    ten: 'Bảng giá sửa chữa',
+    mo: 'Ước tính chi phí trước khi mang máy tới.',
+    di: () => actions.goRepairPrice(),
+  },
+  {
+    icon: '💬',
+    ten: 'Câu hỏi thường gặp',
+    mo: 'Câu trả lời sẵn cho thắc mắc phổ biến.',
+    di: () => actions.goFaq(),
+  },
+];
 
 const form = reactive({ fullName: '', email: '', phone: '', subject: '', message: '' });
 const sending = ref(false);
@@ -110,6 +161,41 @@ async function submit() {
         Chuyên gia sẵn sàng tư vấn cấu hình phù hợp ngân sách — hoàn toàn miễn
         phí. Quét QR để nhắn Zalo ngay, hoặc gửi yêu cầu hỗ trợ bên dưới.
       </p>
+    </div>
+
+    <!-- Lối tắt tự phục vụ -->
+    <div style="margin-bottom: 32px">
+      <div
+        style="
+          font-family: 'Chakra Petch', sans-serif;
+          font-size: 13px;
+          font-weight: 700;
+          color: var(--text);
+          margin-bottom: 14px;
+        "
+      >
+        Tự tra cứu nhanh — không cần chờ
+      </div>
+      <div
+        style="
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+          gap: 13px;
+        "
+      >
+        <button v-for="o in O_DICH_VU" :key="o.ten" @click="o.di()" class="ct-tile">
+          <div style="font-size: 24px; margin-bottom: 10px">{{ o.icon }}</div>
+          <div style="font-size: 13.5px; font-weight: 700; color: var(--text); margin-bottom: 6px">
+            {{ o.ten }}
+          </div>
+          <div style="font-size: 12.2px; color: var(--muted2); line-height: 1.55; flex: 1">
+            {{ o.mo }}
+          </div>
+          <div :style="{ color: accent }" style="font-size: 12px; font-weight: 700; margin-top: 12px">
+            Bắt đầu →
+          </div>
+        </button>
+      </div>
     </div>
 
     <!-- Body -->
@@ -303,6 +389,9 @@ async function submit() {
 
         <!-- Hotline -->
         <div
+          id="lien-he-hotline"
+          class="lh-card"
+          :class="{ 'lh-flash': focusCard === 'hotline' }"
           style="
             display: flex;
             align-items: center;
@@ -415,6 +504,9 @@ async function submit() {
 
         <!-- Email -->
         <div
+          id="lien-he-email"
+          class="lh-card"
+          :class="{ 'lh-flash': focusCard === 'email' }"
           style="
             display: flex;
             align-items: center;
@@ -461,21 +553,76 @@ async function submit() {
             CAM KẾT CỦA CNTTSHOP
           </div>
           <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px">
-            <li style="font-size: 13.5px; color: var(--muted2); line-height: 1.5">
+            <li style="font-size: 13.5px; color: rgba(255, 255, 255, 0.82); line-height: 1.5">
               🎯 Tư vấn đúng nhu cầu, không ép mua
             </li>
-            <li style="font-size: 13.5px; color: var(--muted2); line-height: 1.5">
+            <li style="font-size: 13.5px; color: rgba(255, 255, 255, 0.82); line-height: 1.5">
               💰 Báo giá minh bạch, không phí ẩn
             </li>
-            <li style="font-size: 13.5px; color: var(--muted2); line-height: 1.5">
+            <li style="font-size: 13.5px; color: rgba(255, 255, 255, 0.82); line-height: 1.5">
               🔧 Hỗ trợ kỹ thuật sau bán hàng miễn phí
             </li>
-            <li style="font-size: 13.5px; color: var(--muted2); line-height: 1.5">
+            <li style="font-size: 13.5px; color: rgba(255, 255, 255, 0.82); line-height: 1.5">
               🛡️ Bảo hành chính hãng tới 36 tháng
             </li>
           </ul>
         </div>
+
+        <!-- Dẫn về trung tâm hỗ trợ đầy đủ -->
+        <button @click="actions.goSupport()" class="ct-tile" style="min-height: auto; flex-direction: row; align-items: center; gap: 14px">
+          <span style="font-size: 22px">🎧</span>
+          <span style="flex: 1; text-align: left">
+            <span style="display: block; font-size: 13.5px; font-weight: 700; color: var(--text)">
+              Trung tâm hỗ trợ CNTTShop
+            </span>
+            <span style="display: block; font-size: 12.2px; color: var(--muted2); margin-top: 4px">
+              Toàn bộ công cụ tự phục vụ, chính sách và hướng dẫn ở một nơi.
+            </span>
+          </span>
+          <span :style="{ color: accent }" style="font-size: 13px; font-weight: 700">→</span>
+        </button>
       </div>
     </div>
   </main>
 </template>
+
+<style scoped>
+.ct-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  background: var(--card);
+  border: 1px solid rgba(var(--line-rgb), 0.14);
+  border-radius: 14px;
+  padding: 20px 20px;
+  cursor: pointer;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  transition: border-color 0.16s, transform 0.16s;
+  min-height: 152px;
+  width: 100%;
+}
+.ct-tile:hover {
+  border-color: var(--acc, #c6ff4a);
+  transform: translateY(-2px);
+}
+
+/* Thẻ được nhắm tới từ menu (Gọi điện thoại / Gửi email) nhấp nháy viền để khách thấy ngay. */
+.lh-card {
+  scroll-margin-top: 120px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.lh-flash {
+  border-color: var(--acc, #c6ff4a) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--acc, #c6ff4a) 28%, transparent);
+  animation: lh-pulse 0.6s ease 2;
+}
+@keyframes lh-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--acc, #c6ff4a) 28%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--acc, #c6ff4a) 12%, transparent);
+  }
+}
+</style>

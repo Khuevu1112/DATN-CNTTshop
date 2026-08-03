@@ -42,6 +42,11 @@ public class WalletTransaction {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
+    /** Đã gửi nhắc "coupon sắp hết hạn" cho lượt đổi này chưa — chống nhắc trùng (xem
+     * RedemptionService.nhacCouponSapHetHan). Chỉ có ý nghĩa với giao dịch type='redeem'. */
+    @Column(name = "coupon_reminder_sent", nullable = false)
+    private boolean couponReminderSent = false;
+
     @PrePersist
     public void prePersist() {
         createdAt = LocalDateTime.now();
@@ -73,4 +78,7 @@ public class WalletTransaction {
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    public boolean isCouponReminderSent() { return couponReminderSent; }
+    public void setCouponReminderSent(boolean couponReminderSent) { this.couponReminderSent = couponReminderSent; }
 }

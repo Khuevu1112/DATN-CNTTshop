@@ -1,4 +1,4 @@
--- ============================================================
+﻿-- ============================================================
 -- 66_support_center.sql
 -- Trung tâm hỗ trợ — gom 6 mảng nội dung/dịch vụ hậu mãi vào một khu vực:
 --   1. Trung tâm bảo hành (SERVICE_CENTER)      -> tra cứu điểm bảo hành gần nhất
@@ -17,6 +17,18 @@
 -- Shop sửa cả máy khách mua nơi khác (đó chính là mục đích của bảng giá công khai). Ràng buộc
 -- vào PRODUCT sẽ chặn mất phần lớn nhu cầu thật. Vì vậy model lưu dạng chuỗi tự do + nhóm thiết
 -- bị, và chỉ dùng để BÁO THAM KHẢO — giá chốt luôn do kỹ thuật quyết sau khi kiểm máy.
+--
+-- ------------------------------------------------------------
+-- HAI ĐIỀU CẦN BIẾT TRƯỚC KHI CHẠY FILE NÀY
+-- ------------------------------------------------------------
+-- 1. FILE NÀY CÓ BOM UTF-8 (khác các migration trước). Không phải để cho đẹp: sqlcmd đọc file
+--    .sql không BOM theo bảng mã ANSI của máy, nên mọi chuỗi N'...' tiếng Việt bị mã hoá hai
+--    lần và vào CSDL thành "CNTTShop Háº£i PhĂ²ng". Có BOM thì sqlcmd, SSMS và Azure Data Studio
+--    đều tự nhận đúng UTF-8, không cần ai nhớ thêm cờ -f 65001. ĐỪNG XOÁ BOM khi sửa file.
+--
+-- 2. Bảng SERVICE_APPOINTMENT có FILTERED INDEX, nên MỌI câu INSERT/UPDATE/DELETE lên bảng đó
+--    đều đòi SET QUOTED_IDENTIFIER ON. Driver JDBC bật sẵn nên ứng dụng chạy bình thường; chỉ
+--    khi thao tác tay bằng sqlcmd mới cần tự bật, nếu không sẽ gặp lỗi 1934.
 -- ============================================================
 USE ShopDB;
 GO
@@ -99,11 +111,21 @@ GO
 -- Một khung giờ / một trung tâm chỉ nhận một lượt (kỹ thuật viên trực quầy tiếp nhận tuần tự).
 -- Đặt ở tầng CSDL vì hai khách bấm cùng lúc thì kiểm tra ở tầng service vẫn lọt — chỉ UNIQUE
 -- INDEX mới chặn được thật. Lịch đã huỷ/khách không đến phải nhả chỗ ra, nên dùng filtered index.
+--
+-- Viết bằng hai vế <> thay vì NOT IN: filtered index của SQL Server KHÔNG chấp nhận NOT IN
+-- (chỉ nhận toán tử so sánh đơn giản và IN), dùng NOT IN sẽ lỗi "Incorrect syntax near 'NOT'".
+--
+-- SET QUOTED_IDENTIFIER ON là BẮT BUỘC khi tạo filtered index. Driver JDBC bật sẵn tuỳ chọn này
+-- nên chạy từ ứng dụng thì không thấy vấn đề, nhưng sqlcmd mặc định TẮT — thiếu dòng này thì
+-- người chạy script bằng sqlcmd sẽ gặp lỗi 1934 mà không hiểu vì sao.
+SET QUOTED_IDENTIFIER ON;
+GO
+
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'UX_SERVICE_APPOINTMENT_slot')
 BEGIN
     CREATE UNIQUE INDEX UX_SERVICE_APPOINTMENT_slot
         ON SERVICE_APPOINTMENT (center_id, ngay_hen, khung_gio)
-        WHERE trang_thai NOT IN ('da_huy', 'khach_khong_den');
+        WHERE trang_thai <> 'da_huy' AND trang_thai <> 'khach_khong_den';
 END
 GO
 

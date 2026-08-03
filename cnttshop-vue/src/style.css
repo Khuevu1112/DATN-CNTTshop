@@ -227,3 +227,228 @@ select option {
     transform: none;
   }
 }
+
+/* ===========================================================================
+ * TRUNG TÂM HỖ TRỢ — lớp dùng chung cho 6 trang trong khu vực /ho-tro.
+ *
+ * Vì sao tách ra global thay vì <style scoped> ở từng view: sáu trang này là MỘT khu vực với
+ * khách (hỗ trợ), nên nút, ô nhập và tiêu đề phải giống hệt nhau. Nhân bản trong scoped ở mỗi
+ * file thì chỉ cần sửa một chỗ quên chỗ khác là khu vực vỡ phong cách ngay.
+ *
+ * Toàn bộ dùng biến màu sẵn có (--card/--text/--acc/--line-rgb) nên tự đúng ở cả chế độ tối và
+ * sáng, không cần khai báo riêng cho data-mode='light'.
+ * =========================================================================== */
+
+.sp-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid rgba(var(--line-rgb), 0.2);
+  color: var(--muted);
+  border-radius: 9px;
+  padding: 8px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  margin-bottom: 26px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  transition: border-color 0.15s, color 0.15s;
+}
+.sp-back:hover {
+  border-color: var(--acc, #c6ff4a);
+  color: var(--acc, #c6ff4a);
+}
+
+.sp-eyebrow {
+  font-family: 'Chakra Petch', sans-serif;
+  font-size: 11px;
+  letter-spacing: 2.5px;
+  color: var(--acc, #c6ff4a);
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.sp-h1 {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 800;
+  font-size: 38px;
+  line-height: 1.15;
+  margin: 0 0 12px;
+  color: var(--text);
+}
+
+.sp-h2 {
+  font-family: 'Chakra Petch', sans-serif;
+  font-weight: 700;
+  font-size: 17px;
+  color: var(--text);
+  margin: 0 0 16px;
+}
+
+.sp-input,
+.sp-select,
+.sp-textarea {
+  width: 100%;
+  padding: 0 14px;
+  background: var(--card2);
+  border: 1px solid rgba(var(--line-rgb), 0.22);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 13.5px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  transition: border-color 0.15s;
+}
+.sp-input,
+.sp-select {
+  height: 42px;
+}
+.sp-textarea {
+  padding: 12px 14px;
+  resize: vertical;
+  line-height: 1.6;
+}
+.sp-input:focus,
+.sp-select:focus,
+.sp-textarea:focus {
+  outline: none;
+  border-color: var(--acc, #c6ff4a);
+}
+/* Mũi tên mặc định của <select> ăn màu nền hệ điều hành, ở chế độ tối thành gần như vô hình. */
+.sp-select {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position: calc(100% - 18px) 18px, calc(100% - 13px) 18px;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 34px;
+}
+
+.sp-btn-acc {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: var(--acc, #c6ff4a);
+  color: var(--acc-ink);
+  border: none;
+  border-radius: 11px;
+  height: 42px;
+  padding: 0 20px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.sp-btn-acc:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.sp-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  background: transparent;
+  border: 1px solid rgba(var(--line-rgb), 0.2);
+  color: var(--muted2);
+  border-radius: 10px;
+  height: 40px;
+  padding: 0 18px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+.sp-btn-ghost:hover {
+  border-color: var(--acc, #c6ff4a);
+  color: var(--acc, #c6ff4a);
+}
+.sp-btn-ghost:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.sp-card {
+  background: var(--card);
+  border: 1px solid rgba(var(--line-rgb), 0.14);
+  border-radius: 16px;
+}
+
+/* Viên trạng thái / nhãn nhỏ. Màu chữ và viền do inline style quyết định theo ngữ cảnh. */
+.sp-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 999px;
+  padding: 4px 11px;
+  font-size: 11.5px;
+  font-weight: 600;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+
+/* Nút lọc dạng chip — dùng ở trang trung tâm bảo hành và bảng giá sửa chữa. */
+.sp-chip {
+  background: transparent;
+  border: 1px solid rgba(var(--line-rgb), 0.2);
+  color: var(--muted2);
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 12.8px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.sp-chip:hover {
+  border-color: var(--acc, #c6ff4a);
+  color: var(--acc, #c6ff4a);
+}
+.sp-chip.active {
+  background: var(--acc, #c6ff4a);
+  border-color: var(--acc, #c6ff4a);
+  color: var(--acc-ink);
+  font-weight: 700;
+}
+
+.sp-alert {
+  border-radius: 10px;
+  padding: 12px 15px;
+  font-size: 13px;
+  line-height: 1.55;
+  margin-bottom: 14px;
+}
+.sp-alert.err {
+  background: rgba(var(--sale-rgb), 0.12);
+  border: 1px solid rgba(var(--sale-rgb), 0.3);
+  color: var(--sale);
+}
+.sp-alert.ok {
+  background: color-mix(in srgb, var(--green) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--green) 30%, transparent);
+  color: var(--green);
+}
+.sp-alert.info {
+  background: var(--card2);
+  border: 1px solid rgba(var(--line-rgb), 0.16);
+  color: var(--muted2);
+}
+
+.sp-empty {
+  text-align: center;
+  padding: 52px 20px;
+  color: var(--muted);
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+@media (max-width: 720px) {
+  .sp-h1 {
+    font-size: 29px;
+  }
+}

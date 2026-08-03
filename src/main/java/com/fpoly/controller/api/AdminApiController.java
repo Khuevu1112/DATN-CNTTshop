@@ -1100,7 +1100,7 @@ public class AdminApiController {
 
     private WarrantySummaryDto toWarrantySummary(Warranty w) {
         return new WarrantySummaryDto(
-                w.getId(), w.getOrderItem().getTenSanPham(), w.getSerialNumber(),
+                w.getId(), w.getMaBaoHanh(), w.getOrderItem().getTenSanPham(), w.getSerialNumber(),
                 w.getStartDate(), w.getEndDate(), w.getStatus(),
                 w.getNguoiDung().getHoTen(), w.getNguoiDung().getEmail());
     }
@@ -1109,7 +1109,8 @@ public class AdminApiController {
         List<WarrantyRequestDto> requests = warrantyService.getRequests(w.getId()).stream()
                 .map(this::toWarrantyRequestDto).toList();
         return new WarrantyDetailDto(
-                w.getId(), w.getOrderItem().getTenSanPham(), w.getOrderItem().getOrder().getMaDonHang(),
+                w.getId(), w.getMaBaoHanh(), w.getOrderItem().getTenSanPham(),
+                w.getOrderItem().getOrder().getMaDonHang(),
                 w.getSerialNumber(), w.getStartDate(), w.getEndDate(), w.getStatus(),
                 w.getNguoiDung().getHoTen(), w.getNguoiDung().getEmail(), requests);
     }
@@ -1119,7 +1120,12 @@ public class AdminApiController {
                 .map(h -> new WarrantyHistoryDto(h.getStatus(), h.getNote(), h.getCreatedAt())).toList();
         return new WarrantyRequestDto(
                 r.getId(), r.getIssueDescription(), r.getRequestStatus(), r.getCreatedAt(),
-                r.getWarranty().getId(), r.getWarranty().getOrderItem().getTenSanPham(),
+                r.getNgayHen(), r.getHinhThuc(),
+                r.getCenter() != null ? r.getCenter().getId() : null,
+                r.getCenter() != null ? r.getCenter().getTen() : null,
+                r.getPhuPhi(),
+                r.getWarranty().getId(), r.getWarranty().getMaBaoHanh(),
+                r.getWarranty().getOrderItem().getTenSanPham(),
                 r.getWarranty().getNguoiDung().getHoTen(), r.getWarranty().getNguoiDung().getEmail(), history);
     }
 

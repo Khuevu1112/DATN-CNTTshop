@@ -129,3 +129,50 @@ export const chotGiaTradeIn = (id, payload) => http.post(`/admin/trade-in/${id}/
 export const capTinDungTradeIn = (id) => http.post(`/admin/trade-in/${id}/cap-tin-dung`).then(r => r.data)
 export const doiTrangThaiTradeIn = (id, trangThai, ghiChu) =>
   http.post(`/admin/trade-in/${id}/trang-thai/${trangThai}`, { ghiChu }).then(r => r.data)
+
+// ===== Trung tâm hỗ trợ =====
+// Hai quyền tách bạch bên backend (xem 66_support_center.sql):
+//   support_content     -> trung tâm bảo hành, bảng giá, chính sách, FAQ (việc biên tập)
+//   service_appointment -> lịch hẹn dịch vụ (việc trực hằng ngày của kỹ thuật)
+export const getSupportCenters = () => http.get('/admin/support/trung-tam').then(r => r.data)
+export const createSupportCenter = (payload) => http.post('/admin/support/trung-tam', payload).then(r => r.data)
+export const updateSupportCenter = (id, payload) => http.put(`/admin/support/trung-tam/${id}`, payload).then(r => r.data)
+export const deleteSupportCenter = (id) => http.delete(`/admin/support/trung-tam/${id}`)
+
+export const getRepairPrices = () => http.get('/admin/support/bang-gia').then(r => r.data)
+export const createRepairPrice = (payload) => http.post('/admin/support/bang-gia', payload).then(r => r.data)
+export const updateRepairPrice = (id, payload) => http.put(`/admin/support/bang-gia/${id}`, payload).then(r => r.data)
+export const deleteRepairPrice = (id) => http.delete(`/admin/support/bang-gia/${id}`)
+
+export const getWarrantyPolicies = () => http.get('/admin/support/chinh-sach').then(r => r.data)
+export const createWarrantyPolicy = (payload) => http.post('/admin/support/chinh-sach', payload).then(r => r.data)
+export const updateWarrantyPolicy = (id, payload) => http.put(`/admin/support/chinh-sach/${id}`, payload).then(r => r.data)
+export const deleteWarrantyPolicy = (id) => http.delete(`/admin/support/chinh-sach/${id}`)
+
+export const getFaqItems = () => http.get('/admin/support/faq').then(r => r.data)
+export const getFaqCategories = () => http.get('/admin/support/faq/danh-muc').then(r => r.data)
+export const createFaqItem = (payload) => http.post('/admin/support/faq', payload).then(r => r.data)
+export const updateFaqItem = (id, payload) => http.put(`/admin/support/faq/${id}`, payload).then(r => r.data)
+export const deleteFaqItem = (id) => http.delete(`/admin/support/faq/${id}`)
+
+export const getServiceAppointments = (trangThai) =>
+  http.get('/admin/support/lich-hen', { params: trangThai ? { trangThai } : {} }).then(r => r.data)
+// chiPhi chỉ có tác dụng khi trangThai='hoan_thanh' — backend bỏ qua ở các bước khác.
+export const updateAppointmentStatus = (id, trangThai, ghiChu, chiPhi) =>
+  http.post(`/admin/support/lich-hen/${id}/trang-thai`, { trangThai, ghiChu, chiPhi }).then(r => r.data)
+
+// Tỉnh/thành cho form trung tâm bảo hành — endpoint công khai, dùng chung với phía khách.
+export const getProvinces = () => http.get('/provinces').then(r => r.data)
+
+// ===== Đổi trả hàng (quyền "return_request") =====
+export const getReturns = (trangThai) =>
+  http.get('/admin/returns', { params: trangThai ? { trangThai } : {} }).then(r => r.data)
+export const updateReturnStatus = (id, trangThai, ghiChu) =>
+  http.post(`/admin/returns/${id}/trang-thai`, { trangThai, ghiChu }).then(r => r.data)
+
+// ===== Tin tức / bài viết (quyền "articles") =====
+export const getArticles = () => http.get('/admin/articles').then(r => r.data)
+export const getArticleCategories = () => http.get('/admin/articles/categories').then(r => r.data)
+export const createArticle = (payload) => http.post('/admin/articles', payload).then(r => r.data)
+export const updateArticle = (id, payload) => http.put(`/admin/articles/${id}`, payload).then(r => r.data)
+export const deleteArticle = (id) => http.delete(`/admin/articles/${id}`)
