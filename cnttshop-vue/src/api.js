@@ -97,6 +97,20 @@ export const submitContact = (payload) => post('/contact', payload);
 // "Chính sách trả góp".
 export const fetchInstallmentConfig = () => get('/installment/config');
 
+// Danh sách yêu thích (kiểu Steam wishlist) — yêu cầu đăng nhập.
+export const fetchWishlist = () => get('/wishlist');
+export const toggleWishlist = (productId) => post('/wishlist/' + productId + '/toggle', {});
+export const removeFromWishlist = (productId) => del('/wishlist/' + productId);
+
+// Trả góp: tính thử (công khai) + đăng ký hồ sơ (cần đăng nhập).
+export const fetchInstallmentQuote = (variantId, soThang, soLuong, traTruoc) => {
+  const q = new URLSearchParams({ variantId, soThang });
+  if (soLuong) q.set('soLuong', soLuong);
+  if (traTruoc != null) q.set('traTruoc', traTruoc);
+  return get('/installment/quote?' + q.toString());
+};
+export const registerInstallment = (payload) => post('/installment', payload);
+
 // Tin tức (blog) — công khai.
 export const fetchArticleCategories = () => get('/article-categories');
 export const fetchArticles = (category) =>

@@ -251,6 +251,44 @@ public class MailService {
         mailSender.send(message);
     }
 
+    /** Sản phẩm trong wishlist vừa giảm giá (xem WishlistService.baoGiamGia). */
+    public void sendWishlistDiscountEmail(String toEmail, String tenKhach, String tenSanPham,
+                                          String slug, java.math.BigDecimal giaCu, java.math.BigDecimal giaMoi)
+            throws jakarta.mail.MessagingException {
+        MimeMessage message = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+        helper.setTo(toEmail);
+        helper.setSubject("🔥 Sản phẩm bạn yêu thích vừa giảm giá - CNTTShop");
+
+        String link = frontendUrl + "/san-pham/" + slug;
+        String html = """
+                <div style="font-family:Arial;background:#f5f5f5;padding:30px;">
+                  <div style="max-width:600px;margin:auto;background:white;border-radius:10px;overflow:hidden;box-shadow:0 0 15px rgba(0,0,0,.08);">
+                    <div style="background:#dc3545;color:white;padding:20px;text-align:center;">
+                      <h2 style="margin:0">CNTTShop</h2>
+                      <p style="margin:6px 0 0">Sản phẩm yêu thích giảm giá</p>
+                    </div>
+                    <div style="padding:28px;">
+                      <h3>Xin chào %s,</h3>
+                      <p><b>%s</b> trong danh sách yêu thích của bạn vừa giảm giá:</p>
+                      <div style="text-align:center;margin:20px 0;padding:16px;background:#f8f9fa;border-radius:10px;">
+                        <span style="text-decoration:line-through;color:#999;font-size:14px;">%s đ</span>
+                        <span style="font-size:24px;font-weight:bold;color:#dc3545;margin-left:10px;">%s đ</span>
+                      </div>
+                      <p style="text-align:center">
+                        <a href="%s" style="display:inline-block;background:#dc3545;color:white;text-decoration:none;padding:12px 26px;border-radius:8px;font-weight:bold;">Xem sản phẩm</a>
+                      </p>
+                      <hr>
+                      <p style="font-size:13px;color:#777">Email được gửi tự động từ hệ thống <b>CNTTShop</b> vì sản phẩm này nằm trong danh sách yêu thích của bạn.</p>
+                    </div>
+                  </div>
+                </div>
+                """.formatted(tenKhach, tenSanPham, giaCu.toBigInteger(), giaMoi.toBigInteger(), link);
+
+        helper.setText(html, true);
+        mailSender.send(message);
+    }
+
     /** Gửi khi admin khoá tài khoản (xem AdminApiController#lockCustomer). lockUntil null = khoá vĩnh viễn. */
     public void sendAccountLockedEmail(String toEmail, String tenKhach, String reason, java.time.LocalDateTime lockUntil)
             throws MessagingException {

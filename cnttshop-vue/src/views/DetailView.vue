@@ -8,11 +8,13 @@ import {
   products,
   silverTokensFor,
   renderDescription,
+  resolveVariantId,
 } from '../data/products.js';
 import { state, actions, accent } from '../store.js';
 import { fetchProductReviews, API_ORIGIN, resolveImageUrl } from '../api.js';
 import { flyToCart } from '../flyToCart.js';
 import ProductCard from '../components/ProductCard.vue';
+import InstallmentModal from '../components/InstallmentModal.vue';
 
 const sp = computed(() => productById(state.selId));
 
@@ -174,6 +176,26 @@ function onAdd(e) {
 async function onBuy() {
   await actions.addToCart(sp.value.id, state.cfgSel);
   actions.goCart();
+}
+
+// ===== Yêu thích + Trả góp — hàng nút đối xứng bên dưới Thêm giỏ / Mua ngay =====
+const daYeuThich = computed(() => sp.value && state.wishlistIds.has(sp.value.id));
+function onToggleWishlist() {
+  if (sp.value) actions.toggleWishlist(sp.value.id);
+}
+
+const showInstallment = ref(false);
+// Biến thể theo đúng lựa chọn hiện tại (giống hệt cách onAdd/onBuy resolve), để "Trả góp" tính
+// đúng giá của cấu hình khách đang xem, không phải giá mặc định của sản phẩm.
+const installmentVariantId = computed(() =>
+  sp.value ? resolveVariantId(sp.value, state.cfgSel) : null,
+);
+function onInstallment() {
+  if (!installmentVariantId.value) {
+    actions.showToast('Sản phẩm hiện không khả dụng để trả góp');
+    return;
+  }
+  showInstallment.value = true;
 }
 </script>
 
@@ -539,6 +561,65 @@ async function onBuy() {
             Mua ngay
           </button>
         </div>
+
+        <!-- Yêu thích + Trả góp: đối xứng, cùng kích cỡ với hàng Thêm giỏ/Mua ngay ở trên -->
+        <div style="display: flex; gap: 14px; align-items: center; margin-bottom: 24px">
+          <button
+            @click="onToggleWishlist"
+            :style="{
+              border: '1px solid ' + (daYeuThich ? 'var(--sale)' : 'rgba(var(--line-rgb), 0.22)'),
+              background: daYeuThich ? 'color-mix(in srgb, var(--sale) 14%, transparent)' : 'transparent',
+              color: daYeuThich ? 'var(--sale)' : 'var(--muted2)',
+            }"
+            style="
+              flex: 1;
+              height: 48px;
+              border-radius: 13px;
+              font-family: 'Plus Jakarta Sans', sans-serif;
+              font-weight: 700;
+              font-size: 13.5px;
+              cursor: pointer;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              gap: 8px;
+            "
+          >
+            <span style="font-size: 16px">{{ daYeuThich ? '♥' : '♡' }}</span>
+            {{ daYeuThich ? 'Đã yêu thích' : 'Yêu thích' }}
+          </button>
+          <button
+            @click="onInstallment"
+            style="
+              flex: 1;
+              height: 48px;
+              border: 1px solid rgba(var(--line-rgb), 0.22);
+              background: transparent;
+              border-radius: 13px;
+              color: var(--muted2);
+              font-family: 'Plus Jakarta Sans', sans-serif;
+              font-weight: 700;
+              font-size: 13.5px;
+              cursor: pointer;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              gap: 8px;
+            "
+          >
+            <span style="font-size: 15px">💳</span>
+            Trả góp 0%
+          </button>
+        </div>
+
+        <InstallmentModal
+          v-if="showInstallment"
+          :product-id="sp.id"
+          :variant-id="installmentVariantId"
+          :ten-san-pham="sp.name"
+          :gia="live"
+          @close="showInstallment = false"
+        />
 
         <div
           style="

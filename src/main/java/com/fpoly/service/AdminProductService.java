@@ -71,6 +71,7 @@ public class AdminProductService {
     @Autowired private OptionValueRepository optionValueRepo;
     @Autowired private ProductPromotionRepository promotionRepo;
     @Autowired private ProductBundleRepository bundleRepo;
+    @Autowired private WishlistService wishlistService;
 
     @PersistenceContext
     private EntityManager em;
@@ -105,6 +106,15 @@ public class AdminProductService {
         product = productRepo.save(product);
 
         List<ProductVariant> existingVariants = new ArrayList<>(variantRepo.findByProductId(id));
+
+        // Giá đại diện (thấp nhất trong các biến thể) TRƯỚC khi sửa — khách yêu thích cả SẢN
+        // PHẨM chứ không phải một biến thể cụ thể, nên so sánh theo giá thấp nhất, giống cách
+        // card sản phẩm hiển thị giá. Dùng để báo giảm giá cho wishlist sau khi lưu xong.
+        java.math.BigDecimal giaThapNhatTruoc = existingVariants.stream()
+                .map(ProductVariant::getPrice)
+                .filter(java.util.Objects::nonNull)
+                .min(java.math.BigDecimal::compareTo)
+                .orElse(null);
         // Gỡ liên kết option-value cũ trước để có thể xoá OPTION_VALUE an toàn.
         for (ProductVariant v : existingVariants) {
             v.setOptionValues(new ArrayList<>());
@@ -126,6 +136,23 @@ public class AdminProductService {
         saveBundles(product, req.bundleProductIds());
         Map<String, OptionValue> valueByKey = saveOptions(product, req.options());
         saveVariants(product, req.variants(), valueByKey, existingVariants);
+
+        if (giaThapNhatTruoc != null) {
+            java.math.BigDecimal giaThapNhatSau = variantRepo.findByProductId(id).stream()
+                    .map(ProductVariant::getPrice)
+                    .filter(java.util.Objects::nonNull)
+                    .min(java.math.BigDecimal::compareTo)
+                    .orElse(null);
+            if (giaThapNhatSau != null) {
+                int cmp = giaThapNhatSau.compareTo(giaThapNhatTruoc);
+                if (cmp < 0) {
+                    wishlistService.baoGiamGia(product, giaThapNhatTruoc, giaThapNhatSau);
+                } else if (cmp > 0) {
+                    // Giá tăng lại -> mở khoá để lần giảm tiếp theo vẫn báo được cho khách.
+                    wishlistService.moKhoaNhacGiamGia(product);
+                }
+            }
+        }
 
         return product;
     }

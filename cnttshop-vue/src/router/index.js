@@ -89,6 +89,7 @@ const routes = [
   },
 
   { path: '/tin-tuc', name: 'news', component: () => import('../views/NewsView.vue') },
+  { path: '/yeu-thich', name: 'wishlist', component: () => import('../views/WishlistView.vue') },
   { path: '/tin-tuc/:slug', name: 'article', component: () => import('../views/ArticleView.vue') },
 
   { path: '/so-sanh', name: 'compare', component: () => import('../views/CompareView.vue') },

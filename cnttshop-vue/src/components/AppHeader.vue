@@ -407,6 +407,16 @@ function onSearchKey(e) {
         </Transition>
       </div>
 
+      <button @click="actions.goWishlist" class="hbtn"
+        style="position: relative; flex: none; width: 42px; height: 42px; display: flex; align-items: center; justify-content: center; border-radius: 11px; border: 1px solid rgba(var(--line-rgb),0.2); background: transparent; color: var(--text); cursor: pointer; font-size: 17px"
+        title="Sản phẩm yêu thích">
+        ♥
+        <span v-if="state.wishlistIds.size > 0" :style="{ background: accent }"
+          style="position: absolute; top: -6px; right: -6px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; color: var(--acc-ink); font-family: 'Chakra Petch', sans-serif; font-weight: 700; font-size: 10px; display: flex; align-items: center; justify-content: center">
+          {{ state.wishlistIds.size }}
+        </span>
+      </button>
+
       <button id="app-cart-icon" @click="actions.goCart" class="hbtn"
         :style="{ background: 'color-mix(in srgb, ' + accent + ' 12%, var(--card))' }"
         style="position: relative; flex: none; height: 42px; display: flex; align-items: center; gap: 9px; padding: 0 16px; border-radius: 11px; border: 1px solid rgba(var(--line-rgb),0.2); color: var(--text); cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 600; font-size: 13.5px">

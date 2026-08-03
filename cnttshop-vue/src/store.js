@@ -24,6 +24,9 @@ import {
   getUnreadNotificationCount,
   markNotificationRead as apiMarkNotificationRead,
   markAllNotificationsRead as apiMarkAllNotificationsRead,
+  fetchWishlist,
+  toggleWishlist as apiToggleWishlist,
+  removeFromWishlist as apiRemoveFromWishlist,
 } from './api.js';
 
 // ===== Đọc query string cổng thanh toán (Stripe) / OAuth2 trả về trước khi dọn URL =====
@@ -46,6 +49,10 @@ export const state = reactive({
   cart: [], // CartItemDto[] thật từ backend
   cartSubtotal: 0,
   selectedCartItemIds: [], // id các dòng giỏ hàng được tick chọn để thanh toán (CartView → Checkout)
+  // Danh sách yêu thích (kiểu Steam wishlist). wishlistIds là Set<productId> để trái tim ở bất kỳ
+  // đâu (trang chi tiết, thẻ sản phẩm...) biết ngay trạng thái mà không phải gọi API riêng.
+  wishlistIds: new Set(),
+  wishlistItems: [], // WishlistItemDto[] đầy đủ, dùng cho trang /yeu-thich
   brandFilter: [],
   segmentKeyword: '', // '' = không lọc phân khúc, khác rỗng = từ khoá matchesQuery (xem CATEGORY_SEGMENTS)
   // ===== Bộ lọc riêng cho PC & Máy tính bàn (thay bộ lọc Thương hiệu chung — PC nào cũng là
@@ -243,6 +250,7 @@ export const actions = {
   goInstallmentPolicy: () => router.push({ name: 'installment-policy' }),
   goCommitment: () => router.push({ name: 'commitment' }),
   goReturnPolicy: () => router.push({ name: 'return-policy' }),
+  goWishlist: () => router.push({ name: 'wishlist' }),
   // Tin tức / blog.
   goNews: (category) => router.push({ name: 'news', query: category ? { c: category } : {} }),
   goArticle: (slug) => router.push({ name: 'article', params: { slug } }),
@@ -282,6 +290,7 @@ export const actions = {
     actions.showToast('Đăng nhập thành công');
     actions.refreshCart();
     actions.refreshUnreadNotifCount();
+    actions.refreshWishlist();
   },
   updateProfile: async (payload) => {
     const updated = await apiUpdateProfile(payload);
@@ -296,6 +305,8 @@ export const actions = {
     state.cartSubtotal = 0;
     state.notifications = [];
     state.unreadNotifCount = 0;
+    state.wishlistIds = new Set();
+    state.wishlistItems = [];
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     actions.showToast('Đã đăng xuất');
@@ -339,6 +350,49 @@ export const actions = {
       // chưa đăng nhập / lỗi mạng -> bỏ qua, không chặn UI
     }
   },
+  // ===== Yêu thích (wishlist) =====
+  refreshWishlist: async () => {
+    if (!state.token) return;
+    try {
+      const list = await fetchWishlist();
+      state.wishlistItems = list;
+      state.wishlistIds = new Set(list.map((w) => w.productId));
+    } catch (e) {
+      // chưa đăng nhập / lỗi mạng -> bỏ qua, không chặn UI
+    }
+  },
+  /** Bật/tắt trái tim. Cập nhật lạc quan (optimistic) ngay trên wishlistIds để icon phản hồi tức
+   * thì, rồi đồng bộ lại danh sách đầy đủ từ server (cần giá/tồn kho mới nhất cho trang wishlist). */
+  toggleWishlist: async (productId) => {
+    if (!state.user) {
+      actions.openLogin();
+      return;
+    }
+    const dangCo = state.wishlistIds.has(productId);
+    if (dangCo) state.wishlistIds.delete(productId);
+    else state.wishlistIds.add(productId);
+    try {
+      const r = await apiToggleWishlist(productId);
+      actions.showToast(r.daYeuThich ? '❤️ Đã thêm vào yêu thích' : 'Đã bỏ yêu thích');
+      await actions.refreshWishlist();
+    } catch (e) {
+      // gọi API lỗi -> lùi lại trạng thái cũ
+      if (dangCo) state.wishlistIds.add(productId);
+      else state.wishlistIds.delete(productId);
+      actions.showToast(e?.message || 'Có lỗi khi cập nhật yêu thích');
+    }
+  },
+  removeWishlistItem: async (productId) => {
+    state.wishlistIds.delete(productId);
+    state.wishlistItems = state.wishlistItems.filter((w) => w.productId !== productId);
+    try {
+      await apiRemoveFromWishlist(productId);
+    } catch (e) {
+      actions.showToast(e?.message || 'Có lỗi khi bỏ yêu thích');
+      actions.refreshWishlist();
+    }
+  },
+
   toggleCartItemSelected: (id) => {
     const idx = state.selectedCartItemIds.indexOf(id);
     if (idx === -1) state.selectedCartItemIds.push(id);
@@ -406,6 +460,22 @@ export const actions = {
       await addCartItem(variantId, 1);
       await actions.refreshCart();
       actions.showToast('Đã thêm "' + p.name + '" vào giỏ');
+    } catch (e) {
+      actions.showToast(e?.message || 'Có lỗi khi thêm vào giỏ');
+    }
+  },
+  /** Thêm vào giỏ thẳng từ trang Yêu thích — variantId đã được backend chọn sẵn (biến thể mặc
+   * định), không cần loadDetail()/resolveVariantId() như addToCart (dùng cho trang chi tiết, nơi
+   * khách còn đang chọn cấu hình). */
+  addWishlistItemToCart: async (item) => {
+    if (!item.variantId) {
+      actions.showToast('Sản phẩm hiện không khả dụng');
+      return;
+    }
+    try {
+      await addCartItem(item.variantId, 1);
+      await actions.refreshCart();
+      actions.showToast('Đã thêm "' + item.tenSanPham + '" vào giỏ');
     } catch (e) {
       actions.showToast(e?.message || 'Có lỗi khi thêm vào giỏ');
     }
@@ -559,6 +629,7 @@ if (_oauthToken) {
       actions.showToast('Đăng nhập thành công');
       actions.refreshCart();
       actions.refreshUnreadNotifCount();
+      actions.refreshWishlist();
     })
     .catch(() => actions.showToast('Đăng nhập mạng xã hội thất bại, vui lòng thử lại'));
 } else if (_oauthError) {
@@ -572,6 +643,7 @@ if (_returnOrderId || _returnPayment) {
 
 actions.refreshCart();
 actions.refreshUnreadNotifCount();
+actions.refreshWishlist();
 setInterval(() => actions.refreshUnreadNotifCount(), 30000);
 
 // ===== Token hết hạn/không hợp lệ (báo từ api.js, xem baoTokenHetHan) -> tự đăng xuất + mời
