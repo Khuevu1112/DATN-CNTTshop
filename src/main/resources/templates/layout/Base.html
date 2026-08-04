@@ -95,8 +95,8 @@ body{background:#f5f5f5}
                 
             </div>
 
-            <div class="col-lg-4 text-end">
-                <div class="dropdown d-inline-block me-3">
+<div class="col-lg-4 text-end">
+                <div class="dropdown d-inline-block me-2">
 
                     <button class="user-info-btn"
                             type="button"
@@ -163,7 +163,6 @@ body{background:#f5f5f5}
 
                         </th:block>
 
-
                         <li><hr class="dropdown-divider"></li>
 
                         <li>
@@ -176,6 +175,16 @@ body{background:#f5f5f5}
 
                     </ul>
                 </div>
+
+                <!-- Nút Xây dựng cấu hình (giữa tài khoản và giỏ hàng) -->
+                <a th:href="@{/pc-config}"
+                   style="background:#032e5d;color:white;border-radius:30px;
+                          padding:13px 18px;font-size:16px;font-weight:600;
+                          text-decoration:none;display:inline-flex;align-items:center;
+                          white-space:nowrap;margin-right:8px;">
+                    <i class="bi bi-cpu-fill me-2"></i>
+                    Xây dựng cấu hình
+                </a>
 
                 <a th:href="@{/cart}" class="cart-btn">
                     <i class="bi bi-cart-fill me-2"></i>

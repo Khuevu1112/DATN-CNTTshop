@@ -168,6 +168,7 @@ public class SecurityConfig {
                     .requestMatchers("/admin/products/**", "/admin/categories/**").hasAnyRole(STAFF_ROLES)
                     .requestMatchers("/account/**").hasAnyRole(STAFF_AND_CUSTOMER_ROLES)
                     .requestMatchers("/cart/**", "/orders/**", "/account/addresses/**").hasAnyRole(STAFF_AND_CUSTOMER_ROLES)
+                    .requestMatchers("/pc-config/**").hasAnyRole(STAFF_AND_CUSTOMER_ROLES)
                     .requestMatchers("/admin/orders/**", "/admin/gio-hang/**").hasAnyRole(STAFF_ROLES)
                     .anyRequest().authenticated()
             )

@@ -12,6 +12,8 @@ import com.fpoly.model.Product;
 
 public interface ProductRepository extends JpaRepository<Product, Integer> {
 
+    // ── Các method cũ giữ nguyên ──────────────────────────────
+
     Optional<Product> findBySlug(String slug);
 
     List<Product> findByIdIn(List<Integer> ids);
@@ -37,4 +39,5 @@ public interface ProductRepository extends JpaRepository<Product, Integer> {
             Category category,
             String keyword
     );
+
 }

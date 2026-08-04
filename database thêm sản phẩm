@@ -1,0 +1,108 @@
+
+USE ShopDB;
+GO
+
+INSERT INTO PRODUCT (name, slug, description, category_id, brand_id, is_active, created_at)
+VALUES (N'Laptop Lenovo LOQ 15', 'laptop-lenovo-loq-15',
+        N'Laptop gaming nhiều cấu hình tùy chọn, chọn phiên bản phù hợp nhu cầu.',
+        (SELECT id FROM CATEGORY WHERE slug = 'laptop'),
+        (SELECT id FROM BRAND WHERE name = 'Lenovo'),
+        1, GETDATE());
+GO
+
+DECLARE @pid INT = (SELECT id FROM PRODUCT WHERE slug = 'laptop-lenovo-loq-15');
+
+-- Thuộc tính "Cấu hình"
+INSERT INTO PRODUCT_OPTION (product_id, option_name) VALUES (@pid, N'Cấu hình');
+DECLARE @opt INT = SCOPE_IDENTITY();
+
+INSERT INTO OPTION_VALUE (option_id, value) VALUES
+(@opt, N'i5 / 16GB / 512GB'),
+(@opt, N'i7 / 16GB / 512GB'),
+(@opt, N'i7 / 32GB / 1TB');
+
+-- 3 biến thể tương ứng
+INSERT INTO PRODUCT_VARIANT (product_id, sku, price, original_price, stock, is_default) VALUES
+(@pid, 'LOQ-I5-16-512', 19990000, 21990000, 10, 1),
+(@pid, 'LOQ-I7-16-512', 23990000, NULL,     7,  0),
+(@pid, 'LOQ-I7-32-1TB', 28990000, NULL,     4,  0);
+
+-- Ảnh
+INSERT INTO PRODUCT_IMAGE (product_id, url, is_primary, sort_order)
+VALUES (@pid, 'https://placehold.co/400x400?text=Lenovo+LOQ', 1, 0);
+
+-- Liên kết biến thể <-> giá trị option
+INSERT INTO VARIANT_OPTION_VALUE (variant_id, option_value_id)
+SELECT (SELECT id FROM PRODUCT_VARIANT WHERE sku = 'LOQ-I5-16-512'),
+       (SELECT id FROM OPTION_VALUE WHERE option_id = @opt AND value = N'i5 / 16GB / 512GB')
+UNION ALL
+SELECT (SELECT id FROM PRODUCT_VARIANT WHERE sku = 'LOQ-I7-16-512'),
+       (SELECT id FROM OPTION_VALUE WHERE option_id = @opt AND value = N'i7 / 16GB / 512GB')
+UNION ALL
+SELECT (SELECT id FROM PRODUCT_VARIANT WHERE sku = 'LOQ-I7-32-1TB'),
+       (SELECT id FROM OPTION_VALUE WHERE option_id = @opt AND value = N'i7 / 32GB / 1TB');
+GO
+
+PRINT N'✅ Đã thêm sản phẩm nhiều phiên bản: Laptop Lenovo LOQ 15.';
+GO
+
+
+ALTER TABLE OPTION_VALUE ADD price_extra DECIMAL(18,2) NOT NULL DEFAULT 0;
+ALTER TABLE OPTION_VALUE ADD is_default BIT NOT NULL DEFAULT 0;
+ALTER TABLE OPTION_VALUE ADD is_active BIT NOT NULL DEFAULT 1;
+ALTER TABLE OPTION_VALUE ADD sort_order INT NOT NULL DEFAULT 0;
+GO
+ALTER TABLE PRODUCT_OPTION ADD selection_type VARCHAR(20) NOT NULL DEFAULT 'single';
+ALTER TABLE PRODUCT_OPTION ADD min_select INT NOT NULL DEFAULT 0;
+ALTER TABLE PRODUCT_OPTION ADD max_select INT NOT NULL DEFAULT 1;
+ALTER TABLE PRODUCT_OPTION ADD description NVARCHAR(500) NULL;
+ALTER TABLE PRODUCT_OPTION ADD is_required BIT NOT NULL DEFAULT 0;
+ALTER TABLE PRODUCT_OPTION ADD is_visible BIT NOT NULL DEFAULT 1;
+ALTER TABLE PRODUCT_OPTION ADD sort_order INT NOT NULL DEFAULT 0;
+GO
+CREATE TABLE PRODUCT_SPEC (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    product_id INT NOT NULL,
+    spec_name NVARCHAR(150) NOT NULL,
+    spec_value NVARCHAR(500) NOT NULL,
+    sort_order INT DEFAULT 0,
+    FOREIGN KEY (product_id) REFERENCES PRODUCT(id)
+);
+GO
+CREATE TABLE PRODUCT_PROMOTION (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    product_id INT NOT NULL,
+    content NVARCHAR(1000) NOT NULL,
+    sort_order INT DEFAULT 0,
+    FOREIGN KEY (product_id) REFERENCES PRODUCT(id)
+);
+GO
+
+CREATE TABLE PASSWORD_RESET_OTP (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+
+    email NVARCHAR(255) NOT NULL,
+
+    otp_code VARCHAR(10) NOT NULL,
+
+    expires_at DATETIME2 NOT NULL,
+
+    is_used BIT NOT NULL DEFAULT 0,
+
+    created_at DATETIME2 NOT NULL DEFAULT GETDATE()
+);
+GO
+
+CREATE TABLE PRODUCT_BUNDLE (
+    id INT IDENTITY(1,1) PRIMARY KEY,
+    product_id INT NOT NULL,
+    bundle_product_id INT NOT NULL,
+    FOREIGN KEY (product_id) REFERENCES PRODUCT(id),
+    FOREIGN KEY (bundle_product_id) REFERENCES PRODUCT(id)
+);
+
+SELECT * FROM PRODUCT_IMAGE ORDER BY id DESC;
+
+SELECT id, product_id, url, is_primary, sort_order
+FROM PRODUCT_IMAGE
+ORDER BY id DESC;

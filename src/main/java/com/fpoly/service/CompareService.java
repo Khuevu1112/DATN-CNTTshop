@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import com.fpoly.dto.CatalogDtos.CompareRowDto;
 import com.fpoly.model.Product;
 import com.fpoly.model.ProductSpec;
+import com.fpoly.model.dto.CompareRow;
 import com.fpoly.repository.ProductRepository;
 
 @Service
@@ -43,6 +44,7 @@ public class CompareService {
         return ordered;
     }
 
+    /** Dùng bởi CompareApiController (REST/Vue). */
     public List<CompareRowDto> xayDungBangSoSanh(List<Product> products) {
         if (products.isEmpty()) return new ArrayList<>();
 
@@ -68,6 +70,36 @@ public class CompareService {
                 values[i] = valueByKeyAndProduct.getOrDefault(key, Collections.emptyMap()).getOrDefault(pid, "—");
             }
             rows.add(new CompareRowDto(key, List.of(values)));
+        }
+        return rows;
+    }
+
+    /** Dùng bởi CompareController (Thymeleaf legacy /compare). */
+    public List<CompareRow> xayDungBangSoSanhModel(List<Product> products) {
+        if (products.isEmpty()) return new ArrayList<>();
+
+        LinkedHashSet<String> allKeys = new LinkedHashSet<>();
+        Map<String, Map<Integer, String>> valueByKeyAndProduct = new HashMap<>();
+
+        for (Product p : products) {
+            List<ProductSpec> specs = p.getSpecs();
+            if (specs == null) continue;
+            specs.sort(Comparator.comparing(s -> s.getSortOrder() != null ? s.getSortOrder() : 0));
+            for (ProductSpec spec : specs) {
+                String key = spec.getSpecKey();
+                allKeys.add(key);
+                valueByKeyAndProduct.computeIfAbsent(key, k -> new HashMap<>()).put(p.getId(), spec.getSpecValue());
+            }
+        }
+
+        List<CompareRow> rows = new ArrayList<>();
+        for (String key : allKeys) {
+            String[] values = new String[products.size()];
+            for (int i = 0; i < products.size(); i++) {
+                Integer pid = products.get(i).getId();
+                values[i] = valueByKeyAndProduct.getOrDefault(key, Collections.emptyMap()).getOrDefault(pid, "—");
+            }
+            rows.add(new CompareRow(key, values));
         }
         return rows;
     }

@@ -48,8 +48,8 @@ public class AddressService {
 
     @Transactional
     public UserAddress them(String email, String tenNguoiNhan, String soDienThoai,
-                             String diaChiCuThe, String tinhThanh, String quanHuyen,
-                             String phuongXa, boolean isDefault) {
+                             String diaChiCuThe, String tinhThanh, String phuongXa,
+                             Double latitude, Double longitude, boolean isDefault) {
         NguoiDung user = nguoiDungRepo.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
 
@@ -63,8 +63,9 @@ public class AddressService {
         address.setSoDienThoai(soDienThoai);
         address.setDiaChiCuThe(diaChiCuThe);
         address.setTinhThanh(tinhThanh);
-        address.setQuanHuyen(quanHuyen);
         address.setPhuongXa(phuongXa);
+        address.setLatitude(latitude != null ? BigDecimal.valueOf(latitude) : null);
+        address.setLongitude(longitude != null ? BigDecimal.valueOf(longitude) : null);
 
         List<UserAddress> existing = addressRepo.findByNguoiDung(user);
         address.setIsDefault(isDefault || existing.isEmpty());
@@ -74,8 +75,8 @@ public class AddressService {
 
     @Transactional
     public UserAddress sua(Integer id, String email, String tenNguoiNhan, String soDienThoai,
-                            String diaChiCuThe, String tinhThanh, String quanHuyen,
-                            String phuongXa, boolean isDefault) {
+                            String diaChiCuThe, String tinhThanh, String phuongXa,
+                            Double latitude, Double longitude, boolean isDefault) {
         UserAddress address = layTheoId(id, email);
 
         if (isDefault && !Boolean.TRUE.equals(address.getIsDefault())) {
@@ -86,8 +87,9 @@ public class AddressService {
         address.setSoDienThoai(soDienThoai);
         address.setDiaChiCuThe(diaChiCuThe);
         address.setTinhThanh(tinhThanh);
-        address.setQuanHuyen(quanHuyen);
         address.setPhuongXa(phuongXa);
+        address.setLatitude(latitude != null ? BigDecimal.valueOf(latitude) : null);
+        address.setLongitude(longitude != null ? BigDecimal.valueOf(longitude) : null);
         address.setIsDefault(isDefault);
 
         return addressRepo.save(address);
