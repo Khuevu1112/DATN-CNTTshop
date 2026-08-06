@@ -666,7 +666,7 @@ public class AdminApiController {
     @RequirePermission(feature = "coupons", action = PermissionType.VIEW)
     public List<Map<String, Object>> coupons() {
         List<Object[]> rows = em.createNativeQuery(
-            "SELECT id, code, discount_type, discount_value, min_order_value, max_uses, used_count, expires_at, is_active, xu_cost " +
+            "SELECT id, code, discount_type, discount_value, min_order_value, max_uses, used_count, expires_at, is_active, xu_cost, max_discount_amount " +
             "FROM COUPON ORDER BY id DESC"
         ).getResultList();
 
@@ -683,6 +683,7 @@ public class AdminApiController {
             m.put("expiresAt", r[7]);
             m.put("isActive", r[8]);
             m.put("xuCost", r[9]);
+            m.put("maxDiscountAmount", r[10]);
             out.add(m);
         }
         return out;
@@ -696,17 +697,32 @@ public class AdminApiController {
         if (code.isBlank() || code.equals("NULL")) {
             throw new RuntimeException("Mã coupon không được để trống");
         }
+        String discountType = String.valueOf(body.getOrDefault("discountType", "percent"));
+
+        // Giảm tối đa chỉ có ý nghĩa với loại "percent" — với "fixed" giá trị giảm đã là số
+        // tiền cố định nên bỏ qua, tránh admin nhập nhầm mà không có tác dụng gì.
+        BigDecimal maxDiscount = null;
+        if ("percent".equals(discountType)
+                && body.get("maxDiscountAmount") != null
+                && !String.valueOf(body.get("maxDiscountAmount")).isBlank()) {
+            maxDiscount = new BigDecimal(String.valueOf(body.get("maxDiscountAmount")));
+            if (maxDiscount.signum() <= 0) {
+                throw new RuntimeException("Giá trị giảm tối đa phải lớn hơn 0");
+            }
+        }
+
         try {
             em.createNativeQuery(
-                "INSERT INTO COUPON (code, discount_type, discount_value, min_order_value, max_uses, expires_at, is_active, xu_cost) " +
-                "VALUES (:code, :type, :val, :min, :max, :exp, 1, :xuCost)")
+                "INSERT INTO COUPON (code, discount_type, discount_value, min_order_value, max_uses, expires_at, is_active, xu_cost, max_discount_amount) " +
+                "VALUES (:code, :type, :val, :min, :max, :exp, 1, :xuCost, :maxDiscount)")
                 .setParameter("code", code)
-                .setParameter("type", String.valueOf(body.getOrDefault("discountType", "percent")))
+                .setParameter("type", discountType)
                 .setParameter("val", new BigDecimal(String.valueOf(body.get("discountValue"))))
                 .setParameter("min", body.get("minOrderValue") != null ? new BigDecimal(String.valueOf(body.get("minOrderValue"))) : BigDecimal.ZERO)
                 .setParameter("max", body.get("maxUses") != null && !String.valueOf(body.get("maxUses")).isBlank() ? Integer.valueOf(String.valueOf(body.get("maxUses"))) : null)
                 .setParameter("exp", body.get("expiresAt") != null && !String.valueOf(body.get("expiresAt")).isBlank() ? LocalDate.parse(String.valueOf(body.get("expiresAt"))) : null)
                 .setParameter("xuCost", body.get("xuCost") != null && !String.valueOf(body.get("xuCost")).isBlank() ? Integer.valueOf(String.valueOf(body.get("xuCost"))) : null)
+                .setParameter("maxDiscount", maxDiscount)
                 .executeUpdate();
         } catch (org.springframework.dao.DataIntegrityViolationException e) {
             throw new RuntimeException("Mã coupon \"" + code + "\" đã tồn tại");

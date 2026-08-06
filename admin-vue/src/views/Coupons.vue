@@ -43,6 +43,12 @@
           </div>
         </div>
 
+        <!-- Giảm tối đa chỉ có ý nghĩa với loại % — với tiền mặt giá trị đã là số tiền cố định -->
+        <div v-if="form.type === 'percent'" style="margin-bottom: 14px">
+          <label class="lbl">Giảm tối đa (đ)</label>
+          <input v-model="form.maxDiscountAmount" placeholder="Không giới hạn" class="field" />
+        </div>
+
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px">
           <div>
             <label class="lbl">Đơn tối thiểu</label>
@@ -178,6 +184,7 @@ const form = reactive({
   code: '',
   type: 'percent',
   value: '',
+  maxDiscountAmount: '',
   min: '',
   exp: '',
   maxUses: '',
@@ -218,6 +225,7 @@ async function submit() {
       code: form.code.trim(),
       discountType: form.type,
       discountValue: Number(form.value),
+      maxDiscountAmount: form.type === 'percent' && form.maxDiscountAmount ? Number(form.maxDiscountAmount) : null,
       minOrderValue: form.min ? Number(form.min) : 0,
       maxUses: form.maxUses ? Number(form.maxUses) : null,
       expiresAt: form.exp || null,
@@ -226,6 +234,7 @@ async function submit() {
     await refreshAdminCoupons();
     form.code = '';
     form.value = '';
+    form.maxDiscountAmount = '';
     form.min = '';
     form.exp = '';
     form.maxUses = '';

@@ -23,6 +23,12 @@ public class Coupon {
     @Column(name = "discount_value", nullable = false)
     private BigDecimal giaTriGiam;
 
+    /** Số tiền giảm tối đa — chỉ có ý nghĩa khi loaiGiam = "percent", dùng để chặn đơn hàng lớn
+     * bị giảm quá sâu (vd: giảm 20% nhưng tối đa 500.000đ). NULL = không giới hạn. Với
+     * loaiGiam = "fixed" trường này không có tác dụng vì giá trị giảm đã là số tiền cố định. */
+    @Column(name = "max_discount_amount")
+    private BigDecimal giamToiDa;
+
     @Column(name = "min_order_value", nullable = false)
     private BigDecimal donToiThieu = BigDecimal.ZERO;
 
@@ -56,6 +62,9 @@ public class Coupon {
 
     public BigDecimal getGiaTriGiam() { return giaTriGiam; }
     public void setGiaTriGiam(BigDecimal giaTriGiam) { this.giaTriGiam = giaTriGiam; }
+
+    public BigDecimal getGiamToiDa() { return giamToiDa; }
+    public void setGiamToiDa(BigDecimal giamToiDa) { this.giamToiDa = giamToiDa; }
 
     public BigDecimal getDonToiThieu() { return donToiThieu; }
     public void setDonToiThieu(BigDecimal donToiThieu) { this.donToiThieu = donToiThieu; }

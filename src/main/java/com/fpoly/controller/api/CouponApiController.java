@@ -25,6 +25,7 @@ public class CouponApiController {
         Coupon coupon = couponService.layCouponHopLe(req.code(), req.subtotal());
         return new ApplyCouponResultDto(
                 coupon.getMa(), coupon.getLoaiGiam(), coupon.getGiaTriGiam(),
+                coupon.getGiamToiDa(),
                 couponService.tinhGiamGia(coupon, req.subtotal())
         );
     }

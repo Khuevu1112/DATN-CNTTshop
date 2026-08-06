@@ -46,12 +46,20 @@ public class CouponService {
         return coupon;
     }
 
-    /** percent: % trên tiền hàng; fixed: số tiền cố định — luôn giới hạn không vượt quá tiền
-     * hàng (không để giảm giá âm tổng đơn). */
+    /** percent: % trên tiền hàng, giới hạn theo giamToiDa (nếu admin cấu hình) để tránh đơn
+     * hàng lớn bị giảm quá sâu; fixed: số tiền cố định, không áp giamToiDa vì bản thân giá trị
+     * đã là số tiền cụ thể — luôn giới hạn không vượt quá tiền hàng (không để giảm giá âm
+     * tổng đơn). */
     public BigDecimal tinhGiamGia(Coupon coupon, BigDecimal subtotal) {
-        BigDecimal giam = "percent".equals(coupon.getLoaiGiam())
-                ? subtotal.multiply(coupon.getGiaTriGiam()).divide(BigDecimal.valueOf(100))
-                : coupon.getGiaTriGiam();
+        BigDecimal giam;
+        if ("percent".equals(coupon.getLoaiGiam())) {
+            giam = subtotal.multiply(coupon.getGiaTriGiam()).divide(BigDecimal.valueOf(100));
+            if (coupon.getGiamToiDa() != null) {
+                giam = giam.min(coupon.getGiamToiDa());
+            }
+        } else {
+            giam = coupon.getGiaTriGiam();
+        }
         return giam.min(subtotal);
     }
 
