@@ -197,12 +197,16 @@ function mapCoupon(c) {
     code: c.code,
     type: isPercent ? 'Phần trăm' : 'Tiền mặt',
     typeColor: isPercent ? 'var(--acc)' : '#a855f7',
-    value: isPercent ? Number(c.discountValue) + '%' : money(Number(c.discountValue)),
+    value: isPercent
+      ? Number(c.discountValue) + '%' + (c.maxDiscountAmount ? ` (tối đa ${money(Number(c.maxDiscountAmount))})` : '')
+      : money(Number(c.discountValue)),
     min: min > 0 ? money(min) : 'Không',
     used: max ? used + '/' + max : used + '',
     usedPct: max ? Math.round((used / max) * 100) + '%' : '—',
     exp: fmtDateFull(c.expiresAt),
     xuCost: c.xuCost || null,
+    stackable: !!c.stackable,
+    exclusiveGroup: c.exclusiveGroup || null,
     status,
     stText: meta.label,
     stColor: meta.color,

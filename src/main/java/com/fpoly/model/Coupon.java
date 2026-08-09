@@ -23,6 +23,12 @@ public class Coupon {
     @Column(name = "discount_value", nullable = false)
     private BigDecimal giaTriGiam;
 
+    /** Số tiền giảm tối đa — chỉ có ý nghĩa khi loaiGiam = "percent", dùng để chặn đơn hàng lớn
+     * bị giảm quá sâu (vd: giảm 20% nhưng tối đa 500.000đ). NULL = không giới hạn. Với
+     * loaiGiam = "fixed" trường này không có tác dụng vì giá trị giảm đã là số tiền cố định. */
+    @Column(name = "max_discount_amount")
+    private BigDecimal giamToiDa;
+
     @Column(name = "min_order_value", nullable = false)
     private BigDecimal donToiThieu = BigDecimal.ZERO;
 
@@ -45,6 +51,17 @@ public class Coupon {
     @Column(name = "xu_cost")
     private Integer giaXu;
 
+    /** Cho phép dùng CHUNG với mã khác trong cùng 1 đơn hàng hay không. Mặc định false = mã
+     * phải đi một mình (giữ đúng hành vi cũ). true = có thể cộng dồn, trừ khi rơi vào cùng
+     * exclusiveGroup với 1 mã khác cũng đang chọn. */
+    @Column(name = "stackable", nullable = false)
+    private Boolean stackable = false;
+
+    /** Các mã CÙNG giá trị (khác NULL) ở trường này LOẠI TRỪ NHAU dù cả 2 đều stackable = true —
+     * dùng khi 2 mã đều "cộng dồn được" nhưng không muốn dùng chung (vd cùng 1 đợt sale). */
+    @Column(name = "exclusive_group")
+    private String nhomLoaiTru;
+
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
 
@@ -56,6 +73,9 @@ public class Coupon {
 
     public BigDecimal getGiaTriGiam() { return giaTriGiam; }
     public void setGiaTriGiam(BigDecimal giaTriGiam) { this.giaTriGiam = giaTriGiam; }
+
+    public BigDecimal getGiamToiDa() { return giamToiDa; }
+    public void setGiamToiDa(BigDecimal giamToiDa) { this.giamToiDa = giamToiDa; }
 
     public BigDecimal getDonToiThieu() { return donToiThieu; }
     public void setDonToiThieu(BigDecimal donToiThieu) { this.donToiThieu = donToiThieu; }
@@ -77,4 +97,8 @@ public class Coupon {
 
     public Integer getGiaXu() { return giaXu; }
     public void setGiaXu(Integer giaXu) { this.giaXu = giaXu; }
+    public Boolean getStackable() { return stackable; }
+    public void setStackable(Boolean stackable) { this.stackable = stackable; }
+    public String getNhomLoaiTru() { return nhomLoaiTru; }
+    public void setNhomLoaiTru(String nhomLoaiTru) { this.nhomLoaiTru = nhomLoaiTru; }
 }

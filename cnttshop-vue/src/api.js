@@ -272,9 +272,13 @@ export const fetchShippingOptions = (wardId, lat, lng) => {
 
 // Thanh toán + đặt hàng (yêu cầu đăng nhập)
 export const fetchPaymentMethods = () => get('/payment-methods');
-export const placeOrder = (addressId, paymentMethodCode, cartItemIds, couponCode, xuSuDung, shippingOptionCode, tradeInCreditId) =>
-  post('/orders', { addressId, paymentMethodCode, cartItemIds, couponCode, xuSuDung, shippingOptionCode, tradeInCreditId });
+export const placeOrder = (addressId, paymentMethodCode, cartItemIds, couponCodes, xuSuDung, shippingOptionCode, tradeInCreditId) =>
+  post('/orders', { addressId, paymentMethodCode, cartItemIds, couponCodes, xuSuDung, shippingOptionCode, tradeInCreditId });
+// Xem trước 1 mã — GIỮ nguyên cho tương thích các chỗ khác đang dùng single-coupon.
 export const applyCoupon = (code, subtotal) => post('/coupons/apply', { code, subtotal });
+// Xem trước NHIỀU mã cùng lúc — trả { coupons: [...], totalDiscountAmount } hoặc lỗi nếu có mã
+// không hợp lệ/không tương thích (xem CouponService.kiemTraTuongThich).
+export const applyCoupons = (codes, subtotal) => post('/coupons/apply-multi', { codes, subtotal });
 export const fetchMyOrders = () => get('/orders');
 export const fetchOrderDetail = (id) => get('/orders/' + id);
 export const cancelOrder = (id, reason) => post('/orders/' + id + '/cancel', { reason: reason || '' });

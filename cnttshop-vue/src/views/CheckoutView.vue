@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from 'vue';
 import { fmt, VND_MOI_XU_TIEU } from '../data/products.js';
 import { state, actions, accent } from '../store.js';
 import {
-  fetchAddresses, createAddress, fetchPaymentMethods, placeOrder, applyCoupon, fetchWallet,
+  fetchAddresses, createAddress, fetchPaymentMethods, placeOrder, applyCoupons, fetchWallet,
   fetchProvinces, fetchWards, fetchShippingOptions, fetchMyCoupons, fetchMembership, reverseGeocode, fetchTinDungThuCu,
 } from '../api.js';
 import MapPicker from '../components/MapPicker.vue';
@@ -19,7 +19,12 @@ const placing = ref(false);
 const error = ref('');
 
 const couponInput = ref('');
-const appliedCoupon = ref(null); // { code, discountAmount }
+// Danh sách mã ĐANG áp dụng — mỗi phần tử: { code, discountType, discountValue, maxDiscountAmount,
+// stackable, discountAmount }. Nguồn sự thật LUÔN là kết quả trả về từ backend (/coupons/apply-multi)
+// sau mỗi lần thêm/bớt mã, không tự tính ở client — backend mới là nơi áp đúng quy tắc cộng
+// dồn/loại trừ + giới hạn giảm tối đa.
+const appliedCoupons = ref([]);
+const couponTotalDiscount = ref(0);
 const myCoupons = ref([]);
 const myCouponsLoading = ref(true);
 const couponLoading = ref(false);
@@ -138,7 +143,8 @@ function selectAddress(id) {
   loadShippingOptions();
 }
 
-const couponDiscount = computed(() => appliedCoupon.value?.discountAmount || 0);
+const couponDiscount = computed(() => couponTotalDiscount.value);
+const appliedCodes = computed(() => appliedCoupons.value.map((c) => c.code));
 
 // Ưu đãi hạng thành viên: giảm % thẳng trên tiền hàng, áp tự động không cần nhập mã. Phải khớp
 // công thức với MembershipTier.tienGiamTheoBac bên backend (làm tròn nửa lên) vì backend mới là
@@ -197,34 +203,74 @@ function toggleUseXu() {
   if (useXu.value && !xuInput.value) xuInput.value = maxXuUsable.value;
 }
 
-async function onApplyCoupon() {
+// Gọi backend tính lại TOÀN BỘ danh sách mã (nguồn sự thật duy nhất — cộng dồn/loại trừ và giới
+// hạn giảm tối đa đều do CouponService quyết định, client không tự suy ra). Nếu backend báo lỗi
+// (mã không hợp lệ / không tương thích với mã đang có), NÉM LẠI lỗi cho caller và KHÔNG đụng tới
+// appliedCoupons/couponTotalDiscount hiện tại — giữ nguyên trạng thái trước đó, tránh "mất trắng"
+// các mã đã áp thành công chỉ vì 1 mã mới bị xung đột.
+async function recomputeCoupons(codes) {
   couponError.value = '';
-  if (!couponInput.value.trim()) {
-    couponError.value = 'Vui lòng nhập mã giảm giá';
+  if (!codes.length) {
+    appliedCoupons.value = [];
+    couponTotalDiscount.value = 0;
     return;
   }
   couponLoading.value = true;
   try {
-    const result = await applyCoupon(couponInput.value.trim(), selectedSubtotal.value);
-    appliedCoupon.value = { code: result.code, discountAmount: result.discountAmount };
+    const result = await applyCoupons(codes, selectedSubtotal.value);
+    appliedCoupons.value = result.coupons;
+    couponTotalDiscount.value = result.totalDiscountAmount;
   } catch (e) {
-    couponError.value = e?.message && !e.message.startsWith('HTTP') ? e.message : 'Mã giảm giá không hợp lệ';
-    appliedCoupon.value = null;
+    couponError.value = e?.message && !e.message.startsWith('HTTP')
+      ? e.message : 'Mã giảm giá không hợp lệ hoặc không tương thích';
+    throw e;
   } finally {
     couponLoading.value = false;
   }
 }
-function removeCoupon() {
-  appliedCoupon.value = null;
-  couponInput.value = '';
+
+// Gõ tay + bấm "Áp dụng" — thêm mã mới vào danh sách đang có.
+async function onApplyCoupon() {
   couponError.value = '';
+  const ma = couponInput.value.trim().toUpperCase();
+  if (!ma) {
+    couponError.value = 'Vui lòng nhập mã giảm giá';
+    return;
+  }
+  if (appliedCodes.value.includes(ma)) {
+    couponError.value = 'Mã này đã được áp dụng rồi';
+    return;
+  }
+  try {
+    await recomputeCoupons([...appliedCodes.value, ma]);
+    couponInput.value = '';
+  } catch (e) {
+    // couponError đã được set trong recomputeCoupons — không cần làm gì thêm.
+  }
 }
 
-// Xé vé từ danh sách "Mã giảm giá của tôi" (component MyCouponTickets) -> tự điền mã + áp dụng
-// luôn, không cần gõ tay.
-function onTicketApply(coupon) {
-  couponInput.value = coupon.code;
-  onApplyCoupon();
+// Gỡ 1 mã khỏi danh sách (giữ nguyên các mã còn lại).
+async function removeCoupon(code) {
+  try {
+    await recomputeCoupons(appliedCodes.value.filter((c) => c !== code));
+  } catch (e) {
+    // Bỏ bớt mã hiếm khi gây lỗi tương thích, nhưng nếu có thì giữ nguyên trạng thái cũ.
+  }
+}
+
+// Bấm/chọn 1 "vé" từ danh sách "Mã giảm giá của tôi" -> TỰ ĐỘNG kích hoạt ngay (thêm vào danh
+// sách đang áp), không cần gõ tay hay xác nhận thêm bước nào.
+async function onTicketApply(coupon) {
+  if (appliedCodes.value.includes(coupon.code)) return;
+  try {
+    await recomputeCoupons([...appliedCodes.value, coupon.code]);
+  } catch (e) {
+    // Lỗi (vd không tương thích với mã đang chọn) đã hiển thị qua couponError.
+  }
+}
+// Bấm lại vào 1 "vé" đang áp dụng -> bỏ chọn (toggle off).
+async function onTicketRemove(coupon) {
+  await removeCoupon(coupon.code);
 }
 
 async function load() {
@@ -289,7 +335,7 @@ async function submit() {
   state.loadingMsg = 'Đang xử lý đơn hàng...';
   try {
     const xuToUse = useXu.value ? Math.min(xuInput.value || 0, maxXuUsable.value) : 0;
-    const result = await placeOrder(selectedAddressId.value, selectedMethod.value, state.selectedCartItemIds, appliedCoupon.value?.code || null, xuToUse, selectedShippingCode.value, tinDungChon.value);
+    const result = await placeOrder(selectedAddressId.value, selectedMethod.value, state.selectedCartItemIds, appliedCodes.value, xuToUse, selectedShippingCode.value, tinDungChon.value);
     await actions.refreshCart();
     if (result.redirectUrl) {
       // Stripe Checkout chỉ hỗ trợ redirect toàn trang, không nhúng iframe. Hàng trong giỏ
@@ -473,15 +519,16 @@ onMounted(load);
         </div>
         <div style="height: 1px; background: rgba(var(--line-rgb),0.14); margin: 12px 0"></div>
 
-        <!-- Mã giảm giá -->
-        <div v-if="!appliedCoupon" style="margin-bottom: 12px">
+        <!-- Mã giảm giá — cho phép chọn NHIỀU mã cùng lúc, bấm/chọn 1 vé là TỰ ĐỘNG kích hoạt
+             ngay (xem MyCouponTickets: @apply/@remove toggle theo appliedCodes). -->
+        <div style="margin-bottom: 12px">
           <MyCouponTickets
-            :coupons="myCoupons" :loading="myCouponsLoading" title="" hide-when-empty
-            @apply="onTicketApply"
+            :coupons="myCoupons" :loading="myCouponsLoading" :applied-codes="appliedCodes" title="" hide-when-empty
+            @apply="onTicketApply" @remove="onTicketRemove"
           />
           <div style="display: flex; gap: 8px; margin-top: 8px">
             <input
-              v-model="couponInput" placeholder="Nhập mã giảm giá"
+              v-model="couponInput" placeholder="Nhập thêm mã giảm giá" @keyup.enter="onApplyCoupon"
               style="flex: 1; height: 38px; padding: 0 11px; background: var(--card2); border: 1px solid rgba(var(--line-rgb),0.22); border-radius: 8px; color: var(--text); font-size: 12.5px; text-transform: uppercase"
             />
             <button
@@ -492,10 +539,19 @@ onMounted(load);
             </button>
           </div>
           <div v-if="couponError" style="font-size: 11.5px; color: var(--sale); margin-top: 6px">{{ couponError }}</div>
-        </div>
-        <div v-else style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 12.5px">
-          <span style="color: var(--green)">✓ Mã "{{ appliedCoupon.code }}" đã áp dụng</span>
-          <a href="#" @click.prevent="removeCoupon" style="color: var(--muted); text-decoration: none">Gỡ</a>
+
+          <!-- Danh sách mã đang áp dụng — gỡ từng mã riêng lẻ, các mã còn lại giữ nguyên. -->
+          <div v-if="appliedCoupons.length" style="margin-top: 10px; display: flex; flex-direction: column; gap: 6px">
+            <div
+              v-for="c in appliedCoupons" :key="c.code"
+              style="display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; background: var(--card2); padding: 7px 10px; border-radius: 7px"
+            >
+              <span style="color: var(--green)">
+                ✓ "{{ c.code }}" <span style="color: var(--muted2)">(-{{ fmt(c.discountAmount) }})</span>
+              </span>
+              <a href="#" @click.prevent="removeCoupon(c.code)" style="color: var(--muted); text-decoration: none; font-size: 11.5px">Gỡ</a>
+            </div>
+          </div>
         </div>
 
         <!-- Dùng Xu CT giảm trực tiếp vào bill -->

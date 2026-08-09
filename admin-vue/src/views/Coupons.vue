@@ -43,6 +43,12 @@
           </div>
         </div>
 
+        <!-- Giảm tối đa chỉ có ý nghĩa với loại % — với tiền mặt giá trị đã là số tiền cố định -->
+        <div v-if="form.type === 'percent'" style="margin-bottom: 14px">
+          <label class="lbl">Giảm tối đa (đ)</label>
+          <input v-model="form.maxDiscountAmount" placeholder="Không giới hạn" class="field" />
+        </div>
+
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px">
           <div>
             <label class="lbl">Đơn tối thiểu</label>
@@ -62,6 +68,23 @@
           <div>
             <label class="lbl">Giá xu (đổi ở trang KM)</label>
             <input v-model="form.xuCost" placeholder="Trống = không đổi bằng xu" class="field" />
+          </div>
+        </div>
+
+        <!-- Cộng dồn/loại trừ: mặc định mã KHÔNG cộng dồn (phải đi 1 mình) — bật lên nếu muốn
+             cho khách dùng chung với mã khác. Nhóm loại trừ chỉ hiện khi đã bật cộng dồn, vì
+             không có ý nghĩa gì với mã đi 1 mình. -->
+        <div style="margin-bottom: 14px">
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; color: var(--text)">
+            <input type="checkbox" v-model="form.stackable" style="width: 16px; height: 16px; cursor: pointer" />
+            Cho phép dùng chung với mã khác (cộng dồn)
+          </label>
+        </div>
+        <div v-if="form.stackable" style="margin-bottom: 14px">
+          <label class="lbl">Nhóm loại trừ (tuỳ chọn)</label>
+          <input v-model="form.exclusiveGroup" placeholder="Trống = không loại trừ mã nào" class="field" />
+          <div style="font-size: 11px; color: var(--muted); margin-top: 5px">
+            Các mã cùng tên nhóm sẽ không dùng chung được với nhau, dù cả 2 đều cho cộng dồn.
           </div>
         </div>
 
@@ -132,6 +155,16 @@
               <td class="mono" style="padding: 12px 12px; text-align: right; font-size: 12px" :style="{ color: c.xuCost ? '#d9b34a' : 'var(--muted2)' }">
                 {{ c.xuCost ? '🪙 ' + c.xuCost : '—' }}
               </td>
+              <td style="padding: 12px 12px; text-align: center">
+                <span
+                  v-if="c.stackable"
+                  :title="c.exclusiveGroup ? `Loại trừ với mã cùng nhóm: ${c.exclusiveGroup}` : 'Cộng dồn được với mọi mã khác'"
+                  style="font-size: 11px; font-weight: 600; color: var(--green); display: inline-flex; align-items: center; gap: 4px"
+                >
+                  <i class="bi bi-link-45deg"></i> Cộng dồn
+                </span>
+                <span v-else style="font-size: 11px; color: var(--muted2)">Đi 1 mình</span>
+              </td>
               <td style="padding: 12px 18px">
                 <span
                   style="display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; padding: 3px 9px; border-radius: 20px"
@@ -178,6 +211,7 @@ const form = reactive({
   code: '',
   type: 'percent',
   value: '',
+  maxDiscountAmount: '',
   min: '',
   exp: '',
   maxUses: '',
@@ -193,6 +227,7 @@ const heads = [
   { t: 'Đã dùng' },
   { t: 'Hạn' },
   { t: 'Giá xu', a: 'right' },
+  { t: 'Cộng dồn', a: 'center' },
   { t: 'Trạng thái' },
   { t: '' },
 ];
@@ -218,6 +253,7 @@ async function submit() {
       code: form.code.trim(),
       discountType: form.type,
       discountValue: Number(form.value),
+      maxDiscountAmount: form.type === 'percent' && form.maxDiscountAmount ? Number(form.maxDiscountAmount) : null,
       minOrderValue: form.min ? Number(form.min) : 0,
       maxUses: form.maxUses ? Number(form.maxUses) : null,
       expiresAt: form.exp || null,
@@ -226,6 +262,7 @@ async function submit() {
     await refreshAdminCoupons();
     form.code = '';
     form.value = '';
+    form.maxDiscountAmount = '';
     form.min = '';
     form.exp = '';
     form.maxUses = '';

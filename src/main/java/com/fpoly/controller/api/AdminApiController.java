@@ -42,6 +42,7 @@ import com.fpoly.dto.WarrantyDtos.WarrantyRequestDto;
 import com.fpoly.dto.WarrantyDtos.WarrantySummaryDto;
 import com.fpoly.model.Brand;
 import com.fpoly.model.Category;
+import com.fpoly.model.Coupon;
 import com.fpoly.model.NguoiDung;
 import com.fpoly.model.Order;
 import com.fpoly.model.OrderItem;
@@ -60,6 +61,7 @@ import com.fpoly.service.AccountLogService;
 import com.fpoly.service.AddressService;
 import com.fpoly.service.AdminProductService;
 import com.fpoly.service.ContactService;
+import com.fpoly.service.CouponService;
 import com.fpoly.service.MailService;
 import com.fpoly.service.NotificationService;
 import com.fpoly.service.OrderService;
@@ -87,6 +89,9 @@ public class AdminApiController {
 
     @Autowired
     private ContactService contactService;
+
+    @Autowired
+    private CouponService couponService;
 
     @Autowired
     private BrandRepository brandRepo;
@@ -666,7 +671,7 @@ public class AdminApiController {
     @RequirePermission(feature = "coupons", action = PermissionType.VIEW)
     public List<Map<String, Object>> coupons() {
         List<Object[]> rows = em.createNativeQuery(
-            "SELECT id, code, discount_type, discount_value, min_order_value, max_uses, used_count, expires_at, is_active, xu_cost " +
+            "SELECT id, code, discount_type, discount_value, min_order_value, max_uses, used_count, expires_at, is_active, xu_cost, max_discount_amount, stackable, exclusive_group " +
             "FROM COUPON ORDER BY id DESC"
         ).getResultList();
 
@@ -683,6 +688,9 @@ public class AdminApiController {
             m.put("expiresAt", r[7]);
             m.put("isActive", r[8]);
             m.put("xuCost", r[9]);
+            m.put("maxDiscountAmount", r[10]);
+            m.put("stackable", r[11]);
+            m.put("exclusiveGroup", r[12]);
             out.add(m);
         }
         return out;
@@ -696,17 +704,43 @@ public class AdminApiController {
         if (code.isBlank() || code.equals("NULL")) {
             throw new RuntimeException("Mã coupon không được để trống");
         }
+        String discountType = String.valueOf(body.getOrDefault("discountType", "percent"));
+
+        BigDecimal maxDiscount = (body.get("maxDiscountAmount") != null
+                && !String.valueOf(body.get("maxDiscountAmount")).isBlank())
+                ? new BigDecimal(String.valueOf(body.get("maxDiscountAmount"))) : null;
+
+        boolean stackable = Boolean.TRUE.equals(body.get("stackable"))
+                || "true".equalsIgnoreCase(String.valueOf(body.get("stackable")));
+        String exclusiveGroup = (body.get("exclusiveGroup") != null
+                && !String.valueOf(body.get("exclusiveGroup")).isBlank())
+                ? String.valueOf(body.get("exclusiveGroup")).trim() : null;
+
+        // Validate tập trung ở CouponService (dùng chung logic với chỗ khác, tránh mỗi nơi
+        // validate 1 kiểu) — dựng tạm 1 Coupon để chạy qua kiemTraCauHinhHopLe, sau đó lấy lại
+        // giá trị đã được chuẩn hoá (vd giamToiDa/nhomLoaiTru có thể bị ép về null).
+        Coupon tam = new Coupon();
+        tam.setLoaiGiam(discountType);
+        tam.setGiaTriGiam(new BigDecimal(String.valueOf(body.get("discountValue"))));
+        tam.setGiamToiDa(maxDiscount);
+        tam.setStackable(stackable);
+        tam.setNhomLoaiTru(exclusiveGroup);
+        couponService.kiemTraCauHinhHopLe(tam);
+
         try {
             em.createNativeQuery(
-                "INSERT INTO COUPON (code, discount_type, discount_value, min_order_value, max_uses, expires_at, is_active, xu_cost) " +
-                "VALUES (:code, :type, :val, :min, :max, :exp, 1, :xuCost)")
+                "INSERT INTO COUPON (code, discount_type, discount_value, min_order_value, max_uses, expires_at, is_active, xu_cost, max_discount_amount, stackable, exclusive_group) " +
+                "VALUES (:code, :type, :val, :min, :max, :exp, 1, :xuCost, :maxDiscount, :stackable, :exclusiveGroup)")
                 .setParameter("code", code)
-                .setParameter("type", String.valueOf(body.getOrDefault("discountType", "percent")))
-                .setParameter("val", new BigDecimal(String.valueOf(body.get("discountValue"))))
+                .setParameter("type", discountType)
+                .setParameter("val", tam.getGiaTriGiam())
                 .setParameter("min", body.get("minOrderValue") != null ? new BigDecimal(String.valueOf(body.get("minOrderValue"))) : BigDecimal.ZERO)
                 .setParameter("max", body.get("maxUses") != null && !String.valueOf(body.get("maxUses")).isBlank() ? Integer.valueOf(String.valueOf(body.get("maxUses"))) : null)
                 .setParameter("exp", body.get("expiresAt") != null && !String.valueOf(body.get("expiresAt")).isBlank() ? LocalDate.parse(String.valueOf(body.get("expiresAt"))) : null)
                 .setParameter("xuCost", body.get("xuCost") != null && !String.valueOf(body.get("xuCost")).isBlank() ? Integer.valueOf(String.valueOf(body.get("xuCost"))) : null)
+                .setParameter("maxDiscount", tam.getGiamToiDa())
+                .setParameter("stackable", tam.getStackable())
+                .setParameter("exclusiveGroup", tam.getNhomLoaiTru())
                 .executeUpdate();
         } catch (org.springframework.dao.DataIntegrityViolationException e) {
             throw new RuntimeException("Mã coupon \"" + code + "\" đã tồn tại");

@@ -61,13 +61,16 @@ public class OrderDtos {
 
     // cartItemIds null/rỗng = thanh toán toàn bộ giỏ hàng (giữ tương thích cũ); có giá trị =
     // chỉ thanh toán các dòng được tick chọn ở CartView, các dòng còn lại vẫn nằm trong giỏ.
-    // couponCode null/rỗng = không áp mã giảm giá. xuSuDung null/0 = không dùng Xu CT giảm
-    // trực tiếp vào bill. shippingOptionCode = mã tuỳ chọn giao hàng (xem /api/shipping/options —
-    // hoa_toc/thuong trong Hải Phòng, hoặc mã hãng ngoài Hải Phòng).
+    // couponCode (CŨ, giữ tương thích ngược) null/rỗng = không áp mã. couponCodes (MỚI) = danh
+    // sách nhiều mã cùng áp — nếu có giá trị thì ƯU TIÊN dùng couponCodes, bỏ qua couponCode
+    // (xem OrderApiController.place). xuSuDung null/0 = không dùng Xu CT giảm trực tiếp vào
+    // bill. shippingOptionCode = mã tuỳ chọn giao hàng (xem /api/shipping/options — hoa_toc/thuong
+    // trong Hải Phòng, hoặc mã hãng ngoài Hải Phòng).
     // tradeInCreditId = tín dụng thu cũ khách chọn dùng cho đơn này (xem TradeInService).
-    // Áp SONG SONG với coupon + xu, không tranh chỗ couponCode.
+    // Áp SONG SONG với coupon + xu, không tranh chỗ couponCode/couponCodes.
     public record PlaceOrderRequest(
             Integer addressId, String paymentMethodCode, List<Integer> cartItemIds, String couponCode,
+            List<String> couponCodes,
             Integer xuSuDung, String shippingOptionCode, Integer tradeInCreditId
     ) {}
 

@@ -44,8 +44,13 @@ public class OrderApiController {
     @PostMapping
     public PlaceOrderResultDto place(@RequestBody PlaceOrderRequest req, Authentication auth) {
         String code = req.paymentMethodCode() == null ? "cod" : req.paymentMethodCode();
+        // Ưu tiên couponCodes (nhiều mã, tính năng mới) — nếu client chưa cập nhật và chỉ gửi
+        // couponCode (1 mã, cũ) thì fallback bọc thành danh sách 1 phần tử.
+        List<String> maCouponList = (req.couponCodes() != null && !req.couponCodes().isEmpty())
+                ? req.couponCodes()
+                : (req.couponCode() != null && !req.couponCode().isBlank() ? List.of(req.couponCode()) : List.of());
         Order order = orderService.datHangTuGioHang(auth.getName(), req.addressId(), code, req.cartItemIds(),
-                req.couponCode(), req.xuSuDung(), req.shippingOptionCode(), req.tradeInCreditId());
+                maCouponList, req.xuSuDung(), req.shippingOptionCode(), req.tradeInCreditId());
 
         String redirectUrl = null;
         if (orderService.laCongThanhToanRedirect(code)) {
