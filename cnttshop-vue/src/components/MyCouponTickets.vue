@@ -16,14 +16,19 @@
       <div
         v-for="c in visibleCoupons" :key="c.couponId"
         class="ct-ticket"
-        :class="{ 'ct-expired': isExpired(c) }"
+        :class="{ 'ct-expired': isExpired(c), 'ct-applied': isApplied(c) }"
         @click="isExpired(c) ? null : openTicket(c)"
         :style="{
           overflow: tearingId === c.couponId ? 'visible' : 'hidden',
-          cursor: (c.used || isExpired(c) || isRevealed(c.couponId)) ? 'default' : 'pointer',
+          cursor: (c.used || isExpired(c)) ? 'default' : 'pointer',
           opacity: c.used ? 0.55 : 1,
         }"
       >
+        <!-- Mã đang được chọn áp dụng ở trang thanh toán — bấm lại để bỏ chọn (toggle). -->
+        <div v-if="isApplied(c) && tearingId !== c.couponId" class="ct-applied-badge">
+          <i class="bi bi-check-circle-fill"></i> Đang áp dụng
+        </div>
+
         <!-- Mã hết hạn: dấu đóng "KHÔNG CÒN KHẢ DỤNG" + nút xoá khỏi danh sách -->
         <template v-if="isExpired(c)">
           <div class="ct-stamp"><span>KHÔNG CÒN<br />KHẢ DỤNG</span></div>
@@ -69,33 +74,6 @@
       </div>
     </div>
   </div>
-
-  <Teleport to="body">
-    <div v-if="confirmCoupon" style="position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 20px">
-      <div style="background: var(--card); border: 1px solid rgba(var(--line-rgb),0.18); border-radius: 16px; padding: 26px; max-width: 340px; width: 100%; text-align: center">
-        <div style="font-size: 32px; margin-bottom: 10px">🎫</div>
-        <div style="font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 6px">Bạn muốn áp dụng ưu đãi này?</div>
-        <div style="font-size: 12.5px; color: var(--muted2); margin-bottom: 20px">
-          {{ discountLabel(confirmCoupon) }} — đơn tối thiểu {{ fmt(confirmCoupon.minOrder) }}
-        </div>
-        <div style="display: flex; gap: 10px">
-          <button
-            @click="cancelApply"
-            style="flex: 1; height: 42px; border: 1px solid rgba(var(--line-rgb),0.22); background: transparent; border-radius: 10px; color: var(--muted2); font-size: 13px; cursor: pointer"
-          >
-            Không
-          </button>
-          <button
-            @click="confirmApply"
-            :style="{ background: accent }"
-            style="flex: 1; height: 42px; border: none; border-radius: 10px; color: var(--acc-ink); font-weight: 700; font-size: 13px; cursor: pointer"
-          >
-            Có, áp dụng
-          </button>
-        </div>
-      </div>
-    </div>
-  </Teleport>
 </template>
 
 <script setup>
@@ -108,8 +86,12 @@ const props = defineProps({
   loading: { type: Boolean, default: false },
   title: { type: String, default: '🎟️ Mã giảm giá của tôi' },
   hideWhenEmpty: { type: Boolean, default: false },
+  // Mã (code) hiện đang được chọn áp dụng ở trang thanh toán — cho phép chọn NHIỀU mã cùng lúc.
+  // Ticket nào có code nằm trong danh sách này sẽ hiển thị badge "Đang áp dụng" và bấm lại
+  // sẽ BỎ chọn thay vì áp lại.
+  appliedCodes: { type: Array, default: () => [] },
 });
-const emit = defineEmits(['apply']);
+const emit = defineEmits(['apply', 'remove']);
 
 const TEAR_MS = 680;
 
@@ -122,6 +104,9 @@ function fmtDate(iso) {
 // Mã đã quá hạn sử dụng (còn hiệu lực = chưa dùng + chưa tới HSD).
 function isExpired(c) {
   return !c.used && c.expiresAt && new Date(c.expiresAt).getTime() < Date.now();
+}
+function isApplied(c) {
+  return props.appliedCodes.includes(c.code);
 }
 
 // USER tự xoá mã hết hạn khỏi danh sách. Không gọi backend: mã đổi bằng Xu là bản ghi tài chính
@@ -153,28 +138,33 @@ function discountLabel(c) {
   return c.discountType === 'percent' ? `Giảm ${Number(c.discountValue)}%` : `Giảm ${fmt(c.discountValue)}`;
 }
 function stubIcon(c) {
+  if (isApplied(c)) return '✅';
   const shown = isRevealed(c.couponId) || c.used;
   return shown ? (c.used ? '✅' : '🎫') : '✂️';
 }
 function stubLabel(c) {
+  if (isApplied(c)) return 'Đang dùng';
   const shown = isRevealed(c.couponId) || c.used;
   return shown ? (c.used ? 'Đã dùng' : 'Đã mở') : 'Xé vé';
 }
 
-const confirmCoupon = ref(null);
 const tearingId = ref(null);
 let tearTimer = null;
 
+// Bấm/chọn mã là TỰ ĐỘNG KÍCH HOẠT — không cần bước xác nhận riêng:
+// - Mã đang áp dụng -> bấm lại để BỎ chọn (toggle off).
+// - Mã đã từng mở (revealed) nhưng chưa áp -> áp ngay lập tức, không xé vé lại.
+// - Mã lần đầu mở -> chạy hiệu ứng xé vé rồi mới áp dụng, giữ trải nghiệm trực quan cũ.
 function openTicket(c) {
-  if (c.used || isRevealed(c.couponId) || tearingId.value) return;
-  confirmCoupon.value = c;
-}
-function cancelApply() {
-  confirmCoupon.value = null;
-}
-function confirmApply() {
-  const c = confirmCoupon.value;
-  confirmCoupon.value = null;
+  if (c.used || tearingId.value) return;
+  if (isApplied(c)) {
+    emit('remove', c);
+    return;
+  }
+  if (isRevealed(c.couponId)) {
+    emit('apply', c);
+    return;
+  }
   tearingId.value = c.couponId;
   clearTimeout(tearTimer);
   tearTimer = setTimeout(() => {
@@ -197,6 +187,27 @@ function copyCode(code) {
   border-radius: 10px;
   border: 1px solid rgba(var(--line-rgb), 0.16);
   transition: opacity 0.25s ease;
+}
+
+/* ===== Mã đang được chọn áp dụng: viền nổi bật + badge góc trên ===== */
+.ct-applied {
+  border-color: var(--green);
+  box-shadow: 0 0 0 1px var(--green) inset;
+}
+.ct-applied-badge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--green);
+  padding: 2px 8px;
+  border-radius: 20px;
 }
 
 /* ===== Mã hết hạn: nền tối, nội dung mờ, dấu đóng chéo góc ===== */

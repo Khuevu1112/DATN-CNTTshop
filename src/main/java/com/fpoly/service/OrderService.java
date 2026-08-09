@@ -30,6 +30,9 @@ import com.fpoly.repository.PaymentMethodRepository;
 import com.fpoly.repository.PaymentRepository;
 import com.fpoly.repository.UserAddressRepository;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+
 @Service
 public class OrderService {
 
@@ -84,6 +87,9 @@ public class OrderService {
     @Autowired
     private SubscriptionService subscriptionService;
 
+    @PersistenceContext
+    private EntityManager em;
+
     // Chỉ dùng khi địa chỉ chưa có Phường chuẩn hoá (tạo qua trang Thymeleaf cũ) hoặc không có
     // mã tuỳ chọn giao hàng — xem ShippingService cho luồng tính phí thật theo Phường.
     private static final BigDecimal PHI_VAN_CHUYEN_MAC_DINH = new BigDecimal("30000");
@@ -126,20 +132,39 @@ public class OrderService {
      * có giá trị thì giảm thêm (1 xu = 1.000đ khi tiêu, xem WalletService), cộng dồn với coupon,
      * tổng giảm không bao giờ vượt quá tiền hàng. maTuyChonGiaoHang = mã tuỳ chọn giao hàng
      * (hoa_toc/thuong trong Hải Phòng, hoặc mã hãng ngoài Hải Phòng — xem ShippingService);
-     * null = fallback phí cố định (địa chỉ Thymeleaf cũ chưa có Phường chuẩn hoá). */
+     * null = fallback phí cố định (địa chỉ Thymeleaf cũ chưa có Phường chuẩn hoá).
+     * GIỮ NGUYÊN cho tương thích ngược (Thymeleaf cũ, các overload phía trên) — bọc 1 mã thành
+     * danh sách 1 phần tử rồi gọi bản nhiều mã bên dưới. */
     @Transactional
     public Order datHangTuGioHang(String email, Integer addressId, String paymentMethodCode, List<Integer> cartItemIds,
                                    String maCoupon, Integer soXuMuonDung, String maTuyChonGiaoHang) {
-        return datHangTuGioHang(email, addressId, paymentMethodCode, cartItemIds, maCoupon,
+        List<String> danhSachMaCoupon = (maCoupon == null || maCoupon.isBlank())
+                ? List.of() : List.of(maCoupon);
+        return datHangTuGioHang(email, addressId, paymentMethodCode, cartItemIds, danhSachMaCoupon,
                 soXuMuonDung, maTuyChonGiaoHang, null);
     }
 
     /** tradeInCreditId = tín dụng thu cũ dùng cho đơn này. Trừ SAU coupon/hạng/xu và ghi vào cột
      * riêng (Order.tienThuCu), không gộp vào tienGiamGia — kế toán cần tách bạch giảm giá khuyến
-     * mãi với tiền shop trả khách để mua lại máy cũ. */
+     * mãi với tiền shop trả khách để mua lại máy cũ.
+     * GIỮ NGUYÊN cho tương thích ngược — bọc 1 mã thành danh sách 1 phần tử. */
     @Transactional
     public Order datHangTuGioHang(String email, Integer addressId, String paymentMethodCode, List<Integer> cartItemIds,
                                    String maCoupon, Integer soXuMuonDung, String maTuyChonGiaoHang,
+                                   Integer tradeInCreditId) {
+        List<String> danhSachMaCoupon = (maCoupon == null || maCoupon.isBlank())
+                ? List.of() : List.of(maCoupon);
+        return datHangTuGioHang(email, addressId, paymentMethodCode, cartItemIds, danhSachMaCoupon,
+                soXuMuonDung, maTuyChonGiaoHang, tradeInCreditId);
+    }
+
+    /** Bản ÁP NHIỀU MÃ CÙNG LÚC (cộng dồn/loại trừ — xem CouponService.kiemTraTuongThich).
+     * danhSachMaCoupon null/rỗng = không áp mã nào. Toàn bộ tham số khác giống các overload
+     * phía trên. Đây là nơi chứa TOÀN BỘ logic tạo đơn thật sự — mọi overload khác đều gọi vào
+     * đây. */
+    @Transactional
+    public Order datHangTuGioHang(String email, Integer addressId, String paymentMethodCode, List<Integer> cartItemIds,
+                                   List<String> danhSachMaCoupon, Integer soXuMuonDung, String maTuyChonGiaoHang,
                                    Integer tradeInCreditId) {
         NguoiDung user = nguoiDungRepo.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
@@ -178,10 +203,13 @@ public class OrderService {
         com.fpoly.model.MembershipTier bacThanhVien = membershipService.bacCua(user);
         BigDecimal tienGiamGia = bacThanhVien.tienGiamTheoBac(tienHang);
 
-        com.fpoly.model.Coupon coupon = null;
-        if (maCoupon != null && !maCoupon.isBlank()) {
-            coupon = couponService.layCouponHopLe(maCoupon, tienHang);
-            tienGiamGia = tienGiamGia.add(couponService.tinhGiamGia(coupon, tienHang));
+        // Áp NHIỀU mã cùng lúc: kiểm tra hợp lệ + tương thích (cộng dồn/loại trừ) trước, ném lỗi
+        // ngay nếu có vấn đề — không áp nửa chừng. Danh sách rỗng = không áp mã nào (giữ nguyên
+        // hành vi cũ).
+        List<com.fpoly.model.Coupon> danhSachCoupon = new ArrayList<>();
+        if (danhSachMaCoupon != null && !danhSachMaCoupon.isEmpty()) {
+            danhSachCoupon = couponService.layDanhSachCouponHopLe(danhSachMaCoupon, tienHang);
+            tienGiamGia = tienGiamGia.add(couponService.tinhTongGiamGia(danhSachCoupon, tienHang));
         }
         // Tổng giảm từ bậc + coupon vẫn không được vượt quá tiền hàng.
         tienGiamGia = tienGiamGia.min(tienHang);
@@ -229,7 +257,7 @@ public class OrderService {
         order.setTienThuCu(tienThuCu);
         order.setTradeInCreditId(tinDung == null ? null : tinDung.getId());
         order.setTrangThai("pending");
-        order.setCouponId(coupon != null ? coupon.getId() : null);
+        order.setCouponId(danhSachCoupon.isEmpty() ? null : danhSachCoupon.get(0).getId());
         if (tuyChonGiaoHang != null) {
             order.setMaTuyChonGiaoHang(tuyChonGiaoHang.code());
             order.setNhanTuyChonGiaoHang(tuyChonGiaoHang.label());
@@ -268,8 +296,20 @@ public class OrderService {
 
         Order saved = orderRepo.save(order);
 
-        if (coupon != null) {
-            couponService.danhDauDaDung(coupon);
+        if (!danhSachCoupon.isEmpty()) {
+            couponService.danhDauDaDungNhieu(danhSachCoupon);
+            // Ghi lại TỪNG mã đã áp + số tiền giảm riêng của mã đó vào ORDER_COUPON — cột
+            // ORDER.coupon_id ở trên chỉ giữ mã ĐẦU TIÊN để tương thích ngược với code/báo cáo cũ,
+            // danh sách đầy đủ (khi áp nhiều mã cộng dồn) nằm ở bảng này.
+            for (com.fpoly.model.Coupon c : danhSachCoupon) {
+                BigDecimal giamRieng = couponService.tinhGiamGia(c, tienHang);
+                em.createNativeQuery(
+                        "INSERT INTO ORDER_COUPON (order_id, coupon_id, discount_amount) VALUES (:orderId, :couponId, :amount)")
+                        .setParameter("orderId", saved.getId())
+                        .setParameter("couponId", c.getId())
+                        .setParameter("amount", giamRieng)
+                        .executeUpdate();
+            }
         }
         if (soXuThucDung > 0) {
             walletService.chiXuTaiThanhToan(user, soXuThucDung, saved);
