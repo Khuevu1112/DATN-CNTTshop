@@ -35,11 +35,13 @@
             <hr>
 
             <!-- GIÁ -->
-            <h1 class="fw-bold"
+            <!-- Giá do JS điền theo biến thể đang chọn (xem updatePrice ở cuối trang); render
+                 sẵn giá của biến thể đầu tiên để không nháy trống trước khi script chạy. -->
+            <h1 id="productPrice"
+                class="fw-bold"
                 style="color:#032e5d;"
                 th:if="${product.variants != null and !product.variants.isEmpty()}"
                 th:text="${#numbers.formatDecimal(product.variants[0].price, 0, 'COMMA', 0, 'POINT')} + ' ₫'">
-                0 ₫
             </h1>
             <div class="text-muted text-decoration-line-through fs-5"
                  th:if="${product.variants != null
@@ -66,9 +68,27 @@
             <!-- FORM GIỎ HÀNG / MUA NGAY -->
             <form th:action="@{/cart/add}" method="post">
                 <input type="hidden" name="productId" th:value="${product.id}">
-                <input type="hidden" name="variantId"
-                       th:if="${product.variants != null and !product.variants.isEmpty()}"
-                       th:value="${product.variants[0].id}">
+                <div class="mb-3"
+                     th:if="${product.variants != null and !product.variants.isEmpty()}">
+
+                    <label class="form-label fw-bold">
+                        Chọn phiên bản
+                    </label>
+
+                    <select class="form-select"
+                            id="variantSelect"
+                            name="variantId">
+
+                    <option
+                        th:each="v : ${product.variants}"
+                        th:value="${v.id}"
+                        th:data-price="${v.price}"
+                        th:text="${v.sku}">
+                    </option>
+
+                    </select>
+
+                </div>
 
                 <!-- GHI CHÚ -->
                 <div class="mb-3">
@@ -179,6 +199,30 @@ function changeQty(value) {
     let qty = parseInt(input.value) + value;
     if (qty < 1) qty = 1;
     input.value = qty;
+}
+
+const variantSelect = document.getElementById("variantSelect");
+const priceBox = document.getElementById("productPrice");
+
+function updatePrice(){
+
+    if(!variantSelect) return;
+
+    const option = variantSelect.options[variantSelect.selectedIndex];
+
+    let price = option.dataset.price;
+
+    price = Number(price).toLocaleString("vi-VN");
+
+    priceBox.innerHTML = price + " ₫";
+}
+
+if(variantSelect){
+
+    variantSelect.addEventListener("change", updatePrice);
+
+    updatePrice();
+
 }
 
 // So sánh: lưu vào sessionStorage
