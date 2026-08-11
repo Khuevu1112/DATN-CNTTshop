@@ -504,12 +504,12 @@
               <option value="confirmed">Đã xác nhận</option>
               <option value="processing">Đang xử lý</option>
               <option value="shipped">Đang giao</option>
-              <option value="delivered">Đã giao</option>
+              <option value="delivered">Hoàn tất</option>
               <option value="cancelled">Đã huỷ</option>
               <option value="refunded">Hoàn tiền</option>
             </select>
             <div v-if="detail.st === 'cancelled' || detail.st === 'delivered'" style="font-size: 11.5px; color: var(--muted); margin-bottom: 10px">
-              Đơn đã {{ detail.st === 'cancelled' ? 'huỷ' : 'giao' }}, không thể đổi trạng thái.
+              Đơn đã {{ detail.st === 'cancelled' ? 'huỷ' : 'hoàn tất' }}, không thể đổi trạng thái.
             </div>
             <button
               @click="saveStatus"
@@ -870,7 +870,7 @@ const stLabels = {
   confirmed: 'Đã xác nhận',
   processing: 'Đang xử lý',
   shipped: 'Đang giao',
-  delivered: 'Đã giao',
+  delivered: 'Hoàn tất',
   cancelled: 'Đã huỷ',
   refunded: 'Hoàn tiền',
 };

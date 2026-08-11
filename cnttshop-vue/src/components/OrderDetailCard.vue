@@ -24,7 +24,7 @@ const gatewayPayUrl = computed(() => {
 
 const STATUS_LABEL = {
   pending: 'Chờ xác nhận', confirmed: 'Đã xác nhận', processing: 'Đang xử lý',
-  shipped: 'Đang giao', delivered: 'Đã giao', cancelled: 'Đã hủy', refunded: 'Đã hoàn tiền',
+  shipped: 'Đang giao', delivered: 'Hoàn tất', cancelled: 'Đã hủy', refunded: 'Đã hoàn tiền',
 };
 const PAYMENT_STATUS_LABEL = {
   pending: 'Chưa thanh toán', paid: 'Đã thanh toán', failed: 'Thất bại',

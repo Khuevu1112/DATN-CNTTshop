@@ -58,7 +58,7 @@ export const STATUS = {
   confirmed: { label: 'Đã xác nhận', color: '#00e5ff' },
   processing: { label: 'Đang xử lý', color: '#7aa2ff' },
   shipped: { label: 'Đang giao', color: '#a855f7' },
-  delivered: { label: 'Đã giao', color: '#22d39a' },
+  delivered: { label: 'Hoàn tất', color: '#22d39a' },
   cancelled: { label: 'Đã huỷ', color: '#ff3b5c' },
   refunded: { label: 'Hoàn tiền', color: '#94a3b8' },
 };

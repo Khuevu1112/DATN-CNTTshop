@@ -614,6 +614,16 @@ public class OrderService {
             subscriptionService.hoanLuotTheoDon(order);
         }
 
+        // Hoàn tiền = khách trả lại HÀNG cho shop, nên hàng phải quay về kho. Chỉ tới được từ
+        // "shipped" (xem CHUYEN_TRANG_THAI_HOP_LE) nghĩa là đơn chắc chắn đã bị trừ kho lúc tạo,
+        // không cần kiểm tra tungTruKho như nhánh cancelled ở trên.
+        if ("refunded".equals(trangThaiMoi)) {
+            for (OrderItem oi : order.getChiTiet()) {
+                ProductVariant v = oi.getVariant();
+                v.setStock((v.getStock() == null ? 0 : v.getStock()) + oi.getSoLuong());
+            }
+        }
+
         order.setTrangThai(trangThaiMoi);
         orderRepo.save(order);
 
@@ -737,7 +747,7 @@ public class OrderService {
             case "confirmed" -> "Đã xác nhận";
             case "processing" -> "Đang xử lý";
             case "shipped" -> "Đang giao";
-            case "delivered" -> "Đã giao";
+            case "delivered" -> "Hoàn tất";
             case "cancelled" -> "Đã hủy";
             case "refunded" -> "Đã hoàn tiền";
             default -> status;

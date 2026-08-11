@@ -169,6 +169,11 @@ export const getReturns = (trangThai) =>
   http.get('/admin/returns', { params: trangThai ? { trangThai } : {} }).then(r => r.data)
 export const updateReturnStatus = (id, trangThai, ghiChu) =>
   http.post(`/admin/returns/${id}/trang-thai`, { trangThai, ghiChu }).then(r => r.data)
+// CSKH tự khởi tạo yêu cầu hộ khách: tra cứu đơn để chọn đúng dòng sản phẩm, rồi tạo.
+export const lookupOrderForReturn = (maDon) =>
+  http.get('/admin/returns/tra-cuu-don', { params: { maDon } }).then(r => r.data)
+export const createReturn = (payload) =>
+  http.post('/admin/returns', payload).then(r => r.data)
 
 // ===== Tin tức / bài viết (quyền "articles") =====
 export const getArticles = () => http.get('/admin/articles').then(r => r.data)

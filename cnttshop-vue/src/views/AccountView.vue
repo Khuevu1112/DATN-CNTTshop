@@ -389,7 +389,7 @@ const orders = ref([]);
 const orderDetail = ref(null);
 const ORDER_STATUS_LABEL = {
   pending: 'Chờ xác nhận', confirmed: 'Đã xác nhận', processing: 'Đang xử lý',
-  shipped: 'Đang giao', delivered: 'Đã giao', cancelled: 'Đã hủy', refunded: 'Đã hoàn tiền',
+  shipped: 'Đang giao', delivered: 'Hoàn tất', cancelled: 'Đã hủy', refunded: 'Đã hoàn tiền',
 };
 
 async function loadOrders() {
@@ -404,7 +404,7 @@ async function loadOrders() {
 // Widget theo dõi tiến trình đơn hàng (đơn còn đang xử lý) — hiện ở tab "Cá nhân", dưới phần
 // địa chỉ, trên mã giảm giá.
 const TRACK_STEPS = ['pending', 'confirmed', 'processing', 'shipped', 'delivered'];
-const TRACK_STEP_LABELS = ['Chờ xác nhận', 'Đã xác nhận', 'Đóng gói', 'Đang giao', 'Đã giao'];
+const TRACK_STEP_LABELS = ['Chờ xác nhận', 'Đã xác nhận', 'Đóng gói', 'Đang giao', 'Hoàn tất'];
 const activeOrders = computed(() =>
   orders.value.filter((o) => ['pending', 'confirmed', 'processing', 'shipped'].includes(o.status)),
 );

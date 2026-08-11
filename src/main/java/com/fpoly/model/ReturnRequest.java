@@ -63,6 +63,25 @@ public class ReturnRequest {
     @Column(name = "ghi_chu_cskh")
     private String ghiChuCskh;
 
+    /** Biến thể được đổi/trả — biết chính xác phải cộng lại tồn kho cho SKU nào khi yêu cầu
+     * hoàn tất. Null với các yêu cầu cũ (trước 79_return_restock.sql) hoặc khi khách không
+     * chỉ được dòng sản phẩm nào trong đơn. Xem ReturnRequestService.hoanTonKho. */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "variant_id")
+    private ProductVariant variant;
+
+    @Column(name = "so_luong")
+    private Integer soLuong;
+
+    /** Chống cộng kho 2 lần khi yêu cầu bị chuyển trạng thái lặp lại. */
+    @Column(name = "da_hoan_kho", nullable = false)
+    private Boolean daHoanKho = false;
+
+    /** true = CSKH tự khởi tạo hộ khách (khách mang máy tới cửa hàng, gọi hotline...) thay vì
+     * khách tự gửi qua web — dùng để không bắt buộc video mở hàng. */
+    @Column(name = "tao_boi_admin", nullable = false)
+    private Boolean taoBoiAdmin = false;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -92,6 +111,18 @@ public class ReturnRequest {
 
     public String getTenSanPham() { return tenSanPham; }
     public void setTenSanPham(String tenSanPham) { this.tenSanPham = tenSanPham; }
+
+    public ProductVariant getVariant() { return variant; }
+    public void setVariant(ProductVariant variant) { this.variant = variant; }
+
+    public Integer getSoLuong() { return soLuong; }
+    public void setSoLuong(Integer soLuong) { this.soLuong = soLuong; }
+
+    public Boolean getDaHoanKho() { return daHoanKho; }
+    public void setDaHoanKho(Boolean daHoanKho) { this.daHoanKho = daHoanKho; }
+
+    public Boolean getTaoBoiAdmin() { return taoBoiAdmin; }
+    public void setTaoBoiAdmin(Boolean taoBoiAdmin) { this.taoBoiAdmin = taoBoiAdmin; }
 
     public String getKenhMua() { return kenhMua; }
     public void setKenhMua(String kenhMua) { this.kenhMua = kenhMua; }

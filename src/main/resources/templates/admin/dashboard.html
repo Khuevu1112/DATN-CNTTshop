@@ -380,7 +380,7 @@ function fmtVND(n) {
     return n.toLocaleString('vi-VN') + 'đ';
 }
 function statusBadge(s) {
-    const m = { pending:['bdg-warning','Chờ xác nhận'], confirmed:['bdg-info','Đã xác nhận'], processing:['bdg-info','Đang xử lý'], shipped:['bdg-info','Đang giao'], delivered:['bdg-success','Đã giao'], cancelled:['bdg-danger','Đã huỷ'], refunded:['bdg-secondary','Hoàn hàng'] };
+    const m = { pending:['bdg-warning','Chờ xác nhận'], confirmed:['bdg-info','Đã xác nhận'], processing:['bdg-info','Đang xử lý'], shipped:['bdg-info','Đang giao'], delivered:['bdg-success','Hoàn tất'], cancelled:['bdg-danger','Đã huỷ'], refunded:['bdg-secondary','Hoàn hàng'] };
     const [c,l] = m[s] || ['bdg-secondary', s];
     return `<span class="bdg ${c}">${l}</span>`;
 }

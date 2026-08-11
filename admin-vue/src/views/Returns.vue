@@ -1,7 +1,7 @@
 <template>
   <div style="animation: fadeUp 0.35s ease">
-    <!-- Lọc trạng thái -->
-    <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px">
+    <!-- Lọc trạng thái + tạo yêu cầu hộ khách -->
+    <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 16px">
       <button
         v-for="t in TABS"
         :key="t.ma"
@@ -14,6 +14,82 @@
           {{ demTheoTrangThai(t.ma) }}
         </span>
       </button>
+      <button class="btn-ghost" style="margin-left: auto" @click="moFormTao">+ Tạo yêu cầu hộ khách</button>
+    </div>
+
+    <!-- Form CSKH tự khởi tạo: tra mã đơn -> chọn dòng sản phẩm -> tạo -->
+    <div v-if="formMo" style="background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; margin-bottom: 16px">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px">
+        <b style="font-size: 14px">Tạo yêu cầu đổi/trả hộ khách</b>
+        <button class="btn-ghost" style="height: 30px; padding: 0 12px" @click="dongFormTao">Đóng</button>
+      </div>
+
+      <div style="display: flex; gap: 9px; flex-wrap: wrap; align-items: center; margin-bottom: 12px">
+        <input
+          v-model="form.maDon"
+          class="fld"
+          style="flex: 1; min-width: 200px; height: 38px"
+          placeholder="Mã đơn hàng (vd DH250811ABCD)"
+          @keyup.enter="traCuu"
+        />
+        <button class="btn-ghost" :disabled="dangTraCuu || !form.maDon" @click="traCuu">
+          {{ dangTraCuu ? 'Đang tra...' : 'Tra cứu đơn' }}
+        </button>
+      </div>
+
+      <div v-if="loiForm" style="font-size: 12.5px; color: var(--danger, #ff5d7a); margin-bottom: 12px">{{ loiForm }}</div>
+
+      <template v-if="don">
+        <div style="font-size: 12.5px; color: var(--muted2); margin-bottom: 10px">
+          Khách: <b style="color: var(--text)">{{ don.hoTen }}</b> · {{ don.email }}
+          <span v-if="don.dienThoai"> · {{ don.dienThoai }}</span>
+        </div>
+
+        <div style="font-size: 12.5px; color: var(--muted2); margin-bottom: 6px">Sản phẩm cần đổi/trả</div>
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px">
+          <label
+            v-for="sp in don.sanPham"
+            :key="sp.orderItemId"
+            style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--card2); border-radius: 10px; cursor: pointer"
+          >
+            <input type="radio" :value="sp.orderItemId" v-model="form.orderItemId" style="accent-color: var(--acc)" />
+            <span style="flex: 1; font-size: 13px">
+              {{ sp.tenSanPham }}
+              <span class="mono" style="font-size: 11px; color: var(--muted)"> · {{ sp.sku }}</span>
+            </span>
+            <span style="font-size: 12px; color: var(--muted)">đã mua ×{{ sp.soLuong }}</span>
+          </label>
+        </div>
+
+        <div style="display: flex; gap: 9px; flex-wrap: wrap; margin-bottom: 12px">
+          <select v-model="form.lyDo" class="fld" style="height: 38px; min-width: 200px">
+            <option value="loi_nsx">Lỗi nhà sản xuất</option>
+            <option value="giao_sai">Giao sai mẫu / cấu hình</option>
+            <option value="khong_dung_mo_ta">Không đúng mô tả</option>
+            <option value="khac">Lý do khác</option>
+          </select>
+          <input
+            v-model.number="form.soLuong"
+            type="number"
+            min="1"
+            class="fld"
+            style="width: 150px; height: 38px"
+            placeholder="Số lượng"
+          />
+        </div>
+
+        <textarea
+          v-model="form.noiDung"
+          class="fld"
+          rows="3"
+          style="width: 100%; padding: 10px 12px; margin-bottom: 12px"
+          placeholder="Mô tả tình trạng máy / lý do khách đổi trả"
+        ></textarea>
+
+        <button class="btn-ghost" :disabled="dangTao || !form.noiDung" @click="taoYeuCau">
+          {{ dangTao ? 'Đang tạo...' : 'Tạo yêu cầu' }}
+        </button>
+      </template>
     </div>
 
     <div v-if="loading" class="spin"></div>
@@ -32,6 +108,8 @@
               <span class="badge" style="background: var(--card2); color: var(--muted2)">
                 {{ r.kenhMua === 'online' ? 'Mua online' : 'Tại cửa hàng' }}
               </span>
+              <span v-if="r.taoBoiAdmin" class="badge" style="background: var(--card2); color: var(--muted2)">CSKH tạo</span>
+              <span v-if="r.daHoanKho" class="badge" :style="badge('hoan_tat')">Đã hoàn kho</span>
             </div>
             <div style="font-size: 12px; color: var(--muted); margin-top: 6px">
               {{ r.hoTen }} · {{ r.email }}<span v-if="r.dienThoai"> · {{ r.dienThoai }}</span> · {{ fmtDateTime(r.createdAt) }}
@@ -74,7 +152,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { getReturns, updateReturnStatus } from '../api/admin'
+import { getReturns, updateReturnStatus, lookupOrderForReturn, createReturn } from '../api/admin'
 import { resolveImageUrl } from '../api/http'
 
 const danhSach = ref([])
@@ -83,6 +161,65 @@ const loading = ref(true)
 const loc = ref('')
 const ghiChu = ref({})
 const dangLuu = ref(null)
+
+// ===== CSKH tự khởi tạo yêu cầu hộ khách =====
+const formMo = ref(false)
+const don = ref(null)
+const loiForm = ref('')
+const dangTraCuu = ref(false)
+const dangTao = ref(false)
+const form = ref({ maDon: '', orderItemId: null, lyDo: 'loi_nsx', noiDung: '', soLuong: 1 })
+
+function moFormTao() {
+  formMo.value = true
+}
+function dongFormTao() {
+  formMo.value = false
+  don.value = null
+  loiForm.value = ''
+  form.value = { maDon: '', orderItemId: null, lyDo: 'loi_nsx', noiDung: '', soLuong: 1 }
+}
+
+async function traCuu() {
+  dangTraCuu.value = true
+  loiForm.value = ''
+  don.value = null
+  try {
+    const kq = await lookupOrderForReturn(form.value.maDon.trim())
+    don.value = kq
+    // Đơn 1 sản phẩm thì chọn sẵn cho nhanh, khỏi bắt CSKH bấm thêm 1 lần.
+    if (kq.sanPham?.length === 1) {
+      form.value.orderItemId = kq.sanPham[0].orderItemId
+      form.value.soLuong = kq.sanPham[0].soLuong || 1
+    } else {
+      form.value.orderItemId = null
+    }
+  } catch (e) {
+    loiForm.value = e?.response?.data?.message || 'Không tra cứu được đơn hàng này.'
+  } finally {
+    dangTraCuu.value = false
+  }
+}
+
+async function taoYeuCau() {
+  dangTao.value = true
+  loiForm.value = ''
+  try {
+    await createReturn({
+      maDon: form.value.maDon.trim(),
+      orderItemId: form.value.orderItemId,
+      lyDo: form.value.lyDo,
+      noiDung: form.value.noiDung,
+      soLuong: form.value.soLuong,
+    })
+    dongFormTao()
+    await tai()
+  } catch (e) {
+    loiForm.value = e?.response?.data?.message || 'Không tạo được yêu cầu.'
+  } finally {
+    dangTao.value = false
+  }
+}
 
 const TABS = [
   { ma: '', ten: 'Tất cả' },

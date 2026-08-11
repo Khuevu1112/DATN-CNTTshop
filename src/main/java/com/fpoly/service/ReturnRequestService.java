@@ -12,12 +12,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.fpoly.dto.ReturnDtos.DongSanPhamDto;
+import com.fpoly.dto.ReturnDtos.DonChoDoiTraDto;
 import com.fpoly.dto.ReturnDtos.ReturnDto;
 import com.fpoly.model.NguoiDung;
 import com.fpoly.model.Order;
+import com.fpoly.model.OrderItem;
+import com.fpoly.model.ProductVariant;
 import com.fpoly.model.ReturnRequest;
 import com.fpoly.repository.NguoiDungRepository;
 import com.fpoly.repository.OrderRepository;
+import com.fpoly.repository.ProductVariantRepository;
 import com.fpoly.repository.ReturnRequestRepository;
 
 /** Đổi trả hàng (1 đổi 1 trong 7 ngày). Chính sách RIÊNG với bảo hành — xem 71_return_request.sql.
@@ -28,6 +33,7 @@ public class ReturnRequestService {
     @Autowired private ReturnRequestRepository repo;
     @Autowired private NguoiDungRepository nguoiDungRepo;
     @Autowired private OrderRepository orderRepo;
+    @Autowired private ProductVariantRepository variantRepo;
     @Autowired private NotificationService notificationService;
 
     private static final List<String> TRANG_THAI = List.of(
@@ -113,6 +119,66 @@ public class ReturnRequestService {
         return toDto(r);
     }
 
+    /** CSKH tự khởi tạo yêu cầu hộ khách (khách mang máy tới cửa hàng, gọi hotline...).
+     * Bắt buộc có mã đơn — đây là căn cứ để biết khách nào, mua gì, và hoàn kho về đâu; không
+     * bắt buộc video mở hàng vì nhân viên đang trực tiếp cầm máy trên tay.
+     * orderItemId = dòng sản phẩm trong đơn cần đổi/trả (null nếu cả đơn chỉ có 1 dòng). */
+    @Transactional
+    public ReturnDto taoYeuCauBoiAdmin(String maDon, Integer orderItemId, String lyDo,
+                                       String noiDung, Integer soLuong) {
+        if (maDon == null || maDon.isBlank()) {
+            throw new RuntimeException("Vui lòng nhập mã đơn hàng cần đổi/trả.");
+        }
+        if (noiDung == null || noiDung.isBlank()) {
+            throw new RuntimeException("Vui lòng mô tả nội dung cần đổi trả.");
+        }
+        Order order = orderRepo.findByMaDonHang(maDon.trim())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng " + maDon.trim()));
+        if (order.getNguoiDung() == null) {
+            throw new RuntimeException("Đơn hàng này không gắn với tài khoản khách nào.");
+        }
+
+        List<OrderItem> chiTiet = order.getChiTiet() == null ? List.of() : order.getChiTiet();
+        OrderItem dong = null;
+        if (orderItemId != null) {
+            dong = chiTiet.stream().filter(i -> orderItemId.equals(i.getId())).findFirst()
+                    .orElseThrow(() -> new RuntimeException("Dòng sản phẩm không thuộc đơn " + order.getMaDonHang()));
+        } else if (chiTiet.size() == 1) {
+            dong = chiTiet.get(0);
+        } else if (chiTiet.size() > 1) {
+            throw new RuntimeException("Đơn có nhiều sản phẩm, vui lòng chọn sản phẩm cần đổi/trả.");
+        }
+
+        ReturnRequest r = new ReturnRequest();
+        r.setMaYeuCau(sinhMa());
+        r.setUser(order.getNguoiDung());
+        r.setOrder(order);
+        r.setMaDon(order.getMaDonHang());
+        r.setKenhMua("tai_cua_hang");
+        r.setTaoBoiAdmin(true);
+        r.setLyDo(lyDo);
+        r.setNoiDung(noiDung.trim());
+        if (dong != null) {
+            r.setVariant(dong.getVariant());
+            r.setTenSanPham(dong.getTenSanPham());
+            int max = dong.getSoLuong() == null ? 1 : dong.getSoLuong();
+            int sl = soLuong == null || soLuong <= 0 ? max : soLuong;
+            if (sl > max) {
+                throw new RuntimeException("Số lượng đổi/trả (" + sl + ") vượt quá số đã mua (" + max + ").");
+            }
+            r.setSoLuong(sl);
+        }
+        r.setTrangThai("cho_xu_ly");
+        repo.save(r);
+
+        notificationService.taoChoUser(order.getNguoiDung().getId(), "return_request",
+                "CNTTShop đã tạo yêu cầu đổi trả " + r.getMaYeuCau(),
+                "Nhân viên CSKH vừa khởi tạo yêu cầu đổi trả cho đơn " + order.getMaDonHang()
+                        + ". Bạn có thể theo dõi tiến độ tại trang Đổi trả.",
+                "/ho-tro/doi-tra");
+        return toDto(r);
+    }
+
     public List<ReturnDto> cuaToi(String email) {
         return repo.findByUserEmailOrderByCreatedAtDesc(email).stream().map(this::toDto).toList();
     }
@@ -141,6 +207,13 @@ public class ReturnRequestService {
         r.setTrangThai(trangThaiMoi);
         if (ghiChu != null && !ghiChu.isBlank()) r.setGhiChuCskh(ghiChu.trim());
         r.setUpdatedAt(LocalDateTime.now());
+
+        // Hàng chỉ thực sự về kho ở bước cuối (hoan_tat) — "chap_nhan" mới là đồng ý cho đổi/trả,
+        // khách chưa gửi máy về nên chưa được cộng kho.
+        if ("hoan_tat".equals(trangThaiMoi)) {
+            hoanTonKho(r);
+        }
+
         repo.save(r);
 
         if (r.getUser() != null) {
@@ -150,6 +223,30 @@ public class ReturnRequestService {
                     "/ho-tro/doi-tra");
         }
         return toDto(r);
+    }
+
+    /** Cộng lại tồn kho cho biến thể được trả về. Chỉ chạy khi biết CHÍNH XÁC biến thể — yêu cầu
+     * cũ (trước 79_return_restock.sql) hoặc yêu cầu khách khai chay không gắn được dòng sản phẩm
+     * nào thì bỏ qua, thà để CSKH chỉnh tay còn hơn cộng bừa làm sai sổ kho. Cờ daHoanKho chống
+     * cộng 2 lần. */
+    private void hoanTonKho(ReturnRequest r) {
+        if (Boolean.TRUE.equals(r.getDaHoanKho())) return;
+
+        ProductVariant v = r.getVariant();
+        // Yêu cầu không chỉ rõ biến thể nhưng đơn chỉ có đúng 1 dòng sản phẩm -> suy ra được,
+        // không có gì mơ hồ.
+        int soLuong = r.getSoLuong() != null && r.getSoLuong() > 0 ? r.getSoLuong() : 1;
+        if (v == null && r.getOrder() != null
+                && r.getOrder().getChiTiet() != null && r.getOrder().getChiTiet().size() == 1) {
+            OrderItem oi = r.getOrder().getChiTiet().get(0);
+            v = oi.getVariant();
+            if (r.getSoLuong() == null) soLuong = oi.getSoLuong() == null ? 1 : oi.getSoLuong();
+        }
+        if (v == null) return;
+
+        v.setStock((v.getStock() == null ? 0 : v.getStock()) + soLuong);
+        variantRepo.save(v);
+        r.setDaHoanKho(true);
     }
 
     private ReturnDto toDto(ReturnRequest r) {
@@ -166,6 +263,28 @@ public class ReturnRequestService {
                 u != null ? u.getHoTen() : null,
                 u != null ? u.getEmail() : null,
                 u != null ? u.getSoDienThoai() : null,
-                r.getCreatedAt(), r.getUpdatedAt());
+                r.getCreatedAt(), r.getUpdatedAt(),
+                r.getSoLuong(), r.getDaHoanKho(), r.getTaoBoiAdmin());
+    }
+
+    /** Tra cứu đơn cho màn tạo yêu cầu bên Admin Console — trả về khách hàng + danh sách dòng
+     * sản phẩm để CSKH chọn đúng biến thể cần đổi/trả. */
+    public DonChoDoiTraDto traCuuDonChoDoiTra(String maDon) {
+        if (maDon == null || maDon.isBlank()) {
+            throw new RuntimeException("Vui lòng nhập mã đơn hàng.");
+        }
+        Order order = orderRepo.findByMaDonHang(maDon.trim())
+                .orElseThrow(() -> new RuntimeException("Không tìm thấy đơn hàng " + maDon.trim()));
+        NguoiDung u = order.getNguoiDung();
+        List<DongSanPhamDto> dong = (order.getChiTiet() == null ? List.<OrderItem>of() : order.getChiTiet())
+                .stream()
+                .map(i -> new DongSanPhamDto(i.getId(), i.getTenSanPham(),
+                        i.getVariant() != null ? i.getVariant().getSku() : null, i.getSoLuong()))
+                .toList();
+        return new DonChoDoiTraDto(order.getMaDonHang(),
+                u != null ? u.getHoTen() : null,
+                u != null ? u.getEmail() : null,
+                u != null ? u.getSoDienThoai() : null,
+                order.getTrangThai(), dong);
     }
 }
