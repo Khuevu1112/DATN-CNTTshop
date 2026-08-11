@@ -244,7 +244,8 @@ const exploreItems = computed(() => (activeMenu.value ? EXPLORE[activeMenu.value
 // "Liên hệ" đã gộp vào panel Hỗ trợ trên thanh trên cùng nên KHÔNG còn ở đây nữa.
 const plainNavItems = computed(() => [
   { label: 'Xây dựng cấu hình', icon: 'bi-tools', onClick: actions.goPcBuild, active: route.name === 'pcbuild' },
-  { label: 'So sánh', icon: 'bi-layout-split', onClick: actions.goCompare, active: route.name === 'compare' },
+  // "So sánh" đã chuyển thành nút tròn nổi + drawer (CompareFab/CompareDrawer) nên bỏ khỏi
+  // thanh menu; route /so-sanh vẫn giữ cho các link cũ đã chia sẻ ra ngoài.
   { label: 'Khuyến mãi', icon: 'bi-gift', onClick: actions.goPromotions, active: route.name === 'promotions' },
   { label: 'Tin tức', icon: 'bi-newspaper', onClick: () => actions.goNews(), active: route.name === 'news' || route.name === 'article' },
 ]);

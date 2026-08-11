@@ -7,6 +7,8 @@ import ToastMessage from './components/ToastMessage.vue';
 import LoadingOverlay from './components/LoadingOverlay.vue';
 import WelcomePopup from './components/WelcomePopup.vue';
 import ChatbotWidget from './components/ChatbotWidget.vue';
+import CompareFab from './components/CompareFab.vue';
+import CompareDrawer from './components/CompareDrawer.vue';
 
 const rootStyle = computed(() => ({
   '--acc': accent.value,
@@ -27,5 +29,7 @@ const rootStyle = computed(() => ({
     <AppFooter />
     <WelcomePopup />
     <ChatbotWidget />
+    <CompareFab />
+    <CompareDrawer />
   </div>
 </template>

@@ -546,9 +546,15 @@ onMounted(load);
         <div style="height: 1px; background: rgba(var(--line-rgb),0.14); margin: 18px 0"></div>
 
         <div style="font-size: 13.5px; font-weight: 700; color: var(--text); margin-bottom: 14px">Đơn hàng của bạn</div>
-        <div v-for="c in selectedLines" :key="c.id" style="display: flex; justify-content: space-between; font-size: 12.5px; padding: 5px 0; color: var(--muted2)">
-          <span>{{ c.productName }} x{{ c.quantity }}</span>
-          <span>{{ fmt(c.lineTotal) }}</span>
+        <div v-for="c in selectedLines" :key="c.id" style="display: flex; justify-content: space-between; gap: 10px; font-size: 12.5px; padding: 5px 0; color: var(--muted2)">
+          <span>
+            {{ c.productName }} x{{ c.quantity }}
+            <!-- Cấu hình biến thể: 2 dòng cùng sản phẩm chỉ khác nhau ở đây (xem CartView). -->
+            <span v-if="c.optionsText || c.sku" style="display: block; font-size: 11px; color: var(--muted)">
+              {{ c.optionsText || c.sku }}
+            </span>
+          </span>
+          <span style="white-space: nowrap">{{ fmt(c.lineTotal) }}</span>
         </div>
         <div style="height: 1px; background: rgba(var(--line-rgb),0.14); margin: 12px 0"></div>
 

@@ -517,7 +517,9 @@ function sendFreeText() {
 .cbw-root {
   position: fixed;
   right: 22px;
-  bottom: 22px;
+  /* Chừa chỗ cho nút So sánh nằm ngay DƯỚI nút chatbot (xem CompareFab: 56px + 22px đáy
+     + 12px khoảng cách). Đổi số ở đây thì đổi cả bên đó. */
+  bottom: 90px;
   z-index: 200;
   font-family: "Be Vietnam Pro", sans-serif;
 }

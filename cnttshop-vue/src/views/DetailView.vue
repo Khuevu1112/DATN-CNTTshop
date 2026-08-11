@@ -178,6 +178,45 @@ async function onBuy() {
   actions.goCart();
 }
 
+// ===== So sánh — thanh ngang rộng bằng cả hàng Thêm giỏ + Mua ngay =====
+// Khoá gắn theo BIẾN THỂ đang chọn chứ không phải sản phẩm: hai phiên bản khác nhau của cùng
+// một máy (vd 16GB vs 32GB RAM) là hai cột riêng trong bảng so sánh, đúng như khi so sánh hai
+// sản phẩm khác nhau.
+const bienTheDangChon = computed(() =>
+  Object.entries(state.cfgSel || {})
+    .map(([, v]) => v)
+    .filter(Boolean)
+    .join(' · '),
+);
+const compareKey = computed(() => {
+  if (!sp.value) return '';
+  const vid = resolveVariantId(sp.value, state.cfgSel);
+  return 'product-' + sp.value.id + (vid ? '-v' + vid : '');
+});
+const dangSoSanh = computed(() => !!compareKey.value && actions.isComparing(compareKey.value));
+function onCompare() {
+  if (!sp.value) return;
+  // Bấm lần nữa khi đã có trong danh sách thì chỉ mở drawer, không bỏ ra — bỏ nhầm giữa lúc
+  // đang so sánh khó chịu hơn là phải bấm ✕ trong drawer.
+  if (!dangSoSanh.value) {
+    const ok = actions.addCompare({
+      key: compareKey.value,
+      kind: 'product',
+      id: sp.value.id,
+      slug: sp.value.slug,
+      name: sp.value.name,
+      bienThe: bienTheDangChon.value,
+      price: priceWith(sp.value, state.cfgSel),
+      image: sp.value.imageUrl,
+    });
+    if (!ok) {
+      actions.showToast('Chỉ so sánh được tối đa 5 cấu hình cùng lúc');
+      return;
+    }
+  }
+  actions.openCompare();
+}
+
 // ===== Yêu thích + Trả góp — hàng nút đối xứng bên dưới Thêm giỏ / Mua ngay =====
 const daYeuThich = computed(() => sp.value && state.wishlistIds.has(sp.value.id));
 function onToggleWishlist() {
@@ -561,6 +600,34 @@ function onInstallment() {
             Mua ngay
           </button>
         </div>
+
+        <!-- So sánh: 1 thanh ngang rộng bằng cả hàng Thêm giỏ + Mua ngay ở trên, mở drawer so
+             sánh (xem CompareDrawer) thay vì điều hướng sang trang khác. -->
+        <button
+          @click="onCompare"
+          :style="{
+            border: '1px solid ' + (dangSoSanh ? accent : 'rgba(var(--line-rgb), 0.22)'),
+            background: dangSoSanh ? 'color-mix(in srgb, ' + accent + ' 12%, transparent)' : 'transparent',
+            color: dangSoSanh ? accent : 'var(--muted2)',
+          }"
+          style="
+            width: 100%;
+            height: 50px;
+            border-radius: 13px;
+            margin-bottom: 24px;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-weight: 700;
+            font-size: 14.5px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 9px;
+          "
+        >
+          <span style="font-size: 17px">⇄</span>
+          {{ dangSoSanh ? 'Đang trong danh sách so sánh' : 'So sánh' }}
+        </button>
 
         <!-- Yêu thích + Trả góp: đối xứng, cùng kích cỡ với hàng Thêm giỏ/Mua ngay ở trên -->
         <div style="display: flex; gap: 14px; align-items: center; margin-bottom: 24px">

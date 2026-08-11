@@ -120,11 +120,13 @@ const tokenText = computed(() => '+' + silverTokensFor(selectedSubtotal.value) +
             <div style="font-size: 14.5px; font-weight: 600; margin: 3px 0 4px">
               {{ line.name }}
             </div>
+            <!-- Cấu hình của biến thể — thứ duy nhất phân biệt 2 dòng cùng sản phẩm. Biến thể
+                 chưa gán option value nào thì rơi về SKU, đừng để 2 dòng trông giống hệt nhau. -->
             <div
-              v-if="line.optionsText"
+              v-if="line.optionsText || line.sku"
               style="font-size: 11.5px; color: var(--muted2); margin-bottom: 4px"
             >
-              {{ line.optionsText }}
+              {{ line.optionsText || line.sku }}
             </div>
             <div style="font-size: 13px; color: var(--muted)">
               {{ line.priceText }}

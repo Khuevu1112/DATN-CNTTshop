@@ -40,6 +40,25 @@ if (_returnOrderId || _returnPayment || _oauthToken || _oauthError) {
 }
 
 // ===== Global reactive store (shared singleton) =====
+// So sánh tối đa 5 cấu hình — quá số này bảng tràn ngang và không còn đọc được trên màn hình
+// thường; đây cũng là mức các trang thương mại điện tử lớn dừng lại.
+export const MAX_COMPARE = 5;
+const COMPARE_KEY = 'cntt_compare_items';
+
+function docCompare() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(COMPARE_KEY) || '[]');
+    return Array.isArray(raw) ? raw.slice(0, MAX_COMPARE) : [];
+  } catch (e) {
+    return [];
+  }
+}
+function luuCompare() {
+  try {
+    localStorage.setItem(COMPARE_KEY, JSON.stringify(state.compareItems));
+  } catch (e) { /* hết quota / chế độ riêng tư — bỏ qua, mất danh sách khi F5 là chấp nhận được */ }
+}
+
 export const state = reactive({
   selId: null,
   cfgSel: {},
@@ -53,6 +72,12 @@ export const state = reactive({
   // đâu (trang chi tiết, thẻ sản phẩm...) biết ngay trạng thái mà không phải gọi API riêng.
   wishlistIds: new Set(),
   wishlistItems: [], // WishlistItemDto[] đầy đủ, dùng cho trang /yeu-thich
+  // ===== So sánh cấu hình (drawer trượt từ phải, xem CompareDrawer.vue) =====
+  // Danh sách mục đang so sánh, tối đa 5. Mỗi mục: { key, kind:'product'|'build', id, slug,
+  // name, price, image }. Lưu localStorage để chọn ở trang này rồi so ở trang khác vẫn còn.
+  compareItems: docCompare(),
+  compareOpen: false,
+
   brandFilter: [],
   segmentKeyword: '', // '' = không lọc phân khúc, khác rỗng = từ khoá matchesQuery (xem CATEGORY_SEGMENTS)
   // ===== Bộ lọc riêng cho PC & Máy tính bàn (thay bộ lọc Thương hiệu chung — PC nào cũng là
@@ -228,6 +253,31 @@ export const actions = {
   goPromotions: () => router.push({ name: 'promotions' }),
   goWarranty: () => router.push({ name: 'warranty' }),
   goCompare: () => router.push({ name: 'compare' }),
+
+  // ===== So sánh cấu hình =====
+  // Drawer so sánh thay cho việc điều hướng sang trang riêng: khách đang xem sản phẩm thì
+  // không bị mất ngữ cảnh, thêm/bớt cấu hình rồi đóng lại là quay về đúng chỗ cũ.
+  openCompare: () => { state.compareOpen = true; },
+  closeCompare: () => { state.compareOpen = false; },
+  toggleCompare: () => { state.compareOpen = !state.compareOpen; },
+
+  /** Thêm 1 mục vào danh sách so sánh. Trả về false nếu đã đủ 5 mục. */
+  addCompare(item) {
+    if (state.compareItems.some((i) => i.key === item.key)) return true;
+    if (state.compareItems.length >= MAX_COMPARE) return false;
+    state.compareItems = [...state.compareItems, item];
+    luuCompare();
+    return true;
+  },
+  removeCompare(key) {
+    state.compareItems = state.compareItems.filter((i) => i.key !== key);
+    luuCompare();
+  },
+  clearCompare() {
+    state.compareItems = [];
+    luuCompare();
+  },
+  isComparing: (key) => state.compareItems.some((i) => i.key === key),
   goPcBuild: () => router.push({ name: 'pcbuild' }),
   goAccount: () => router.push({ name: 'account' }),
 
