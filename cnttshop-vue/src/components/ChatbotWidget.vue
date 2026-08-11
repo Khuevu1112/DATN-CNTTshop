@@ -542,8 +542,10 @@ function sendFreeText() {
   bottom: 68px;
   width: 340px;
   max-height: 520px;
-  background: #0a2138;
-  border: 1px solid rgba(120, 170, 230, 0.18);
+  /* Nền xám trung tính, đồng bộ với drawer So sánh (xem CompareDrawer) — tông xanh lam cũ
+     lệch hẳn so với phần còn lại của giao diện. */
+  background: radial-gradient(1200px 600px at 80% -10%, rgb(28, 30, 34) 0%, rgb(16, 17, 20) 55%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
   display: flex;
   flex-direction: column;
@@ -553,8 +555,9 @@ function sendFreeText() {
 
 .cbw-header {
   padding: 14px 16px;
-  background: linear-gradient(90deg, #081a2d, #032e5d);
-  color: #fff;
+  background: rgb(36, 38, 42);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  color: #eef3f8;
 }
 .cbw-title {
   font-weight: 700;
@@ -562,7 +565,7 @@ function sendFreeText() {
 }
 .cbw-sub {
   font-size: 11.5px;
-  color: #a9c0dc;
+  color: #8b95a0;
   margin-top: 2px;
 }
 
@@ -585,8 +588,8 @@ function sendFreeText() {
 }
 .cbw-msg.bot {
   align-self: flex-start;
-  background: #0c2742;
-  color: #e8f1fc;
+  background: rgb(36, 38, 42);
+  color: #eef3f8;
   border-bottom-left-radius: 3px;
 }
 .cbw-msg.user {
@@ -603,9 +606,9 @@ function sendFreeText() {
   gap: 6px;
 }
 .cbw-reply-btn {
-  border: 1px solid rgba(120, 170, 230, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   background: transparent;
-  color: #cfdceb;
+  color: #c3c9d1;
   padding: 6px 11px;
   border-radius: 20px;
   font-size: 12px;
@@ -624,13 +627,13 @@ function sendFreeText() {
 .cbw-pcard {
   cursor: pointer;
   padding: 8px 10px;
-  border: 1px solid rgba(120, 170, 230, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 10px;
-  background: #0c2742;
+  background: rgb(36, 38, 42);
 }
 .cbw-pname {
   font-size: 12.5px;
-  color: #e8f1fc;
+  color: #eef3f8;
   font-weight: 600;
 }
 .cbw-pprice {
@@ -644,26 +647,26 @@ function sendFreeText() {
 }
 .cbw-pold {
   font-size: 10.5px;
-  color: #6e87a6;
+  color: #8b95a0;
   text-decoration: line-through;
   font-weight: 500;
 }
 .cbw-pmeta {
   font-size: 10.5px;
-  color: #7e98b6;
+  color: #8b95a0;
   margin-top: 2px;
 }
 
 .cbw-inputbar {
   display: flex;
-  border-top: 1px solid rgba(120, 170, 230, 0.14);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 .cbw-inputbar input {
   flex: 1;
   background: transparent;
   border: none;
   padding: 12px 14px;
-  color: #e8f1fc;
+  color: #eef3f8;
   font-size: 13px;
 }
 .cbw-inputbar input:focus {
