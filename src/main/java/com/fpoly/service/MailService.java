@@ -25,6 +25,14 @@ public class MailService {
     @Value("${app.frontendUrl}")
     private String frontendUrl;
 
+    // Ưu tiên app.adminEmail trong application.properties; nếu trống thì lấy toàn bộ
+    // user có role admin trong DB làm fallback (xem layDanhSachEmailAdmin).
+    @Value("${app.adminEmail:}")
+    private String adminEmail;
+
+    @Autowired
+    private com.fpoly.repository.NguoiDungRepository nguoiDungRepository;
+
     // Mã tuỳ chọn giao nội thành Hải Phòng (ShippingService) — còn lại là mã hãng vận chuyển
     // liên tỉnh (CARRIER) — dùng để đổi nội dung mail/thông báo cho phù hợp (xem OrderService).
     private static final List<String> MA_TUY_CHON_NOI_THANH = List.of("hoa_toc", "thuong");
@@ -325,6 +333,89 @@ public class MailService {
 
         helper.setText(html, true);
         mailSender.send(message);
+    }
+
+    // ====== Thông báo cho ADMIN khi có đơn hàng mới ======
+
+    public void sendNewOrderAdminNotification(Order order) {
+        List<String> nguoiNhan = layDanhSachEmailAdmin();
+        if (nguoiNhan.isEmpty()) {
+            return; // không có ai để gửi, tránh lỗi mailSender với địa chỉ rỗng
+        }
+
+        StringBuilder danhSachSp = new StringBuilder();
+        List<OrderItem> items = order.getChiTiet() == null ? List.of() : order.getChiTiet();
+        for (OrderItem oi : items) {
+            danhSachSp.append("""
+                    <tr>
+                      <td style="padding:6px 8px;border-bottom:1px solid #eee">%s</td>
+                      <td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:center">x%d</td>
+                      <td style="padding:6px 8px;border-bottom:1px solid #eee;text-align:right">%s</td>
+                    </tr>
+                    """.formatted(oi.getTenSanPham(), oi.getSoLuong(), fmtTien(oi.getThanhTien())));
+        }
+
+        String tenKhach = order.getNguoiDung() != null ? order.getNguoiDung().getHoTen() : "Khách vãng lai";
+        String emailKhach = order.getNguoiDung() != null ? order.getNguoiDung().getEmail() : "-";
+
+        try {
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setTo(nguoiNhan.toArray(new String[0]));
+            helper.setSubject("🛒 Đơn hàng mới - " + order.getMaDonHang() + " - CNTTShop");
+
+            String html = """
+                    <div style="font-family:Arial;background:#f5f5f5;padding:30px;">
+                      <div style="max-width:600px;margin:auto;background:white;border-radius:10px;overflow:hidden;box-shadow:0 0 15px rgba(0,0,0,.08);">
+                        <div style="background:#0d6efd;color:white;padding:20px;text-align:center;">
+                          <h2 style="margin:0">CNTTShop Admin</h2>
+                          <p style="margin:6px 0 0">Có đơn hàng mới cần xử lý</p>
+                        </div>
+                        <div style="padding:28px;">
+                          <table style="width:100%%;border-collapse:collapse;margin-bottom:14px">
+                            <tr><td style="padding:6px"><b>Mã đơn</b></td><td>%s</td></tr>
+                            <tr><td style="padding:6px"><b>Khách hàng</b></td><td>%s (%s)</td></tr>
+                            <tr><td style="padding:6px"><b>Kênh bán</b></td><td>%s</td></tr>
+                            <tr><td style="padding:6px"><b>Trạng thái</b></td><td>%s</td></tr>
+                          </table>
+                          <table style="width:100%%;border-collapse:collapse;">
+                            %s
+                          </table>
+                          <p style="text-align:right;margin-top:10px"><b>Tổng cộng: %s</b></p>
+                          <p style="text-align:center;margin-top:20px">
+                            <a href="%s/admin/orders/%d" style="display:inline-block;background:#0d6efd;color:white;text-decoration:none;padding:12px 26px;border-radius:8px;font-weight:bold;">Xem đơn hàng</a>
+                          </p>
+                          <hr>
+                          <p style="font-size:13px;color:#777">Email được gửi tự động từ hệ thống <b>CNTTShop</b>.</p>
+                        </div>
+                      </div>
+                    </div>
+                    """.formatted(order.getMaDonHang(), tenKhach, emailKhach, order.getKenhBan(),
+                            order.getTrangThai(), danhSachSp, fmtTien(order.getTongTien()),
+                            frontendUrl, order.getId());
+
+            helper.setText(html, true);
+            mailSender.send(message);
+        } catch (MessagingException e) {
+            // Không throw ra ngoài: gửi mail thất bại không được làm hỏng luồng đặt hàng của khách.
+            System.err.println("Gửi mail thông báo admin thất bại: " + e.getMessage());
+        }
+    }
+
+    /** Ưu tiên app.adminEmail (có thể liệt kê nhiều email cách nhau bởi dấu phẩy);
+     * nếu trống thì lấy email của mọi user có role admin trong DB. */
+    private List<String> layDanhSachEmailAdmin() {
+        if (adminEmail != null && !adminEmail.isBlank()) {
+            return java.util.Arrays.stream(adminEmail.split(","))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .toList();
+        }
+        return nguoiDungRepository.findByVaiTro(com.fpoly.model.enums.VaiTro.admin)
+                .stream()
+                .map(com.fpoly.model.NguoiDung::getEmail)
+                .filter(e -> e != null && !e.isBlank())
+                .toList();
     }
 
     private String fmtTien(java.math.BigDecimal tien) {

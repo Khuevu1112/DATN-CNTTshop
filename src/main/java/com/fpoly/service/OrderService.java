@@ -383,6 +383,12 @@ public class OrderService {
             }
         }
 
+        try {
+            mailService.sendNewOrderAdminNotification(saved);
+        } catch (Exception e) {
+            // Không chặn luồng đặt hàng nếu gửi mail admin thất bại
+        }
+
         return saved;
     }
 
