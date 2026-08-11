@@ -512,6 +512,39 @@ onMounted(load);
 
       <!-- Tóm tắt -->
       <div style="background: var(--card); border: 1px solid rgba(var(--line-rgb),0.14); border-radius: 14px; padding: 20px; position: sticky; top: 100px">
+        <!-- Phần thanh toán đặt TRÊN CÙNG (trên cả mã giảm giá): số tiền phải trả và nút đặt
+             hàng là thứ khách cần thấy ngay, không phải cuộn qua mã giảm giá/Xu mới tới. Các
+             khối ưu đãi bên dưới vẫn cập nhật trực tiếp vào con số này. -->
+        <div style="display: flex; justify-content: space-between; font-size: 13px; color: var(--muted2); margin-bottom: 8px">
+          <span>Tiền hàng</span><span>{{ subtotalText }}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 13px; color: var(--muted2); margin-bottom: 8px">
+          <span>Phí vận chuyển</span><span>{{ fmt(shippingFee) }}</span>
+        </div>
+        <div v-if="memberDiscount" style="display: flex; justify-content: space-between; font-size: 13px; color: var(--green); margin-bottom: 8px">
+          <span>Ưu đãi hạng {{ membership.bacHienTai.name }} ({{ memberDiscountPct }}%)</span>
+          <span>-{{ fmt(memberDiscount) }}</span>
+        </div>
+        <div v-if="couponDiscount + xuDiscount" style="display: flex; justify-content: space-between; font-size: 13px; color: var(--green); margin-bottom: 8px">
+          <span>Giảm giá</span><span>-{{ fmt(couponDiscount + xuDiscount) }}</span>
+        </div>
+        <div v-if="tinDungGiam" style="display: flex; justify-content: space-between; font-size: 13px; color: var(--green); margin-bottom: 8px">
+          <span>Tín dụng thu cũ</span><span>-{{ fmt(tinDungGiam) }}</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 15px; font-weight: 700; margin-top: 10px">
+          <span style="color: var(--text)">Tổng cộng</span>
+          <span style="color: var(--acc,#c6ff4a)">{{ totalText }}</span>
+        </div>
+
+        <div v-if="error" style="margin-top: 12px; font-size: 12.5px; color: var(--sale)">{{ error }}</div>
+
+        <button @click="submit" :disabled="placing"
+          style="width: 100%; height: 48px; border: none; border-radius: 11px; background: var(--acc,#c6ff4a); color: var(--acc-ink); font-weight: 700; cursor: pointer; margin-top: 16px; font-size: 14px">
+          {{ placing ? 'Đang xử lý...' : 'Đặt hàng' }}
+        </button>
+
+        <div style="height: 1px; background: rgba(var(--line-rgb),0.14); margin: 18px 0"></div>
+
         <div style="font-size: 13.5px; font-weight: 700; color: var(--text); margin-bottom: 14px">Đơn hàng của bạn</div>
         <div v-for="c in selectedLines" :key="c.id" style="display: flex; justify-content: space-between; font-size: 12.5px; padding: 5px 0; color: var(--muted2)">
           <span>{{ c.productName }} x{{ c.quantity }}</span>
@@ -597,33 +630,6 @@ onMounted(load);
           </div>
         </div>
 
-        <div style="display: flex; justify-content: space-between; font-size: 13px; color: var(--muted2); margin-bottom: 8px">
-          <span>Tiền hàng</span><span>{{ subtotalText }}</span>
-        </div>
-        <div style="display: flex; justify-content: space-between; font-size: 13px; color: var(--muted2); margin-bottom: 8px">
-          <span>Phí vận chuyển</span><span>{{ fmt(shippingFee) }}</span>
-        </div>
-        <div v-if="memberDiscount" style="display: flex; justify-content: space-between; font-size: 13px; color: var(--green); margin-bottom: 8px">
-          <span>Ưu đãi hạng {{ membership.bacHienTai.name }} ({{ memberDiscountPct }}%)</span>
-          <span>-{{ fmt(memberDiscount) }}</span>
-        </div>
-        <div v-if="couponDiscount + xuDiscount" style="display: flex; justify-content: space-between; font-size: 13px; color: var(--green); margin-bottom: 8px">
-          <span>Giảm giá</span><span>-{{ fmt(couponDiscount + xuDiscount) }}</span>
-        </div>
-        <div v-if="tinDungGiam" style="display: flex; justify-content: space-between; font-size: 13px; color: var(--green); margin-bottom: 8px">
-          <span>Tín dụng thu cũ</span><span>-{{ fmt(tinDungGiam) }}</span>
-        </div>
-        <div style="display: flex; justify-content: space-between; font-size: 15px; font-weight: 700; margin-top: 10px">
-          <span style="color: var(--text)">Tổng cộng</span>
-          <span style="color: var(--acc,#c6ff4a)">{{ totalText }}</span>
-        </div>
-
-        <div v-if="error" style="margin-top: 12px; font-size: 12.5px; color: var(--sale)">{{ error }}</div>
-
-        <button @click="submit" :disabled="placing"
-          style="width: 100%; height: 48px; border: none; border-radius: 11px; background: var(--acc,#c6ff4a); color: var(--acc-ink); font-weight: 700; cursor: pointer; margin-top: 16px; font-size: 14px">
-          {{ placing ? 'Đang xử lý...' : 'Đặt hàng' }}
-        </button>
       </div>
     </div>
   </main>
