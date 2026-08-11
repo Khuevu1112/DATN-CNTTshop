@@ -252,6 +252,8 @@ public class AdminProductService {
      * Nhóm bị khoá cặp (cùng linkedGroup): KHÔNG tự bịa tổ hợp — trục của cả nhóm chỉ gồm đúng những
      * tổ hợp admin đã nhập tay trong variants hiện có; nếu chưa có tổ hợp nào thì nhóm đó chưa đóng
      * góp trục nào cả (admin phải tự thêm ít nhất 1 dòng biến thể cho nhóm bị khoá trước).
+     * Chỉ tính các giá trị đang active (is_active = true) — giá trị đã bị tắt không được dùng để
+     * sinh tổ hợp mới, tránh sinh biến thể cho lựa chọn admin không còn muốn bán.
      * Trả về danh sách biến thể MỚI (chưa tồn tại trong variants hiện có) để form tự thêm vào; các
      * dòng đã có được giữ nguyên, không đụng tới.
      */
@@ -267,6 +269,9 @@ public class AdminProductService {
             if (opt.linkedGroup() == null || opt.linkedGroup().isBlank()) {
                 List<Set<String>> axisValues = new ArrayList<>();
                 for (OptionValueRequest v : opt.values()) {
+                    // Bỏ qua giá trị đã bị tắt (active = false) — không sinh tổ hợp mới cho lựa
+                    // chọn admin không còn muốn bán, tránh nhầm lẫn.
+                    if (v.active() != null && !v.active()) continue;
                     if (v.clientKey() != null) axisValues.add(Set.of(v.clientKey()));
                 }
                 if (!axisValues.isEmpty()) axes.add(axisValues);
@@ -279,6 +284,7 @@ public class AdminProductService {
             Set<String> groupKeys = new HashSet<>();
             for (OptionRequest o : group) {
                 for (OptionValueRequest v : o.values()) {
+                    if (v.active() != null && !v.active()) continue;
                     if (v.clientKey() != null) groupKeys.add(v.clientKey());
                 }
             }
@@ -480,7 +486,36 @@ public class AdminProductService {
     ) {
         if (variants == null) variants = List.of();
 
+        // ── Validate trước khi đụng DB: phát hiện sớm dữ liệu bẩn từ client ──────────
+
+        // 1) Trùng tổ hợp option-value giữa các biến thể: 2 dòng cùng chọn đúng 1 tập
+        //    option-value sẽ khiến khách hàng/hệ thống không biết map về variant nào.
+        Set<Set<String>> seenCombos = new HashSet<>();
+        for (VariantRequest req : variants) {
+            Set<String> combo = req.optionValueKeys() == null
+                    ? Set.of()
+                    : new HashSet<>(req.optionValueKeys());
+            if (!combo.isEmpty() && !seenCombos.add(combo)) {
+                throw new RuntimeException(
+                        "Có 2 biến thể trùng tổ hợp thuộc tính, vui lòng kiểm tra lại (SKU: \""
+                                + (req.sku() == null ? "" : req.sku()) + "\")");
+            }
+        }
+
+        // 2) Giá / tồn kho hợp lệ.
+        for (VariantRequest req : variants) {
+            if (req.price() == null || req.price().signum() < 0) {
+                throw new RuntimeException(
+                        "Giá biến thể \"" + (req.sku() == null ? "" : req.sku()) + "\" không hợp lệ");
+            }
+            if (req.stock() != null && req.stock() < 0) {
+                throw new RuntimeException(
+                        "Tồn kho biến thể \"" + (req.sku() == null ? "" : req.sku()) + "\" không được âm");
+            }
+        }
+
         Set<Integer> keptIds = new HashSet<>();
+        List<ProductVariant> savedVariants = new ArrayList<>();
         int i = 0;
         for (VariantRequest req : variants) {
             ProductVariant variant = null;
@@ -501,18 +536,27 @@ public class AdminProductService {
             variant.setPrice(req.price());
             variant.setOriginalPrice(req.originalPrice());
             variant.setStock(req.stock() != null ? req.stock() : 0);
-            variant.setIsDefault(Boolean.TRUE.equals(req.isDefault()) || variants.size() == 1);
+            variant.setIsDefault(Boolean.TRUE.equals(req.isDefault()));
 
+            // 3) Ánh xạ clientKey -> OptionValue: nếu số lượng resolve được KHÔNG khớp số
+            //    lượng key gửi lên nghĩa là có clientKey không hợp lệ (lệch dữ liệu với
+            //    saveOptions ở trên) — chặn lại thay vì âm thầm lưu thiếu thuộc tính.
             List<OptionValue> resolved = new ArrayList<>();
             if (req.optionValueKeys() != null) {
                 for (String key : req.optionValueKeys()) {
                     OptionValue v = valueByKey.get(key);
                     if (v != null) resolved.add(v);
                 }
+                if (resolved.size() != req.optionValueKeys().size()) {
+                    throw new RuntimeException(
+                            "Biến thể \"" + variant.getSku() + "\" có thuộc tính không hợp lệ, "
+                                    + "vui lòng tải lại trang và thử lại.");
+                }
             }
             variant.setOptionValues(resolved);
 
-            variantRepo.save(variant);
+            variant = variantRepo.save(variant);
+            savedVariants.add(variant);
             i++;
         }
 
@@ -523,6 +567,30 @@ public class AdminProductService {
             } catch (DataIntegrityViolationException e) {
                 throw new RuntimeException(
                         "Không thể xoá biến thể \"" + old.getSku() + "\" vì đã có đơn hàng sử dụng.");
+            }
+        }
+
+        // 4) Đảm bảo LUÔN có đúng 1 biến thể mặc định (isDefault = true):
+        //    - Nếu admin không tick default cho dòng nào -> tự động gán cho biến thể đầu tiên.
+        //    - Nếu admin (hoặc lỗi client) tick default cho nhiều dòng -> chỉ giữ lại dòng đầu
+        //      tiên, tắt các dòng còn lại. Trang chi tiết/card sản phẩm luôn cần đúng 1 biến thể
+        //      mặc định để lấy giá/tồn kho hiển thị, tránh NoSuchElementException hoặc sai giá.
+        if (!savedVariants.isEmpty()) {
+            boolean seenDefault = false;
+            for (ProductVariant v : savedVariants) {
+                if (Boolean.TRUE.equals(v.getIsDefault())) {
+                    if (seenDefault) {
+                        v.setIsDefault(false);
+                        variantRepo.save(v);
+                    } else {
+                        seenDefault = true;
+                    }
+                }
+            }
+            if (!seenDefault) {
+                ProductVariant first = savedVariants.get(0);
+                first.setIsDefault(true);
+                variantRepo.save(first);
             }
         }
     }
