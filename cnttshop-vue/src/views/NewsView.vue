@@ -1,4 +1,13 @@
 <script setup>
+/**
+ * Trang Tin tức & thông báo — bố cục 3 cột kiểu trang tin (tham khảo Samsung Support Newsalert
+ * cho phần lọc/danh sách và VnExpress cho khối "xem nhiều / mới nhất" bên phải):
+ *
+ *   [ bộ lọc ]  [ bài nổi bật + lưới card ]  [ tin nổi bật / tin mới nhất ]
+ *
+ * Hai sidebar đều sticky nên khi cuộn danh sách dài, bộ lọc và tin nổi bật vẫn nằm trong tầm
+ * mắt. Màn hẹp thì xếp dọc: nội dung chính lên trước, hai sidebar xuống dưới.
+ */
 import { ref, computed, watch, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { actions, accent } from '../store.js';
@@ -12,14 +21,17 @@ const dangTai = ref(true);
 const catChon = ref(route.query.c || '');
 const tuKhoa = ref('');
 const sapXep = ref('moi_nhat'); // moi_nhat | a_z | xem_nhieu
-const soHien = ref(8); // "Xem thêm" nạp dần thay vì phân trang số trang
-const MOI_LAN = 8;
+const soHien = ref(6); // "Xem thêm" nạp dần thay vì phân trang số trang
+const MOI_LAN = 6;
 
 async function tai() {
   dangTai.value = true;
   soHien.value = MOI_LAN;
   try {
-    articles.value = await fetchArticles(catChon.value || undefined);
+    // Luôn tải TOÀN BỘ bài rồi lọc phía client: hai sidebar cần dữ liệu của mọi danh mục
+    // (tin nổi bật / mới nhất không đổi theo bộ lọc đang chọn), nếu gọi API theo danh mục thì
+    // chúng sẽ trống rỗng mỗi khi khách lọc.
+    articles.value = await fetchArticles();
   } catch (e) {
     articles.value = [];
   } finally {
@@ -31,9 +43,7 @@ function chonCat(ma) {
   catChon.value = ma;
   actions.goNews(ma || undefined); // đồng bộ URL để chia sẻ / F5 giữ đúng danh mục
 }
-watch(() => route.query.c, (v) => { catChon.value = v || ''; tai(); });
-// Đổi từ khoá / cách sắp xếp thì trả danh sách về lượt hiển thị đầu, tránh đang ở "xem thêm"
-// lần 3 mà kết quả mới chỉ có 2 bài.
+watch(() => route.query.c, (v) => { catChon.value = v || ''; soHien.value = MOI_LAN; });
 watch([tuKhoa, sapXep], () => { soHien.value = MOI_LAN; });
 
 function datLai() {
@@ -43,30 +53,44 @@ function datLai() {
 }
 const coLoc = computed(() => !!catChon.value || !!tuKhoa.value.trim() || sapXep.value !== 'moi_nhat');
 
-// Bài nổi bật (chỉ khi xem "Tất cả", không lọc gì) — 1 bài lớn lên đầu.
-const noiBat = computed(() => (!coLoc.value ? articles.value.find((a) => a.noiBat) : null));
+const moiNhatTruoc = (ds) =>
+  [...ds].sort((x, y) => new Date(y.publishedAt || 0) - new Date(x.publishedAt || 0));
+
+// ===== Cột giữa =====
+// Bài hero chỉ hiện khi KHÔNG lọc gì — đang tìm kiếm mà vẫn chèn một bài to không liên quan
+// lên đầu thì gây nhiễu.
+const hero = computed(() => (!coLoc.value ? moiNhatTruoc(articles.value).find((a) => a.noiBat) : null));
 
 const daLoc = computed(() => {
   const q = tuKhoa.value.trim().toLowerCase();
-  let ds = articles.value.filter((a) => a !== noiBat.value);
+  let ds = articles.value.filter((a) => a !== hero.value);
+  if (catChon.value) ds = ds.filter((a) => a.maDanhMuc === catChon.value);
   if (q) {
     ds = ds.filter((a) =>
       (a.tieuDe || '').toLowerCase().includes(q) || (a.tomTat || '').toLowerCase().includes(q),
     );
   }
-  const sorted = [...ds];
   if (sapXep.value === 'a_z') {
-    sorted.sort((x, y) => (x.tieuDe || '').localeCompare(y.tieuDe || '', 'vi'));
-  } else if (sapXep.value === 'xem_nhieu') {
-    sorted.sort((x, y) => (y.luotXem || 0) - (x.luotXem || 0));
-  } else {
-    sorted.sort((x, y) => new Date(y.publishedAt || 0) - new Date(x.publishedAt || 0));
+    return [...ds].sort((x, y) => (x.tieuDe || '').localeCompare(y.tieuDe || '', 'vi'));
   }
-  return sorted;
+  if (sapXep.value === 'xem_nhieu') {
+    return [...ds].sort((x, y) => (y.luotXem || 0) - (x.luotXem || 0));
+  }
+  return moiNhatTruoc(ds);
 });
 const hienThi = computed(() => daLoc.value.slice(0, soHien.value));
 const conNua = computed(() => daLoc.value.length > soHien.value);
 
+// ===== Sidebar phải — không phụ thuộc bộ lọc đang chọn =====
+const tinNoiBat = computed(() =>
+  moiNhatTruoc(articles.value.filter((a) => a.noiBat && a !== hero.value)).slice(0, 5),
+);
+const tinMoiNhat = computed(() =>
+  moiNhatTruoc(articles.value).filter((a) => a !== hero.value).slice(0, 5),
+);
+
+// ===== Sidebar trái =====
+const demTheoCat = (ma) => (ma ? articles.value.filter((a) => a.maDanhMuc === ma).length : articles.value.length);
 const tenCat = computed(() => cats.value.find((c) => c.ma === catChon.value)?.ten || 'Tất cả');
 
 onMounted(async () => {
@@ -80,7 +104,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <main style="max-width: 1100px; margin: 0 auto; padding: 20px 24px 72px">
+  <main class="nw-page">
     <!-- Breadcrumb -->
     <nav class="nw-crumb">
       <button @click="actions.goHome()">Trang chủ</button>
@@ -90,265 +114,301 @@ onMounted(async () => {
       <span class="cur">Tin tức &amp; thông báo</span>
     </nav>
 
-    <div style="margin-bottom: 26px">
-      <h1 class="sp-h1" style="margin-bottom: 10px">Tin tức &amp; <span :style="{ color: accent }">thông báo</span></h1>
-      <p style="font-size: 14.5px; color: var(--muted2); max-width: 680px; line-height: 1.65; margin: 0">
-        Review phần cứng, hướng dẫn build PC, thông báo cập nhật sản phẩm và các chương trình ưu đãi mới nhất.
-      </p>
-    </div>
+    <header class="nw-hd">
+      <h1 class="sp-h1" style="margin-bottom: 8px">Tin tức &amp; <span :style="{ color: accent }">thông báo</span></h1>
+      <p>Review phần cứng, hướng dẫn build PC, thông báo cập nhật sản phẩm và các chương trình ưu đãi mới nhất.</p>
+    </header>
 
-    <!-- Bộ lọc: danh mục + tìm kiếm + sắp xếp -->
-    <section class="nw-filter">
-      <div class="nw-filter-row">
-        <span class="nw-filter-label">Danh mục</span>
-        <div class="nw-chips">
-          <button class="sp-chip" :class="{ active: !catChon }" @click="chonCat('')">Tất cả</button>
+    <div class="nw-grid3">
+      <!-- ═══ SIDEBAR TRÁI: bộ lọc ═══ -->
+      <aside class="nw-side nw-left">
+        <section class="nw-box">
+          <div class="nw-box-title">Danh mục</div>
+          <button
+            class="nw-cat"
+            :class="{ on: !catChon }"
+            @click="chonCat('')"
+          >
+            <span>Tất cả</span><b>{{ demTheoCat('') }}</b>
+          </button>
           <button
             v-for="c in cats"
             :key="c.ma"
-            class="sp-chip"
-            :class="{ active: catChon === c.ma }"
+            class="nw-cat"
+            :class="{ on: catChon === c.ma }"
             @click="chonCat(c.ma)"
           >
-            {{ c.ten }}
+            <span>{{ c.ten }}</span><b>{{ demTheoCat(c.ma) }}</b>
           </button>
-        </div>
-      </div>
+        </section>
 
-      <div class="nw-filter-row">
-        <span class="nw-filter-label">Tìm kiếm</span>
-        <div class="nw-tools">
-          <input v-model="tuKhoa" class="nw-search" type="search" placeholder="Nhập từ khoá tiêu đề bài viết…" />
-          <select v-model="sapXep" class="nw-sort">
-            <option value="moi_nhat">Mới nhất</option>
-            <option value="a_z">Tiêu đề A → Z</option>
-            <option value="xem_nhieu">Xem nhiều nhất</option>
-          </select>
-          <button class="nw-reset" :disabled="!coLoc" @click="datLai">Đặt lại</button>
-        </div>
-      </div>
-    </section>
+        <section class="nw-box">
+          <div class="nw-box-title">Tìm kiếm</div>
+          <input v-model="tuKhoa" class="nw-search" type="search" placeholder="Từ khoá tiêu đề…" />
 
-    <div v-if="dangTai" class="sp-card sp-empty">Đang tải…</div>
-    <div v-else-if="!articles.length" class="sp-card sp-empty">Chưa có bài viết nào trong mục này.</div>
+          <div class="nw-box-title" style="margin-top: 16px">Sắp xếp</div>
+          <label v-for="o in [
+            { v: 'moi_nhat', t: 'Mới nhất' },
+            { v: 'xem_nhieu', t: 'Xem nhiều nhất' },
+            { v: 'a_z', t: 'Tiêu đề A → Z' },
+          ]" :key="o.v" class="nw-radio">
+            <input type="radio" :value="o.v" v-model="sapXep" />
+            <span>{{ o.t }}</span>
+          </label>
 
-    <template v-else>
-      <!-- Bài nổi bật -->
-      <button v-if="noiBat" class="nw-feature" @click="actions.goArticle(noiBat.slug)">
-        <div class="nw-feature-img" :style="{ backgroundImage: `url(${resolveImageUrl(noiBat.thumbnail)})` }"></div>
-        <div class="nw-feature-body">
-          <span class="nw-badge nw-badge-hot">Nổi bật</span>
-          <div class="nw-feature-title">{{ noiBat.tieuDe }}</div>
-          <div class="nw-feature-excerpt">{{ noiBat.tomTat }}</div>
-          <div class="nw-meta">{{ noiBat.tenDanhMuc }} · {{ ngayVN(noiBat.publishedAt) }} · {{ noiBat.luotXem }} lượt xem</div>
-        </div>
-      </button>
+          <button class="nw-reset" :disabled="!coLoc" @click="datLai">Đặt lại bộ lọc</button>
+        </section>
+      </aside>
 
-      <div class="nw-count">
-        {{ daLoc.length }} bài viết<span v-if="catChon"> trong mục “{{ tenCat }}”</span>
-      </div>
+      <!-- ═══ CỘT GIỮA: bài nổi bật + lưới card ═══ -->
+      <section class="nw-main">
+        <div v-if="dangTai" class="sp-card sp-empty">Đang tải…</div>
+        <div v-else-if="!articles.length" class="sp-card sp-empty">Chưa có bài viết nào.</div>
 
-      <!-- Danh sách dọc: mỗi bài 1 hàng, quét mắt nhanh theo tiêu đề -->
-      <div v-if="!hienThi.length" class="sp-card sp-empty">Không tìm thấy bài viết khớp từ khoá.</div>
-      <ul v-else class="nw-list">
-        <li v-for="a in hienThi" :key="a.id">
-          <button class="nw-row" @click="actions.goArticle(a.slug)">
-            <div
-              v-if="a.thumbnail"
-              class="nw-row-thumb"
-              :style="{ backgroundImage: `url(${resolveImageUrl(a.thumbnail)})` }"
-            ></div>
-            <div class="nw-row-body">
-              <span class="nw-badge">{{ a.tenDanhMuc }}</span>
-              <div class="nw-row-title">{{ a.tieuDe }}</div>
-              <div class="nw-row-excerpt">{{ a.tomTat }}</div>
-              <div class="nw-meta">{{ ngayVN(a.publishedAt) }} · {{ a.luotXem }} lượt xem</div>
+        <template v-else>
+          <!-- Bài nổi bật -->
+          <button v-if="hero" class="nw-hero" @click="actions.goArticle(hero.slug)">
+            <div class="nw-hero-img" :style="{ backgroundImage: `url(${resolveImageUrl(hero.thumbnail)})` }">
+              <span class="nw-badge nw-badge-hot">Nổi bật</span>
             </div>
-            <span class="nw-row-cta" :style="{ color: accent }">Xem chi tiết →</span>
+            <div class="nw-hero-body">
+              <div class="nw-hero-title">{{ hero.tieuDe }}</div>
+              <div class="nw-hero-excerpt">{{ hero.tomTat }}</div>
+              <div class="nw-meta">{{ hero.tenDanhMuc }} · {{ ngayVN(hero.publishedAt) }} · {{ hero.luotXem }} lượt xem</div>
+            </div>
           </button>
-        </li>
-      </ul>
 
-      <div v-if="conNua" style="display: flex; justify-content: center; margin-top: 26px">
-        <button class="nw-more" @click="soHien += MOI_LAN">Xem thêm</button>
-      </div>
-    </template>
+          <div class="nw-count">
+            <b>{{ daLoc.length }}</b> bài viết<span v-if="catChon"> trong mục “{{ tenCat }}”</span>
+          </div>
+
+          <div v-if="!hienThi.length" class="sp-card sp-empty">Không tìm thấy bài viết khớp từ khoá.</div>
+
+          <!-- Lưới card -->
+          <div v-else class="nw-cards">
+            <button v-for="a in hienThi" :key="a.id" class="nw-card" @click="actions.goArticle(a.slug)">
+              <div class="nw-card-img" :style="{ backgroundImage: `url(${resolveImageUrl(a.thumbnail)})` }">
+                <span class="nw-badge">{{ a.tenDanhMuc }}</span>
+              </div>
+              <div class="nw-card-body">
+                <div class="nw-card-title">{{ a.tieuDe }}</div>
+                <div class="nw-card-excerpt">{{ a.tomTat }}</div>
+                <div class="nw-meta nw-card-meta">{{ ngayVN(a.publishedAt) }} · {{ a.luotXem }} lượt xem</div>
+              </div>
+            </button>
+          </div>
+
+          <div v-if="conNua" style="display: flex; justify-content: center; margin-top: 24px">
+            <button class="nw-more" @click="soHien += MOI_LAN">Xem thêm</button>
+          </div>
+        </template>
+      </section>
+
+      <!-- ═══ SIDEBAR PHẢI: tin nổi bật + tin mới nhất ═══ -->
+      <aside class="nw-side nw-right">
+        <section v-if="tinNoiBat.length" class="nw-box">
+          <div class="nw-box-title">Tin nổi bật</div>
+          <button
+            v-for="(a, i) in tinNoiBat"
+            :key="a.id"
+            class="nw-rank"
+            @click="actions.goArticle(a.slug)"
+          >
+            <span class="nw-rank-no" :style="{ color: accent }">{{ i + 1 }}</span>
+            <span class="nw-rank-body">
+              <span class="nw-rank-title">{{ a.tieuDe }}</span>
+              <span class="nw-meta">{{ a.luotXem }} lượt xem</span>
+            </span>
+          </button>
+        </section>
+
+        <section v-if="tinMoiNhat.length" class="nw-box">
+          <div class="nw-box-title">Tin mới nhất</div>
+          <button
+            v-for="a in tinMoiNhat"
+            :key="a.id"
+            class="nw-latest"
+            @click="actions.goArticle(a.slug)"
+          >
+            <span
+              class="nw-latest-thumb"
+              :style="a.thumbnail ? { backgroundImage: `url(${resolveImageUrl(a.thumbnail)})` } : {}"
+            ></span>
+            <span class="nw-latest-body">
+              <span class="nw-latest-title">{{ a.tieuDe }}</span>
+              <span class="nw-meta">{{ ngayVN(a.publishedAt) }}</span>
+            </span>
+          </button>
+        </section>
+      </aside>
+    </div>
   </main>
 </template>
 
 <style scoped>
+.nw-page { max-width: 1360px; margin: 0 auto; padding: 20px 24px 72px; }
+
 .nw-crumb {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12.5px;
-  color: var(--muted);
-  margin-bottom: 18px;
-  flex-wrap: wrap;
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  font-size: 12.5px; color: var(--muted); margin-bottom: 16px;
 }
-.nw-crumb button {
-  background: none;
-  border: none;
-  padding: 0;
-  font: inherit;
-  color: var(--muted);
-  cursor: pointer;
-}
+.nw-crumb button { background: none; border: none; padding: 0; font: inherit; color: var(--muted); cursor: pointer; }
 .nw-crumb button:hover { color: var(--acc, #c6ff4a); }
 .nw-crumb .cur { color: var(--text); font-weight: 600; }
 
-.nw-filter {
+.nw-hd { margin-bottom: 22px; }
+.nw-hd p { font-size: 14.5px; color: var(--muted2); max-width: 680px; line-height: 1.65; margin: 0; }
+
+/* 3 cột: bộ lọc | nội dung | tin nổi bật */
+.nw-grid3 { display: grid; grid-template-columns: 218px minmax(0, 1fr) 292px; gap: 24px; align-items: start; }
+.nw-side { display: flex; flex-direction: column; gap: 16px; position: sticky; top: 92px; }
+
+.nw-box {
   background: var(--card);
   border: 1px solid rgba(var(--line-rgb), 0.14);
   border-radius: 14px;
-  padding: 16px 18px;
-  margin-bottom: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+  padding: 16px;
 }
-.nw-filter-row { display: flex; gap: 14px; align-items: flex-start; }
-.nw-filter-label {
-  flex: none;
-  width: 82px;
-  padding-top: 7px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--muted);
-  letter-spacing: 0.4px;
+.nw-box-title {
+  font-family: 'Chakra Petch', sans-serif;
+  font-size: 11.5px; letter-spacing: 1.2px; font-weight: 700;
+  color: var(--muted); text-transform: uppercase; margin-bottom: 12px;
 }
-.nw-chips { display: flex; gap: 8px; flex-wrap: wrap; flex: 1; }
-.nw-tools { display: flex; gap: 8px; flex-wrap: wrap; flex: 1; }
+
+/* --- Bộ lọc --- */
+.nw-cat {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  width: 100%; padding: 8px 10px; margin-bottom: 4px;
+  border: none; border-radius: 9px; background: transparent; cursor: pointer;
+  font-family: inherit; font-size: 13px; color: var(--muted2); text-align: left;
+  transition: background 0.14s, color 0.14s;
+}
+.nw-cat b { font-size: 11.5px; color: var(--muted); font-weight: 700; }
+.nw-cat:hover { background: var(--card2); color: var(--text); }
+.nw-cat.on { background: color-mix(in srgb, var(--acc, #c6ff4a) 14%, transparent); color: var(--acc, #c6ff4a); font-weight: 700; }
+.nw-cat.on b { color: inherit; }
+
 .nw-search {
-  flex: 1;
-  min-width: 200px;
-  height: 36px;
-  padding: 0 12px;
-  border-radius: 9px;
-  border: 1px solid rgba(var(--line-rgb), 0.18);
-  background: var(--card2);
-  color: var(--text);
-  font-size: 13px;
-  font-family: inherit;
+  width: 100%; height: 36px; padding: 0 12px;
+  border-radius: 9px; border: 1px solid rgba(var(--line-rgb), 0.18);
+  background: var(--card2); color: var(--text); font-size: 13px; font-family: inherit;
 }
-.nw-sort {
-  height: 36px;
-  padding: 0 10px;
-  border-radius: 9px;
-  border: 1px solid rgba(var(--line-rgb), 0.18);
-  background: var(--card2);
-  color: var(--text);
-  font-size: 13px;
-  font-family: inherit;
-  cursor: pointer;
+.nw-radio {
+  display: flex; align-items: center; gap: 9px; padding: 6px 2px;
+  font-size: 13px; color: var(--muted2); cursor: pointer;
 }
+.nw-radio input { accent-color: var(--acc, #c6ff4a); cursor: pointer; }
 .nw-reset {
-  height: 36px;
-  padding: 0 16px;
-  border-radius: 9px;
-  border: 1px solid rgba(var(--line-rgb), 0.18);
-  background: transparent;
-  color: var(--muted2);
-  font-size: 13px;
-  font-family: inherit;
-  cursor: pointer;
+  width: 100%; height: 36px; margin-top: 14px;
+  border-radius: 9px; border: 1px solid rgba(var(--line-rgb), 0.18);
+  background: transparent; color: var(--muted2); font-size: 12.5px; font-family: inherit; cursor: pointer;
 }
-.nw-reset:disabled { opacity: 0.45; cursor: default; }
+.nw-reset:disabled { opacity: 0.4; cursor: default; }
 .nw-reset:not(:disabled):hover { border-color: var(--acc, #c6ff4a); color: var(--text); }
 
-.nw-count { font-size: 12.5px; color: var(--muted); margin-bottom: 12px; }
+/* --- Cột giữa --- */
+.nw-main { min-width: 0; }
+.nw-count { font-size: 12.5px; color: var(--muted); margin-bottom: 14px; }
+.nw-count b { color: var(--text); }
 
 .nw-badge {
-  align-self: flex-start;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-  color: var(--muted2);
-  background: var(--card2);
-  border-radius: 20px;
-  padding: 3px 10px;
+  position: absolute; top: 10px; left: 10px;
+  font-size: 10.8px; font-weight: 700; color: #fff;
+  background: rgba(0, 0, 0, 0.6); border-radius: 20px; padding: 3px 10px;
 }
-.nw-badge-hot { color: var(--acc-ink, #10240a); background: var(--acc, #c6ff4a); }
+.nw-badge-hot { background: var(--acc, #c6ff4a); color: var(--acc-ink, #10240a); }
 
-.nw-feature {
-  display: grid;
-  grid-template-columns: 1.1fr 1fr;
-  width: 100%;
-  text-align: left;
-  background: var(--card);
-  border: 1px solid rgba(var(--line-rgb), 0.14);
-  border-radius: 16px;
-  overflow: hidden;
-  cursor: pointer;
-  margin-bottom: 22px;
+.nw-hero {
+  display: block; width: 100%; text-align: left; padding: 0;
+  background: var(--card); border: 1px solid rgba(var(--line-rgb), 0.14);
+  border-radius: 16px; overflow: hidden; cursor: pointer; margin-bottom: 22px;
   font-family: 'Plus Jakarta Sans', sans-serif;
   transition: border-color 0.16s, transform 0.16s;
 }
-.nw-feature:hover { border-color: var(--acc, #c6ff4a); transform: translateY(-2px); }
-.nw-feature-img { min-height: 240px; background-size: cover; background-position: center; background-color: var(--card2); }
-.nw-feature-body { padding: 26px 28px; display: flex; flex-direction: column; gap: 9px; }
-.nw-feature-title { font-family: 'Chakra Petch', sans-serif; font-weight: 800; font-size: 22px; color: var(--text); line-height: 1.25; }
-.nw-feature-excerpt { font-size: 13.5px; color: var(--muted2); line-height: 1.6; }
+.nw-hero:hover { border-color: var(--acc, #c6ff4a); transform: translateY(-2px); }
+.nw-hero-img { position: relative; height: 300px; background-size: cover; background-position: center; background-color: var(--card2); }
+.nw-hero-body { padding: 20px 22px; display: flex; flex-direction: column; gap: 8px; }
+.nw-hero-title { font-family: 'Chakra Petch', sans-serif; font-weight: 800; font-size: 23px; color: var(--text); line-height: 1.25; }
+.nw-hero-excerpt { font-size: 13.5px; color: var(--muted2); line-height: 1.6; }
 
-.nw-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
-.nw-list li + li { border-top: 1px solid rgba(var(--line-rgb), 0.12); }
-.nw-row {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  width: 100%;
-  text-align: left;
-  background: none;
-  border: none;
-  padding: 18px 12px;
-  cursor: pointer;
+.nw-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(258px, 1fr)); gap: 18px; }
+.nw-card {
+  display: flex; flex-direction: column; text-align: left; padding: 0;
+  background: var(--card); border: 1px solid rgba(var(--line-rgb), 0.14);
+  border-radius: 14px; overflow: hidden; cursor: pointer;
   font-family: 'Plus Jakarta Sans', sans-serif;
-  transition: background 0.15s;
+  transition: border-color 0.16s, transform 0.16s;
 }
-.nw-row:hover { background: var(--card); }
-.nw-row:hover .nw-row-title { color: var(--acc, #c6ff4a); }
-.nw-row-thumb {
-  flex: none;
-  width: 132px;
-  height: 84px;
-  border-radius: 10px;
-  background-size: cover;
-  background-position: center;
-  background-color: var(--card2);
-}
-.nw-row-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
-.nw-row-title { font-size: 15.5px; font-weight: 700; color: var(--text); line-height: 1.4; transition: color 0.15s; }
-.nw-row-excerpt {
-  font-size: 12.8px; color: var(--muted2); line-height: 1.55;
+.nw-card:hover { border-color: var(--acc, #c6ff4a); transform: translateY(-2px); }
+.nw-card-img { position: relative; height: 158px; background-size: cover; background-position: center; background-color: var(--card2); }
+.nw-card-body { padding: 14px 16px; display: flex; flex-direction: column; flex: 1; gap: 7px; }
+.nw-card-title {
+  font-size: 14.5px; font-weight: 700; color: var(--text); line-height: 1.4;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
-.nw-row-cta { flex: none; font-size: 12.5px; font-weight: 700; white-space: nowrap; }
+.nw-card-excerpt {
+  font-size: 12.6px; color: var(--muted2); line-height: 1.55;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.nw-card-meta { margin-top: auto; padding-top: 4px; }
 .nw-meta { font-size: 11.5px; color: var(--muted); }
 
 .nw-more {
-  height: 42px;
-  padding: 0 34px;
-  border-radius: 11px;
-  border: 1px solid rgba(var(--line-rgb), 0.2);
-  background: transparent;
-  color: var(--text);
-  font-size: 13.5px;
-  font-weight: 700;
-  font-family: inherit;
-  cursor: pointer;
+  height: 42px; padding: 0 34px;
+  border-radius: 11px; border: 1px solid rgba(var(--line-rgb), 0.2);
+  background: transparent; color: var(--text);
+  font-size: 13.5px; font-weight: 700; font-family: inherit; cursor: pointer;
   transition: border-color 0.15s;
 }
 .nw-more:hover { border-color: var(--acc, #c6ff4a); }
 
-@media (max-width: 860px) {
-  .nw-filter-row { flex-direction: column; gap: 8px; }
-  .nw-filter-label { width: auto; padding-top: 0; }
+/* --- Sidebar phải --- */
+.nw-rank {
+  display: flex; gap: 11px; width: 100%; padding: 9px 4px;
+  background: none; border: none; cursor: pointer; text-align: left;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  border-bottom: 1px solid rgba(var(--line-rgb), 0.1);
 }
-@media (max-width: 720px) {
-  .nw-feature { grid-template-columns: 1fr; }
-  .nw-feature-img { min-height: 180px; }
-  .nw-row { flex-wrap: wrap; gap: 12px; }
-  .nw-row-thumb { width: 100px; height: 66px; }
-  .nw-row-cta { display: none; }
+.nw-rank:last-child { border-bottom: none; }
+.nw-rank-no { flex: none; font-family: 'Chakra Petch', sans-serif; font-weight: 800; font-size: 19px; line-height: 1.2; width: 20px; }
+.nw-rank-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.nw-rank-title {
+  font-size: 12.9px; font-weight: 600; color: var(--text); line-height: 1.42;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+.nw-rank:hover .nw-rank-title { color: var(--acc, #c6ff4a); }
+
+.nw-latest {
+  display: flex; gap: 11px; width: 100%; padding: 9px 4px;
+  background: none; border: none; cursor: pointer; text-align: left;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  border-bottom: 1px solid rgba(var(--line-rgb), 0.1);
+}
+.nw-latest:last-child { border-bottom: none; }
+.nw-latest-thumb {
+  flex: none; width: 62px; height: 46px; border-radius: 8px;
+  background-color: var(--card2); background-size: cover; background-position: center;
+}
+.nw-latest-body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.nw-latest-title {
+  font-size: 12.7px; font-weight: 600; color: var(--text); line-height: 1.4;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.nw-latest:hover .nw-latest-title { color: var(--acc, #c6ff4a); }
+
+/* Màn hẹp: bỏ dần sidebar, nội dung chính luôn lên trước */
+@media (max-width: 1180px) {
+  .nw-grid3 { grid-template-columns: 200px minmax(0, 1fr); }
+  .nw-right { grid-column: 1 / -1; position: static; flex-direction: row; flex-wrap: wrap; }
+  .nw-right .nw-box { flex: 1; min-width: 280px; }
+}
+@media (max-width: 860px) {
+  .nw-grid3 { grid-template-columns: 1fr; }
+  .nw-left { position: static; order: 2; flex-direction: row; flex-wrap: wrap; }
+  .nw-left .nw-box { flex: 1; min-width: 260px; }
+  .nw-main { order: 1; }
+  .nw-right { order: 3; }
+  .nw-hero-img { height: 210px; }
+  .nw-hero-title { font-size: 19px; }
 }
 </style>

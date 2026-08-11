@@ -1,12 +1,18 @@
 <script setup>
+/**
+ * Bảng "Sản phẩm yêu thích" (kiểu Steam wishlist) — dùng làm một tab trong trang Tài khoản.
+ *
+ * Tách khỏi WishlistView để phần bảng dùng chung được, không phải chép đôi: view cũ ở
+ * /yeu-thich giờ chỉ còn là redirect sang tab này (giữ cho link cũ đã chia sẻ ra ngoài).
+ *
+ * Dữ liệu lấy từ state.wishlistItems (nạp sẵn khi đăng nhập — xem store.refreshWishlist),
+ * chỉ tải lại nếu chưa có.
+ */
 import { onMounted } from 'vue';
-import { state, actions, accent } from '../store.js';
+import { state, actions } from '../store.js';
 import { fmt } from '../data/products.js';
 import { resolveImageUrl } from '../api.js';
 
-// Trang "Yêu thích" kiểu Steam wishlist: bảng STT / sản phẩm / giá / tồn kho / thao tác. Dữ liệu
-// lấy từ state.wishlistItems (nạp sẵn từ store khi đăng nhập/boot — xem store.refreshWishlist),
-// chỉ tải lại ở đây nếu chưa có (vào thẳng trang này bằng URL, bỏ qua bước đăng nhập trong phiên).
 onMounted(() => {
   if (state.user && !state.wishlistItems.length) actions.refreshWishlist();
 });
@@ -17,29 +23,17 @@ function boYeuThich(item) {
 </script>
 
 <template>
-  <main style="max-width: 1000px; margin: 0 auto; padding: 24px 24px 72px">
-    <button class="sp-back" @click="actions.goHome()">← Trang chủ</button>
-
-    <div style="margin-bottom: 26px">
-      <div class="sp-eyebrow">DANH SÁCH YÊU THÍCH</div>
-      <h1 class="sp-h1">Sản phẩm <span :style="{ color: accent }">yêu thích</span></h1>
-      <p style="font-size: 14.5px; color: var(--muted2); max-width: 600px; line-height: 1.65; margin: 0">
-        Theo dõi sản phẩm bạn quan tâm — CNTTShop sẽ báo qua email khi giá giảm.
-      </p>
-    </div>
-
-    <div v-if="!state.user" class="sp-card sp-empty">
-      Đăng nhập để lưu và theo dõi sản phẩm yêu thích.<br />
-      <button class="sp-btn-acc" style="margin-top: 16px" @click="actions.openLogin()">Đăng nhập</button>
-    </div>
-
-    <div v-else-if="!state.wishlistItems.length" class="sp-card sp-empty">
+  <div>
+    <div v-if="!state.wishlistItems.length" class="sp-card sp-empty">
       Bạn chưa yêu thích sản phẩm nào.<br />
       Bấm biểu tượng <span style="color: var(--sale)">♥</span> ở trang chi tiết sản phẩm để thêm vào đây.<br />
       <button class="sp-btn-acc" style="margin-top: 16px" @click="actions.goCatAll()">Khám phá sản phẩm</button>
     </div>
 
     <div v-else class="sp-card" style="overflow: hidden">
+      <div style="padding: 14px 16px; font-size: 12.5px; color: var(--muted2); border-bottom: 1px solid rgba(var(--line-rgb), 0.1)">
+        CNTTShop sẽ báo qua email khi sản phẩm trong danh sách này giảm giá.
+      </div>
       <div style="overflow-x: auto">
         <table class="wl-table">
           <thead>
@@ -94,7 +88,7 @@ function boYeuThich(item) {
         </table>
       </div>
     </div>
-  </main>
+  </div>
 </template>
 
 <style scoped>

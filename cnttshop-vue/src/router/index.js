@@ -89,7 +89,9 @@ const routes = [
   },
 
   { path: '/tin-tuc', name: 'news', component: () => import('../views/NewsView.vue') },
-  { path: '/yeu-thich', name: 'wishlist', component: () => import('../views/WishlistView.vue') },
+  // Yêu thích đã chuyển thành tab trong trang Tài khoản; giữ đường dẫn cũ dạng redirect cho
+  // các link đã chia sẻ ra ngoài / bookmark của khách.
+  { path: '/yeu-thich', name: 'wishlist', redirect: { name: 'account', query: { tab: 'wishlist' } } },
   { path: '/tin-tuc/:slug', name: 'article', component: () => import('../views/ArticleView.vue') },
 
   { path: '/so-sanh', name: 'compare', component: () => import('../views/CompareView.vue') },

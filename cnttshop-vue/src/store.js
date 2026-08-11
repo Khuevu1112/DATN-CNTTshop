@@ -300,7 +300,8 @@ export const actions = {
   goInstallmentPolicy: () => router.push({ name: 'installment-policy' }),
   goCommitment: () => router.push({ name: 'commitment' }),
   goReturnPolicy: () => router.push({ name: 'return-policy' }),
-  goWishlist: () => router.push({ name: 'wishlist' }),
+  // Yêu thích giờ là 1 tab trong trang Tài khoản, không còn trang riêng.
+  goWishlist: () => router.push({ name: 'account', query: { tab: 'wishlist' } }),
   // Tin tức / blog.
   goNews: (category) => router.push({ name: 'news', query: category ? { c: category } : {} }),
   goArticle: (slug) => router.push({ name: 'article', params: { slug } }),

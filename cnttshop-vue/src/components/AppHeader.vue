@@ -264,7 +264,9 @@ const SUPPORT_COLUMNS = computed(() => [
     title: 'Hỗ trợ sản phẩm',
     items: [
       { label: 'Trang chủ Hỗ Trợ', go: actions.goSupport },
-      { label: 'Hướng dẫn sử dụng & Software' },
+      // Bài hướng dẫn nằm trong Tin tức ở danh mục "huong_dan" — mở thẳng vào đúng mục,
+      // đừng bắt khách vào trang tin tức rồi tự lọc.
+      { label: 'Hướng dẫn sử dụng & Software', go: () => actions.goNews('huong_dan') },
       { label: 'Tìm kiếm', go: actions.goFaq },
       { label: 'FAQ Hỗ trợ mua trực tuyến', go: actions.goFaq },
     ],
@@ -293,7 +295,7 @@ const SUPPORT_COLUMNS = computed(() => [
     title: 'Tìm thêm thông tin',
     items: [
       { label: 'Quản lý bảo hành cá nhân', go: actions.goWarranty },
-      { label: 'Tin Tức & Cảnh Báo' },
+      { label: 'Tin Tức & Thông Báo', go: () => actions.goNews() },
       { label: 'Combo sửa chữa', go: actions.goRepairPriceCombo },
     ],
   },

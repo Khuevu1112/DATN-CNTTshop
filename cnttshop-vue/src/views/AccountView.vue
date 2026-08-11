@@ -20,11 +20,15 @@ import OrderDetailCard from '../components/OrderDetailCard.vue';
 import MyCouponTickets from '../components/MyCouponTickets.vue';
 import ReviewWizardModal from '../components/ReviewWizardModal.vue';
 import StarRatingInput from '../components/StarRatingInput.vue';
+import WishlistPanel from '../components/WishlistPanel.vue';
 
 const route = useRoute();
 const activeTab = ref(
   route.name === 'orders' || route.name === 'order-review' ? 'orders'
-    : route.name === 'warranty' ? 'warranty' : 'profile',
+    : route.name === 'warranty' ? 'warranty'
+      // ?tab=wishlist: link cũ /yeu-thich redirect vào đây (xem router), và mục Yêu thích
+      // trên header cũng trỏ thẳng tới tab này.
+      : route.query.tab === 'wishlist' ? 'wishlist' : 'profile',
 );
 
 // Wizard đánh giá (xác nhận nhận hàng -> đánh giá giao hàng -> đánh giá sản phẩm) — mở khi vào
@@ -512,6 +516,7 @@ const TABS = [
   { key: 'profile', icon: '👤', label: 'Cá nhân' },
   { key: 'orders', icon: '📦', label: 'Đơn hàng của tôi' },
   { key: 'warranty', icon: '🧾', label: 'Sản phẩm đã mua' },
+  { key: 'wishlist', icon: '♥', label: 'Yêu thích' },
   { key: 'membership', icon: '⭐', label: 'Gói hội viên' },
 ];
 const tabBar = ref(null);
@@ -1041,6 +1046,8 @@ onMounted(() => {
           </div>
         </template>
       </div>
+
+      <WishlistPanel v-if="activeTab === 'wishlist'" />
 
       <div v-if="activeTab === 'warranty'">
         <div v-if="purchasesLoading" style="background: var(--card); border: 1px solid rgba(var(--line-rgb),0.14); border-radius: 14px; padding: 60px; text-align: center; color: var(--muted)">
