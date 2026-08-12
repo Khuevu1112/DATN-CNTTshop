@@ -16,41 +16,15 @@
 import { ref, computed, watch } from 'vue';
 import { state, actions, accent, MAX_COMPARE } from '../store.js';
 import { fetchProductBySlug, fetchPcBuildDetail, fetchProducts, resolveImageUrl } from '../api.js';
-import { chamDiem, soSanhO, KY_HIEU, goiY, phanLoaiHuong } from '../data/compareRank.js';
+import {
+  chamDiem, soSanhO, KY_HIEU, goiY, phanLoaiHuong, CANONICAL, ALIAS_SPEC as ALIAS,
+} from '../data/compareRank.js';
 
 const chiTiet = ref({}); // key -> { items: [{key,label,name}], totalPrice }
 const dangTai = ref(false);
 const goiYThem = ref([]);
 const tuKhoaThem = ref('');
 const cheDo = ref('bang'); // bang | the
-
-const CANONICAL = [
-  { key: 'CPU', label: 'CPU' },
-  { key: 'MAINBOARD', label: 'Mainboard' },
-  { key: 'RAM', label: 'RAM' },
-  { key: 'GPU', label: 'Card đồ hoạ' },
-  { key: 'SSD', label: 'Ổ cứng' },
-  { key: 'HDD', label: 'Ổ HDD' },
-  { key: 'PSU', label: 'Nguồn' },
-  { key: 'COOLER', label: 'Tản nhiệt' },
-  { key: 'CASE', label: 'Vỏ case' },
-  { key: 'MONITOR', label: 'Màn hình' },
-  { key: 'MOUSE', label: 'Chuột' },
-  { key: 'KEYBOARD', label: 'Bàn phím' },
-];
-const ALIAS = {
-  CPU: 'CPU',
-  MAINBOARD: 'MAINBOARD', Mainboard: 'MAINBOARD',
-  RAM: 'RAM',
-  GPU: 'GPU', 'Card đồ họa': 'GPU', 'Card đồ hoạ': 'GPU',
-  SSD: 'SSD', 'Ổ cứng': 'SSD',
-  HDD: 'HDD',
-  PSU: 'PSU', Nguồn: 'PSU',
-  CASE: 'CASE', Case: 'CASE', 'Vỏ case': 'CASE',
-  CPU_COOLER: 'COOLER', Cooler: 'COOLER', 'Tản nhiệt': 'COOLER',
-  MONITOR: 'MONITOR', Monitor: 'MONITOR',
-  Mouse: 'MOUSE', Keyboard: 'KEYBOARD',
-};
 
 const fmt = (n) => (n == null ? '—' : Number(n).toLocaleString('vi-VN') + '₫');
 

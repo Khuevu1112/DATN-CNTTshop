@@ -1,7 +1,7 @@
 <script setup>
 /**
  * Nút tròn nổi mở bảng So sánh — cùng phong cách với nút chatbot, xếp NGAY DƯỚI nút chatbot
- * ở góc phải màn hình (chatbot được đẩy lên trên, xem ChatbotWidget.cbw-root).
+ * ở góc phải màn hình (chatbot được đẩy lên trên, xem ChatbotFab.vue: bottom 90px).
  * Badge hiện số cấu hình đang so sánh để khách biết mình đã chọn mấy cái mà không phải mở ra.
  */
 import { state, actions } from '../store.js';

@@ -78,6 +78,9 @@ export const state = reactive({
   compareItems: docCompare(),
   compareOpen: false,
 
+  // ===== Trợ lý chat (drawer lớn trượt từ phải, xem ChatbotDrawer.vue) =====
+  chatOpen: false,
+
   brandFilter: [],
   segmentKeyword: '', // '' = không lọc phân khúc, khác rỗng = từ khoá matchesQuery (xem CATEGORY_SEGMENTS)
   // ===== Bộ lọc riêng cho PC & Máy tính bàn (thay bộ lọc Thương hiệu chung — PC nào cũng là
@@ -257,9 +260,14 @@ export const actions = {
   // ===== So sánh cấu hình =====
   // Drawer so sánh thay cho việc điều hướng sang trang riêng: khách đang xem sản phẩm thì
   // không bị mất ngữ cảnh, thêm/bớt cấu hình rồi đóng lại là quay về đúng chỗ cũ.
-  openCompare: () => { state.compareOpen = true; },
+  // Mở drawer này thì đóng chat lại — cả hai đều là panel toàn màn hình trượt từ phải
+  // (position:fixed;inset:0), mở đồng thời sẽ chồng lên nhau.
+  openCompare: () => { state.compareOpen = true; state.chatOpen = false; },
   closeCompare: () => { state.compareOpen = false; },
-  toggleCompare: () => { state.compareOpen = !state.compareOpen; },
+  toggleCompare: () => {
+    state.compareOpen = !state.compareOpen;
+    if (state.compareOpen) state.chatOpen = false;
+  },
 
   /** Thêm 1 mục vào danh sách so sánh. Trả về false nếu đã đủ 5 mục. */
   addCompare(item) {
@@ -278,8 +286,17 @@ export const actions = {
     luuCompare();
   },
   isComparing: (key) => state.compareItems.some((i) => i.key === key),
+
+  // ===== Trợ lý chat =====
+  openChat: () => { state.chatOpen = true; state.compareOpen = false; },
+  closeChat: () => { state.chatOpen = false; },
+  toggleChat: () => {
+    state.chatOpen = !state.chatOpen;
+    if (state.chatOpen) state.compareOpen = false;
+  },
+
   goPcBuild: () => router.push({ name: 'pcbuild' }),
-  goAccount: () => router.push({ name: 'account' }),
+  goAccount: (tab) => router.push({ name: 'account', query: tab ? { tab } : {} }),
 
   // ===== Trung tâm hỗ trợ =====
   // goWarranty ở trên là phiếu bảo hành CỦA TÔI (cần đăng nhập); goWarrantyInfo dưới đây là

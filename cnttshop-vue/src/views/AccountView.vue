@@ -23,12 +23,13 @@ import StarRatingInput from '../components/StarRatingInput.vue';
 import WishlistPanel from '../components/WishlistPanel.vue';
 
 const route = useRoute();
+// ?tab=wishlist|membership|...: /yeu-thich redirect vào đây, mục Yêu thích trên header, và
+// trợ lý chat (gợi ý mở "Gói hội viên") đều trỏ thẳng qua query này thay vì chỉ về tab mặc định.
+const VALID_TABS = ['profile', 'orders', 'warranty', 'wishlist', 'membership'];
 const activeTab = ref(
   route.name === 'orders' || route.name === 'order-review' ? 'orders'
     : route.name === 'warranty' ? 'warranty'
-      // ?tab=wishlist: link cũ /yeu-thich redirect vào đây (xem router), và mục Yêu thích
-      // trên header cũng trỏ thẳng tới tab này.
-      : route.query.tab === 'wishlist' ? 'wishlist' : 'profile',
+      : VALID_TABS.includes(route.query.tab) ? route.query.tab : 'profile',
 );
 
 // Wizard đánh giá (xác nhận nhận hàng -> đánh giá giao hàng -> đánh giá sản phẩm) — mở khi vào

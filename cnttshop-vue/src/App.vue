@@ -6,7 +6,8 @@ import AppFooter from './components/AppFooter.vue';
 import ToastMessage from './components/ToastMessage.vue';
 import LoadingOverlay from './components/LoadingOverlay.vue';
 import WelcomePopup from './components/WelcomePopup.vue';
-import ChatbotWidget from './components/ChatbotWidget.vue';
+import ChatbotFab from './components/ChatbotFab.vue';
+import ChatbotDrawer from './components/ChatbotDrawer.vue';
 import CompareFab from './components/CompareFab.vue';
 import CompareDrawer from './components/CompareDrawer.vue';
 
@@ -28,7 +29,8 @@ const rootStyle = computed(() => ({
     <router-view />
     <AppFooter />
     <WelcomePopup />
-    <ChatbotWidget />
+    <ChatbotFab />
+    <ChatbotDrawer />
     <CompareFab />
     <CompareDrawer />
   </div>

@@ -361,3 +361,84 @@ export function phanLoaiHuong(dsCauHinh) {
   }
   return nhan;
 }
+
+// ── Danh mục linh kiện chuẩn hoá — DÙNG CHUNG cho CompareDrawer và ChatbotDrawer ────────────
+// Trước đây CompareDrawer khai báo riêng 1 bản CANONICAL/ALIAS y hệt đây — gộp về 1 nguồn để
+// sửa 1 chỗ là cả 2 nơi đồng bộ, tránh 2 bản trôi dạt xa nhau theo thời gian.
+export const CANONICAL = [
+  { key: 'CPU', label: 'CPU' },
+  { key: 'MAINBOARD', label: 'Mainboard' },
+  { key: 'RAM', label: 'RAM' },
+  { key: 'GPU', label: 'Card đồ hoạ' },
+  { key: 'SSD', label: 'Ổ cứng' },
+  { key: 'HDD', label: 'Ổ HDD' },
+  { key: 'PSU', label: 'Nguồn' },
+  { key: 'COOLER', label: 'Tản nhiệt' },
+  { key: 'CASE', label: 'Vỏ case' },
+  { key: 'MONITOR', label: 'Màn hình' },
+  { key: 'MOUSE', label: 'Chuột' },
+  { key: 'KEYBOARD', label: 'Bàn phím' },
+];
+
+/** Nhãn spec tự do (PRODUCT_SPEC.spec_key hoặc PcBuildItem.componentType) -> khoá chuẩn hoá. */
+export const ALIAS_SPEC = {
+  CPU: 'CPU',
+  MAINBOARD: 'MAINBOARD', Mainboard: 'MAINBOARD',
+  RAM: 'RAM',
+  GPU: 'GPU', 'Card đồ họa': 'GPU', 'Card đồ hoạ': 'GPU',
+  SSD: 'SSD', 'Ổ cứng': 'SSD',
+  HDD: 'HDD',
+  PSU: 'PSU', Nguồn: 'PSU',
+  CASE: 'CASE', Case: 'CASE', 'Vỏ case': 'CASE',
+  CPU_COOLER: 'COOLER', Cooler: 'COOLER', 'Tản nhiệt': 'COOLER',
+  MONITOR: 'MONITOR', Monitor: 'MONITOR',
+  Mouse: 'MOUSE', Keyboard: 'KEYBOARD',
+};
+
+/** Slug danh mục catalog (data/products.js COMPONENT_GROUPS_DEF + man-hinh) -> khoá chuẩn hoá —
+ * dùng khi sản phẩm là 1 LINH KIỆN LẺ (không phải cấu hình PC/laptop dựng sẵn), lúc đó tự thân
+ * cái tên sản phẩm đã mô tả đủ để chấm điểm (vd "RTX 4060 8GB", "Intel Core i5-13400F"). */
+export const CAT_SLUG_TO_KEY = {
+  cpu: 'CPU',
+  mainboard: 'MAINBOARD',
+  ram: 'RAM',
+  gpu: 'GPU',
+  ssd: 'SSD',
+  hdd: 'HDD',
+  psu: 'PSU',
+  'case-may-tinh': 'CASE',
+  'tan-nhiet-cpu': 'COOLER',
+  'man-hinh': 'MONITOR',
+};
+
+/**
+ * Tổng điểm hiệu năng ước lượng của 1 sản phẩm trong catalog — nền tảng cho so sánh tài chính
+ * (chatbot) và nhãn "Hiệu năng cao nhất"/"Đáng tiền nhất" (CompareDrawer, PhanLoaiHuong).
+ *
+ * Ưu tiên cộng điểm theo TỪNG linh kiện nếu specs có nhãn nhận diện được (trường hợp cấu hình
+ * PC/laptop dựng sẵn — specs là danh sách linh kiện, y hệt cách CompareDrawer tính). Nếu không
+ * nhận diện được nhãn nào (linh kiện lẻ: GPU/CPU/RAM/... bán riêng), chấm điểm ngay trên TÊN
+ * sản phẩm thay vì trả về null — trả null ở đây đồng nghĩa "không so sánh được", trong khi tên
+ * linh kiện lẻ luôn có đủ thông tin để chấm.
+ *
+ * @param {Array<{label:string, value:string}>} specs
+ * @param {string} ten tên sản phẩm — dùng làm dữ liệu chấm điểm khi là linh kiện lẻ
+ * @param {string} catSlug slug danh mục sản phẩm (vd 'gpu', 'pc-may-tinh-ban')
+ */
+export function diemSanPham(specs, ten, catSlug) {
+  let tong = 0;
+  let coDiem = false;
+  for (const s of specs || []) {
+    const key = ALIAS_SPEC[s.label];
+    if (!key) continue;
+    const d = chamDiem(key, s.value);
+    if (d != null && d > 0) { tong += d; coDiem = true; }
+  }
+  if (coDiem) return tong;
+  const catKey = CAT_SLUG_TO_KEY[catSlug];
+  if (catKey) {
+    const d = chamDiem(catKey, ten);
+    if (d != null) return d;
+  }
+  return null;
+}
