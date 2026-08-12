@@ -169,6 +169,14 @@ public class FlashSaleService {
         List<FlashSaleItem> hienTai = fs.getDanhSachSanPham();
         hienTai.clear();
 
+        // Bắt Hibernate XOÁ NGAY các dòng cũ trước khi thêm dòng mới. Thứ tự flush mặc định của
+        // Hibernate là INSERT rồi mới tới DELETE (do orphanRemoval), nên nếu không flush ở đây,
+        // sản phẩm nào giữ nguyên trong danh sách (đổi thứ tự/giá nhưng cùng variant) sẽ bị
+        // INSERT dòng mới trong khi dòng cũ cùng (flash_sale_id, variant_id) chưa kịp xoá, đụng
+        // UNIQUE KEY UQ_FLASH_SALE_ITEM ngay lập tức — đây chính là lỗi admin gặp khi lưu lại
+        // đúng 3 sản phẩm đã có sẵn trong đợt sale.
+        flashSaleRepo.saveAndFlush(fs);
+
         int thuTu = 0;
         for (LuuFlashSaleItemRequest r : yeuCau) {
             ProductVariant v = variantRepo.findById(r.variantId())
