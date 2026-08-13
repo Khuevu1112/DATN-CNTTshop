@@ -87,6 +87,9 @@ public class OrderService {
     @Autowired
     private SubscriptionService subscriptionService;
 
+    @Autowired
+    private AfterShipApiService afterShipApiService;
+
     @PersistenceContext
     private EntityManager em;
 
@@ -767,5 +770,46 @@ public class OrderService {
         paymentRepo.save(payment);
 
         thongBaoDaThanhToan(order);
+    }
+
+    /**
+     * Admin nhập mã vận đơn (order_code GHN, hoặc tracking_number Shopee Express) sau khi đã
+     * bàn giao hàng vật lý cho hãng — gọi ở trang admin/orders khi bấm "Bàn giao vận chuyển".
+     *
+     * Với Shopee Express: tự động tạo tracking trên AfterShip ngay lúc này, lưu lại
+     * afterShipTrackingId để các lần gọi API sau (get/update/delete) dùng đúng id nội bộ.
+     *
+     * Với GHN: chỉ cần lưu order_code, KHÔNG cần gọi API tạo gì thêm — API "lấy chi tiết đơn"
+     * dùng thẳng order_code này (xem GhnApiService.layChiTietDon).
+     *
+     * Với GHTK/Viettel Post: chưa có API tracking, chỉ lưu mã để admin xem thủ công trên trang
+     * quản lý của hãng đó — không tạo tracking tự động gì ở bước này.
+     */
+    @Transactional
+    public void banGiaoVanChuyen(Integer orderId, String maVanDonNgoai) {
+        Order order = layDonById(orderId);
+
+        if (order.laDonTaiQuay()) {
+            throw new RuntimeException("Đơn bán tại quầy không có bước bàn giao vận chuyển");
+        }
+        if (maVanDonNgoai == null || maVanDonNgoai.isBlank()) {
+            throw new RuntimeException("Vui lòng nhập mã vận đơn");
+        }
+
+        order.setMaVanDonNgoai(maVanDonNgoai.trim());
+
+        String carrierCode = order.getMaTuyChonGiaoHang();
+        if ("spx".equalsIgnoreCase(carrierCode) || "shopee_express".equalsIgnoreCase(carrierCode)) {
+            afterShipApiService.taoTracking(maVanDonNgoai.trim(), order.getMaDonHang())
+                    .ifPresentOrElse(
+                            tracking -> order.setAfterShipTrackingId(tracking.id()),
+                            () -> {
+                                // Không throw — mã vận đơn vẫn lưu được, chỉ là chưa tạo tracking
+                                // tự động. Admin có thể thử lại sau (AfterShip có thể đang lỗi tạm thời).
+                            }
+                    );
+        }
+
+        orderRepo.save(order);
     }
 }
