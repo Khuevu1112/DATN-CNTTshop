@@ -1,0 +1,264 @@
+---Thêm ảnh phụ---
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+
+BEGIN TRY
+
+    BEGIN TRANSACTION;
+
+
+    /* =========================================================
+       BƯỚC 1
+       TẠO ẢNH CHÍNH CHO NHỮNG PRODUCT CHƯA CÓ ẢNH CHÍNH
+       ========================================================= */
+
+    INSERT INTO PRODUCT_IMAGE
+    (
+        product_id,
+        variant_id,
+        url,
+        is_primary,
+        sort_order
+    )
+    SELECT
+        p.id,
+        NULL,
+        'https://placehold.co/800x800?text=Product+'
+            + CAST(p.id AS VARCHAR(20)),
+        1,
+        0
+    FROM PRODUCT p
+    WHERE NOT EXISTS
+    (
+        SELECT 1
+        FROM PRODUCT_IMAGE pi
+        WHERE pi.product_id = p.id
+          AND pi.is_primary = 1
+    );
+
+
+    /* =========================================================
+       BƯỚC 2
+       THÊM 3 ẢNH PHỤ CHO MỖI PRODUCT
+
+       1 = ảnh phụ 1
+       2 = ảnh phụ 2
+       3 = ảnh phụ 3
+       ========================================================= */
+
+    ;WITH Numbers AS
+    (
+        SELECT 1 AS n
+        UNION ALL
+        SELECT 2
+        UNION ALL
+        SELECT 3
+    ),
+
+    ExistingSecondary AS
+    (
+        SELECT
+            p.id AS product_id,
+            COUNT(pi.id) AS secondary_count
+        FROM PRODUCT p
+        LEFT JOIN PRODUCT_IMAGE pi
+            ON pi.product_id = p.id
+           AND pi.is_primary = 0
+        GROUP BY p.id
+    ),
+
+    Missing AS
+    (
+        SELECT
+            e.product_id,
+            n.n
+        FROM ExistingSecondary e
+        CROSS JOIN Numbers n
+        WHERE n.n > e.secondary_count
+    )
+
+    INSERT INTO PRODUCT_IMAGE
+    (
+        product_id,
+        variant_id,
+        url,
+        is_primary,
+        sort_order
+    )
+    SELECT
+        m.product_id,
+        NULL,
+
+        'https://placehold.co/800x800?text=Product+'
+        + CAST(m.product_id AS VARCHAR(20))
+        + '+Image+'
+        + CAST(m.n AS VARCHAR(10)),
+
+        0,
+
+        m.n
+
+    FROM Missing m
+    WHERE NOT EXISTS
+    (
+        SELECT 1
+        FROM PRODUCT_IMAGE pi
+        WHERE pi.product_id = m.product_id
+          AND pi.is_primary = 0
+          AND pi.sort_order = m.n
+    );
+
+
+    /* =========================================================
+       BƯỚC 3
+       COMMIT
+       ========================================================= */
+
+    COMMIT TRANSACTION;
+
+
+    PRINT '===============================================';
+    PRINT 'THANH CONG!';
+    PRINT 'DA KIEM TRA TOAN BO SAN PHAM TRONG PRODUCT.';
+    PRINT 'MOI SAN PHAM CO ANH CHINH + TOI DA 3 ANH PHU.';
+    PRINT '===============================================';
+
+
+END TRY
+
+BEGIN CATCH
+
+    IF @@TRANCOUNT > 0
+        ROLLBACK TRANSACTION;
+
+    PRINT '===============================================';
+    PRINT 'CO LOI! DU LIEU DA DUOC ROLLBACK.';
+    PRINT '===============================================';
+
+    THROW;
+
+END CATCH;
+GO
+SELECT 
+    COUNT(*) AS TongSanPham
+FROM PRODUCT;
+SELECT
+    p.id,
+    p.name,
+    SUM(CASE WHEN pi.is_primary = 1 THEN 1 ELSE 0 END) AS AnhChinh,
+    SUM(CASE WHEN pi.is_primary = 0 THEN 1 ELSE 0 END) AS AnhPhu,
+    COUNT(pi.id) AS TongAnh
+FROM PRODUCT p
+LEFT JOIN PRODUCT_IMAGE pi
+    ON pi.product_id = p.id
+GROUP BY
+    p.id,
+    p.name
+ORDER BY p.id;
+
+---Thêm số lượng sản phẩm có biến--- 
+SELECT
+    p.id,
+    p.name,
+    SUM(pv.stock) AS SoLuongTon
+FROM PRODUCT p
+LEFT JOIN PRODUCT_VARIANT pv
+    ON pv.product_id = p.id
+GROUP BY
+    p.id,
+    p.name
+ORDER BY
+    p.id;
+
+UPDATE PRODUCT_VARIANT
+SET stock = 99;
+
+---Xem Số, Xóa Ảnh (Không nhất thiết phải chạy trừ việc muốn xem hoặc xóa dữ liệu)---
+SELECT
+    product_id,
+    COUNT(*) AS SoAnh,
+    SUM(CASE WHEN is_primary = 1 THEN 1 ELSE 0 END) AS AnhChinh,
+    SUM(CASE WHEN is_primary = 0 THEN 1 ELSE 0 END) AS AnhPhu
+FROM PRODUCT_IMAGE
+GROUP BY product_id
+ORDER BY product_id;
+
+SELECT
+    id,
+    product_id,
+    url,
+    is_primary,
+    sort_order
+FROM PRODUCT_IMAGE
+WHERE product_id = 881
+ORDER BY sort_order;
+
+SELECT
+    product_id,
+    url,
+    COUNT(*) AS SoLan
+FROM PRODUCT_IMAGE
+GROUP BY product_id, url
+HAVING COUNT(*) > 1
+ORDER BY product_id;
+
+SELECT SUM(SoLan - 1) AS SoAnhBiTrung
+FROM (
+    SELECT
+        product_id,
+        url,
+        COUNT(*) AS SoLan
+    FROM PRODUCT_IMAGE
+    GROUP BY product_id, url
+    HAVING COUNT(*) > 1
+) x;
+
+WITH DuplicateImages AS
+(
+    SELECT
+        id,
+        ROW_NUMBER() OVER (
+            PARTITION BY product_id, url
+            ORDER BY id
+        ) AS rn
+    FROM PRODUCT_IMAGE
+)
+DELETE FROM PRODUCT_IMAGE
+WHERE id IN
+(
+    SELECT id
+    FROM DuplicateImages
+    WHERE rn > 1
+);
+
+SELECT 
+    p.id,
+    p.name,
+    COUNT(pi.id) AS SoAnh
+FROM PRODUCT p
+LEFT JOIN PRODUCT_IMAGE pi 
+    ON pi.product_id = p.id
+GROUP BY p.id, p.name
+HAVING COUNT(pi.id) > 4
+ORDER BY SoAnh DESC;
+
+DELETE FROM PRODUCT_IMAGE
+WHERE url LIKE 'https://images.pexels.com/%';
+SELECT COUNT(*) AS AnhPexelsConLai
+FROM PRODUCT_IMAGE
+WHERE url LIKE 'https://images.pexels.com/%';
+SELECT TOP 50
+    id,
+    product_id,
+    url,
+    is_primary,
+    sort_order
+FROM PRODUCT_IMAGE
+ORDER BY id DESC;
+SELECT 
+    COUNT(*) AS TongAnh,
+    SUM(CASE WHEN is_primary = 1 THEN 1 ELSE 0 END) AS AnhPrimary,
+    SUM(CASE WHEN is_primary = 0 THEN 1 ELSE 0 END) AS AnhPhu,
+    SUM(CASE WHEN is_primary IS NULL THEN 1 ELSE 0 END) AS AnhNull,
+    SUM(CASE WHEN sort_order = 0 THEN 1 ELSE 0 END) AS Sort0
+FROM PRODUCT_IMAGE;
