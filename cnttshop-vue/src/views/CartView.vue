@@ -4,6 +4,9 @@ import { fmt, silverTokensFor } from '../data/products.js';
 import { state, actions, accent } from '../store.js';
 import { resolveImageUrl } from '../api.js';
 
+// Trần số lượng mỗi dòng — PHẢI khớp CartService.SO_LUONG_TOI_DA ở backend.
+const SO_LUONG_TOI_DA = 20;
+
 const cartLines = computed(() =>
   state.cart.map((c) => ({
     id: c.id,
@@ -15,7 +18,22 @@ const cartLines = computed(() =>
     lineText: fmt(c.lineTotal),
     imageUrl: c.imageUrl,
     lineTotal: c.lineTotal,
+    stock: c.stock ?? 0,
+    // Hàng trong giỏ có thể đã hết sạch hoặc tụt kho sau khi khách bỏ vào giỏ (người khác mua
+    // mất). Nói ngay tại dòng đó thay vì để khách phát hiện ở bước đặt hàng.
+    hetHang: (c.stock ?? 0) <= 0,
+    thieuHang: (c.stock ?? 0) > 0 && (c.stock ?? 0) < c.quantity,
+    // Chặn ở client cho phản hồi tức thì; backend vẫn là nơi kiểm thật (CartService).
+    khongTangDuoc: c.quantity >= SO_LUONG_TOI_DA || c.quantity >= (c.stock ?? 0),
   })),
+);
+
+// Không cho thanh toán khi dòng đang chọn có vấn đề về hàng — backend cũng chặn, nhưng để tới
+// đó mới báo thì khách đã đi qua cả trang thanh toán rồi mới bị đẩy ngược lại.
+const dongChonCoVanDe = computed(() =>
+  cartLines.value.filter(
+    (l) => state.selectedCartItemIds.includes(l.id) && (l.hetHang || l.thieuHang),
+  ),
 );
 
 const selectedCount = computed(() => state.selectedCartItemIds.length);
@@ -131,6 +149,12 @@ const tokenText = computed(() => '+' + silverTokensFor(selectedSubtotal.value) +
             <div style="font-size: 13px; color: var(--muted)">
               {{ line.priceText }}
             </div>
+            <div v-if="line.hetHang" style="font-size: 11.5px; color: var(--sale); font-weight: 600; margin-top: 4px">
+              ⚠ Tạm hết hàng — bỏ chọn hoặc xoá khỏi giỏ để tiếp tục đặt hàng
+            </div>
+            <div v-else-if="line.thieuHang" style="font-size: 11.5px; color: var(--amber); font-weight: 600; margin-top: 4px">
+              ⚠ Chỉ còn {{ line.stock }} cái — giảm số lượng để tiếp tục
+            </div>
           </div>
           <div
             style="
@@ -174,14 +198,18 @@ const tokenText = computed(() => '+' + silverTokensFor(selectedSubtotal.value) +
             </Transition>
             <button
               @click="actions.inc(line.id)"
+              :disabled="line.khongTangDuoc"
+              :title="line.khongTangDuoc ? 'Không thể tăng thêm (hết hàng hoặc đã đạt tối đa ' + SO_LUONG_TOI_DA + ')' : ''"
+              :style="{
+                color: line.khongTangDuoc ? 'var(--muted)' : 'var(--muted2)',
+                cursor: line.khongTangDuoc ? 'not-allowed' : 'pointer',
+              }"
               style="
                 width: 30px;
                 height: 30px;
                 border: none;
                 background: transparent;
-                color: var(--muted2);
                 font-size: 17px;
-                cursor: pointer;
                 border-radius: 7px;
               "
             >
@@ -304,12 +332,29 @@ const tokenText = computed(() => '+' + silverTokensFor(selectedSubtotal.value) +
         >
           🪙 {{ tokenText }}
         </div>
+        <div
+          v-if="dongChonCoVanDe.length"
+          style="
+            margin-bottom: 12px;
+            background: color-mix(in srgb, var(--sale) 10%, transparent);
+            border: 1px solid color-mix(in srgb, var(--sale) 26%, transparent);
+            border-radius: 10px;
+            padding: 10px 13px;
+            font-size: 12px;
+            line-height: 1.55;
+            color: var(--muted2);
+          "
+        >
+          {{ dongChonCoVanDe.length }} sản phẩm đang chọn không còn đủ hàng. Bỏ chọn, giảm số
+          lượng hoặc xoá khỏi giỏ rồi đặt hàng nhé.
+        </div>
         <button
           @click="actions.goCheckout"
-          :disabled="!selectedCount"
+          :disabled="!selectedCount || dongChonCoVanDe.length > 0"
           :style="{
             background: accent,
-            opacity: selectedCount ? 1 : 0.5,
+            opacity: selectedCount && !dongChonCoVanDe.length ? 1 : 0.5,
+            cursor: selectedCount && !dongChonCoVanDe.length ? 'pointer' : 'not-allowed',
             boxShadow:
               '0 10px 26px color-mix(in srgb, ' + accent + ' 36%, transparent)',
           }"
@@ -322,7 +367,6 @@ const tokenText = computed(() => '+' + silverTokensFor(selectedSubtotal.value) +
             font-family: 'Plus Jakarta Sans', sans-serif;
             font-weight: 700;
             font-size: 15px;
-            cursor: pointer;
           "
         >
           Tiến hành đặt hàng

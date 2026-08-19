@@ -156,68 +156,33 @@
           flex-wrap: wrap;
         "
       >
-        <select
-          v-model="brandFilter"
-          style="
-            height: 32px;
-            padding: 0 10px;
-            border-radius: 8px;
-            border: 1px solid var(--line2);
-            background: var(--card2);
-            color: var(--text);
-            font-size: 12.5px;
-            cursor: pointer;
-          "
-        >
-          <option value="all">Tất cả thương hiệu</option>
-          <option v-for="b in brandOptions" :key="b" :value="b">{{ b }}</option>
-        </select>
-        <select
-          v-model="statusFilter"
-          style="
-            height: 32px;
-            padding: 0 10px;
-            border-radius: 8px;
-            border: 1px solid var(--line2);
-            background: var(--card2);
-            color: var(--text);
-            font-size: 12.5px;
-            cursor: pointer;
-          "
-        >
-          <option value="all">Mọi trạng thái</option>
-          <option value="active">Đang bán</option>
-          <option value="inactive">Ngừng bán</option>
-        </select>
-        <select
-          v-model="stockFilter"
-          style="
-            height: 32px;
-            padding: 0 10px;
-            border-radius: 8px;
-            border: 1px solid var(--line2);
-            background: var(--card2);
-            color: var(--text);
-            font-size: 12.5px;
-            cursor: pointer;
-          "
-        >
-          <option value="all">Mọi tồn kho</option>
-          <option value="in">Còn nhiều (&gt;12)</option>
-          <option value="low">Sắp hết (1–12)</option>
-          <option value="out">Hết hàng</option>
-        </select>
-        <button
-          v-if="brandFilter !== 'all' || statusFilter !== 'all' || stockFilter !== 'all'"
-          @click="brandFilter = 'all'; statusFilter = 'all'; stockFilter = 'all'"
-          style="background: transparent; border: none; color: var(--sale); font-size: 12px; cursor: pointer"
-        >
-          Xóa lọc
-        </button>
+        <!-- Ba ô lọc cũ (hãng / trạng thái / tồn kho) đã bỏ: DataTable có phễu ngay trên
+             mỗi cột, lọc được theo mọi cột chứ không chỉ ba cột này. -->
         <div style="flex: 1"></div>
         <span class="mono" style="font-size: 11.5px; color: var(--muted)">{{ rows.length }} sản phẩm</span>
         <button
           @click="stockModalOpen = true"
+          style="
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            height: 34px;
+            padding: 0 14px;
+            border-radius: 9px;
+            border: 1px solid var(--line2);
+            background: var(--card);
+            color: var(--text);
+            font-size: 12.5px;
+            font-weight: 700;
+            cursor: pointer;
+          "
+        >
+          <i class="bi bi-sliders"></i> Điều chỉnh kho
+        </button>
+        <!-- Nhập hàng THẬT (có nhà cung cấp, hoá đơn, nhiều dòng, in được chứng từ) nằm ở trang
+             riêng; nút bên cạnh chỉ dành cho sửa tồn lẻ khi kiểm kê lệch. -->
+        <button
+          @click="$router.push('/goods-receipts')"
           style="
             display: flex;
             align-items: center;
@@ -255,181 +220,88 @@
           <i class="bi bi-plus-lg"></i> Thêm sản phẩm
         </button>
       </div>
-      <table style="width: 100%; border-collapse: collapse; font-size: 13px">
-        <thead>
-          <tr style="background: var(--card2)">
-            <th
-              v-for="h in heads"
-              :key="h.t"
-              :style="{
-                textAlign: h.a || 'left',
-                padding: '10px 16px',
-                fontSize: '11px',
-                fontWeight: 600,
-                color: 'var(--muted)',
-                textTransform: 'uppercase',
-                letterSpacing: '.4px',
-              }"
-            >
-              {{ h.t }}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="p in rows"
-            :key="p.id"
-            @click="detailProductId = p.id"
-            style="border-top: 1px solid var(--line); cursor: pointer"
+      <DataTable
+        :columns="cols"
+        :rows="rows"
+        :tim-kiem="ui.search"
+        click-duoc
+        trong="Chưa có sản phẩm nào."
+        @row-click="(p) => (detailProductId = p.id)"
+      >
+        <template #o-name="{ row: p }">
+          <!-- Rê vào ô tên = mở thẻ xem nhanh (mô tả, linh kiện, biến thể + tồn từng biến thể).
+               Gắn ở ô thay vì cả dòng để rê qua phễu lọc ở đầu cột không bật thẻ. -->
+          <div
+            style="display: flex; align-items: center; gap: 11px"
+            @mouseenter="onRowEnter(p, $event)"
+            @mousemove="onRowMove($event)"
+            @mouseleave="onRowLeave"
           >
-            <td style="padding: 11px 16px">
-              <div style="display: flex; align-items: center; gap: 11px">
-                <div
-                  class="mono"
-                  style="
-                    width: 40px;
-                    height: 40px;
-                    border-radius: 9px;
-                    flex: none;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 11px;
-                    font-weight: 700;
-                  "
-                  :style="{ background: grad(p.hue), color: gradText(p.hue) }"
-                >
-                  {{ p.tag }}
-                </div>
-                <div style="min-width: 0">
-                  <div
-                    style="
-                      font-size: 13px;
-                      font-weight: 500;
-                      color: var(--text);
-                    "
-                  >
-                    {{ p.name }}
-                  </div>
-                  <div
-                    class="mono"
-                    style="
-                      font-size: 11px;
-                      color: var(--muted);
-                      margin-top: 2px;
-                    "
-                  >
-                    {{ p.sku }} · {{ p.spec }}
-                  </div>
-                </div>
-              </div>
-            </td>
-            <td style="padding: 11px 12px">
-              <span style="font-size: 12px; color: var(--muted2)">{{
-                p.cat
-              }}</span>
-            </td>
-            <td
-              style="padding: 11px 12px; color: var(--text); font-size: 12.5px"
+            <div
+              class="mono"
+              style="width: 40px; height: 40px; border-radius: 9px; flex: none; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700"
+              :style="{ background: grad(p.hue), color: gradText(p.hue) }"
             >
-              {{ p.brand }}
-            </td>
-            <td style="padding: 11px 12px; text-align: right">
+              {{ p.tag }}
+            </div>
+            <div style="min-width: 0">
+              <div style="font-size: 13px; font-weight: 500; color: var(--text)">{{ p.name }}</div>
+              <div class="mono" style="font-size: 11px; color: var(--muted); margin-top: 2px">
+                {{ p.sku }} · {{ p.spec }}
+              </div>
+            </div>
+          </div>
+        </template>
+        <template #o-cat="{ row: p }">
+          <span style="font-size: 12px; color: var(--muted2)">{{ p.cat }}</span>
+        </template>
+        <template #o-brand="{ row: p }">
+          <span style="font-size: 12.5px">{{ p.brand }}</span>
+        </template>
+        <template #o-price="{ row: p }">
+          <div class="mono" style="font-size: 13.5px; font-weight: 700; color: var(--text)">{{ p.priceFmt }}</div>
+          <div v-if="p.oldp" style="display: flex; align-items: center; justify-content: flex-end; gap: 6px; margin-top: 2px">
+            <span class="mono" style="font-size: 10.5px; color: var(--muted); text-decoration: line-through">{{ p.oldFmt }}</span>
+            <span class="mono" style="font-size: 10px; font-weight: 700; color: var(--sale)">-{{ p.disc }}%</span>
+          </div>
+        </template>
+        <template #o-stock="{ row: p }">
+          <div style="display: flex; align-items: center; gap: 8px">
+            <span class="mono" style="font-size: 13px; font-weight: 700; width: 24px" :style="{ color: stockColor(p.stock) }">{{ p.stock }}</span>
+            <div style="flex: 1; height: 5px; border-radius: 4px; background: var(--card2); overflow: hidden">
               <div
-                class="mono"
-                style="font-size: 13.5px; font-weight: 700; color: var(--text)"
-              >
-                {{ p.priceFmt }}
-              </div>
-              <div
-                v-if="p.oldp"
-                style="
-                  display: flex;
-                  align-items: center;
-                  justify-content: flex-end;
-                  gap: 6px;
-                  margin-top: 2px;
-                "
-              >
-                <span
-                  class="mono"
-                  style="
-                    font-size: 10.5px;
-                    color: var(--muted);
-                    text-decoration: line-through;
-                  "
-                  >{{ p.oldFmt }}</span
-                ><span
-                  class="mono"
-                  style="font-size: 10px; font-weight: 700; color: var(--sale)"
-                  >-{{ p.disc }}%</span
-                >
-              </div>
-            </td>
-            <td style="padding: 11px 12px">
-              <div style="display: flex; align-items: center; gap: 8px">
-                <span
-                  class="mono"
-                  style="font-size: 13px; font-weight: 700; width: 24px"
-                  :style="{ color: stockColor(p.stock) }"
-                  >{{ p.stock }}</span
-                >
-                <div
-                  style="
-                    flex: 1;
-                    height: 5px;
-                    border-radius: 4px;
-                    background: var(--card2);
-                    overflow: hidden;
-                  "
-                >
-                  <div
-                    style="height: 100%; border-radius: 4px"
-                    :style="{
-                      width:
-                        Math.min(100, Math.round((p.stock / 50) * 100)) + '%',
-                      background: stockColor(p.stock),
-                    }"
-                  ></div>
-                </div>
-              </div>
-            </td>
-            <td style="padding: 11px 12px">
-              <span
-                style="
-                  display: inline-flex;
-                  align-items: center;
-                  gap: 5px;
-                  font-size: 11.5px;
-                  font-weight: 600;
-                  padding: 3px 9px;
-                  border-radius: 20px;
-                "
-                :style="{
-                  background: p.active
-                    ? 'color-mix(in srgb,var(--green) 16%,transparent)'
-                    : 'var(--card2)',
-                  color: p.active ? 'var(--green)' : 'var(--muted)',
-                }"
-                ><span
-                  style="width: 6px; height: 6px; border-radius: 50%"
-                  :style="{
-                    background: p.active ? 'var(--green)' : 'var(--muted)',
-                  }"
-                ></span
-                >{{ p.active ? 'Hiển thị' : 'Ẩn' }}</span
-              >
-            </td>
-            <td style="padding: 11px 16px; text-align: center">
-              <i
-                class="bi bi-three-dots-vertical"
-                style="color: var(--muted); font-size: 15px"
-              ></i>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+                style="height: 100%; border-radius: 4px"
+                :style="{ width: Math.min(100, Math.round((p.stock / 50) * 100)) + '%', background: stockColor(p.stock) }"
+              ></div>
+            </div>
+          </div>
+        </template>
+        <template #o-active="{ row: p }">
+          <span
+            style="display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; padding: 3px 9px; border-radius: 20px"
+            :style="{
+              background: p.active ? 'color-mix(in srgb,var(--green) 16%,transparent)' : 'var(--card2)',
+              color: p.active ? 'var(--green)' : 'var(--muted)',
+            }"
+          >
+            <span style="width: 6px; height: 6px; border-radius: 50%" :style="{ background: p.active ? 'var(--green)' : 'var(--muted)' }"></span>
+            {{ p.active ? 'Hiển thị' : 'Ẩn' }}
+          </span>
+        </template>
+        <template #o-thaoTac>
+          <i class="bi bi-three-dots-vertical" style="color: var(--muted); font-size: 15px"></i>
+        </template>
+      </DataTable>
     </div>
+
+    <!-- Thẻ xem nhanh khi rê chuột: mô tả + linh kiện + từng biến thể kèm tình trạng kho.
+         Ẩn khi đang mở modal để hai lớp không chồng lên nhau. -->
+    <ProductHoverCard
+      v-if="hoverRow && !detailProductId && !formOpen"
+      :row="hoverRow"
+      :data="hoverData"
+      :anchor="hoverPos"
+    />
 
     <ProductDetailModal
       v-if="detailProductId"
@@ -449,32 +321,77 @@
     <StockMovementModal
       v-if="stockModalOpen"
       @close="stockModalOpen = false"
-      @saved="refreshAdminProducts"
+      @saved="onStockChanged"
     />
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onBeforeUnmount } from 'vue';
 import { PRODUCTS, CATS, short, grad, gradText, gradCat, refreshAdminProducts, refreshAdminCategories } from '../data/adminData';
 import { ui } from '../uiState';
-import { createCategory } from '../api/admin';
+import { createCategory, getAdminProductDetail } from '../api/admin';
 import ProductFormModal from '../components/ProductFormModal.vue';
 import ProductDetailModal from '../components/ProductDetailModal.vue';
+import ProductHoverCard from '../components/ProductHoverCard.vue';
+import DataTable from '../components/DataTable.vue';
 import StockMovementModal from '../components/StockMovementModal.vue';
 
 const cat = ref('all');
-const brandFilter = ref('all');
-const statusFilter = ref('all');
-const stockFilter = ref('all');
 const detailProductId = ref(null);
 const formOpen = ref(false);
 const formProductId = ref(null);
 const stockModalOpen = ref(false);
 
-const brandOptions = computed(() =>
-  [...new Set(PRODUCTS.map((p) => p.brand))].sort((a, b) => a.localeCompare(b)),
-);
+// ===== Thẻ xem nhanh khi rê chuột =====
+// Rê ngang bảng là lướt qua hàng chục dòng, nên KHÔNG gọi API ngay: chờ TRE_HIEN ms xem chuột
+// có dừng lại thật không. Kết quả nhớ đệm theo id để rê qua rê lại cùng một dòng chỉ tốn đúng
+// một request cho cả phiên.
+const TRE_HIEN = 260;
+const hoverRow = ref(null);
+const hoverData = ref(null);
+const hoverPos = ref({ x: 0, y: 0 });
+const boNhoDem = new Map();
+let hoverTimer = null;
+
+function onRowEnter(p, e) {
+  clearTimeout(hoverTimer);
+  hoverPos.value = { x: e.clientX, y: e.clientY };
+  hoverTimer = setTimeout(() => {
+    hoverRow.value = p;
+    hoverData.value = boNhoDem.get(p.id) || null;
+    if (!hoverData.value) taiChiTiet(p.id);
+  }, TRE_HIEN);
+}
+
+async function taiChiTiet(id) {
+  try {
+    const d = await getAdminProductDetail(id);
+    boNhoDem.set(id, d);
+    // Chuột có thể đã rời sang dòng khác trong lúc chờ mạng -> chỉ gán nếu vẫn đúng dòng đó.
+    if (hoverRow.value?.id === id) hoverData.value = d;
+  } catch (e) {
+    if (hoverRow.value?.id === id) hoverRow.value = null; // lỗi mạng -> ẩn thẻ, không báo ồn ào
+  }
+}
+
+function onRowMove(e) {
+  if (!hoverRow.value) hoverPos.value = { x: e.clientX, y: e.clientY };
+}
+function onRowLeave() {
+  clearTimeout(hoverTimer);
+  hoverRow.value = null;
+  hoverData.value = null;
+}
+// Sửa/thêm sản phẩm xong thì dữ liệu đã đệm là cũ -> bỏ hết, lần rê sau nạp lại.
+function xoaBoNhoDem() {
+  boNhoDem.clear();
+}
+async function onStockChanged() {
+  xoaBoNhoDem(); // vừa nhập/điều chỉnh kho -> tồn trong thẻ xem nhanh đã cũ
+  await refreshAdminProducts();
+}
+onBeforeUnmount(() => clearTimeout(hoverTimer));
 
 function openCreate() {
   formProductId.value = null;
@@ -487,20 +404,24 @@ function onEditFromDetail(id) {
 }
 async function onSaved() {
   formOpen.value = false;
+  xoaBoNhoDem();
   await refreshAdminProducts();
 }
 async function onDeletedFromDetail() {
   detailProductId.value = null;
+  xoaBoNhoDem();
   await refreshAdminProducts();
 }
-const heads = [
-  { t: 'Sản phẩm' },
-  { t: 'Danh mục' },
-  { t: 'Hãng' },
-  { t: 'Giá bán', a: 'right' },
-  { t: 'Tồn kho' },
-  { t: 'Trạng thái' },
-  { t: '' },
+// Cột cho DataTable — mỗi cột có phễu lọc/sắp xếp kiểu Excel (xem components/DataTable.vue).
+// Ba ô select cũ (hãng / trạng thái / tồn kho) đã bỏ: phễu ngay trên đầu cột làm được nhiều hơn.
+const cols = [
+  { key: 'name', label: 'Sản phẩm', text: (p) => p.name + ' · ' + p.sku },
+  { key: 'cat', label: 'Danh mục' },
+  { key: 'brand', label: 'Hãng' },
+  { key: 'price', label: 'Giá bán', align: 'right', kieu: 'so', value: (p) => p.price, text: (p) => p.priceFmt },
+  { key: 'stock', label: 'Tồn kho', kieu: 'so' },
+  { key: 'active', label: 'Trạng thái', text: (p) => (p.active ? 'Hiển thị' : 'Ẩn') },
+  { key: 'thaoTac', label: '', align: 'center', loc: false },
 ];
 // Danh mục (gộp từ Quản lý danh mục cũ) — click 1 thẻ = lọc bảng sản phẩm bên dưới theo cat.value
 const showAddCategory = ref(false);
@@ -541,23 +462,12 @@ async function addCategory() {
     savingCategory.value = false;
   }
 }
-const rows = computed(() => {
-  const q = ui.search.trim().toLowerCase();
-  return PRODUCTS.filter(
-    (p) =>
-      (cat.value === 'all' || p.catSlug === cat.value) &&
-      (brandFilter.value === 'all' || p.brand === brandFilter.value) &&
-      (statusFilter.value === 'all' ||
-        (statusFilter.value === 'active' ? p.active : !p.active)) &&
-      (stockFilter.value === 'all' ||
-        (stockFilter.value === 'out' && p.stock === 0) ||
-        (stockFilter.value === 'low' && p.stock >= 1 && p.stock <= 12) ||
-        (stockFilter.value === 'in' && p.stock > 12)) &&
-      (!q ||
-        p.name.toLowerCase().includes(q) ||
-        p.brand.toLowerCase().includes(q)),
-  );
-});
+// Lọc theo hãng / trạng thái / tồn kho và tìm theo từ khoá đã chuyển hết vào phễu từng cột của
+// DataTable — ở đây chỉ còn lọc theo DANH MỤC, vì đó là các thẻ danh mục bấm được phía trên
+// bảng (một lối vào riêng, không phải bộ lọc cột).
+const rows = computed(() =>
+  PRODUCTS.filter((p) => cat.value === 'all' || p.catSlug === cat.value),
+);
 const stockColor = (s) =>
   s <= 5 ? 'var(--sale)' : s <= 12 ? 'var(--amber)' : 'var(--green)';
 const stats = computed(() => [

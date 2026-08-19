@@ -438,6 +438,14 @@ select option {
   border: 1px solid rgba(var(--line-rgb), 0.16);
   color: var(--muted2);
 }
+/* Cảnh báo "làm được nhưng không phải cách này" — nhẹ hơn .err (lỗi thật) nhưng phải bắt mắt
+   hơn .info, VD ngoài phạm vi phục vụ tận nơi. */
+.sp-alert.warn {
+  background: color-mix(in srgb, #f5a524 12%, transparent);
+  border: 1px solid color-mix(in srgb, #f5a524 34%, transparent);
+  color: #c77c07;
+}
+:root:not([data-mode='light']) .sp-alert.warn { color: #ffc457; }
 
 .sp-empty {
   text-align: center;

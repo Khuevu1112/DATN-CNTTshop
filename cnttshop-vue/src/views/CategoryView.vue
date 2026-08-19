@@ -1,7 +1,7 @@
 <script setup>
 import { computed, reactive, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
-import { catMeta, fmt, matchesQuery, CATEGORY_SEGMENTS, COMPONENT_SLUGS } from '../data/products.js';
+import { catMeta, fmt, matchesQuery, matchesSearch, CATEGORY_SEGMENTS, COMPONENT_SLUGS } from '../data/products.js';
 import { state, actions, accent, products } from '../store.js';
 import ProductCard from '../components/ProductCard.vue';
 
@@ -169,8 +169,10 @@ const sorters = {
 // (đếm dựa trên các bộ lọc khác đang áp dụng, không tính chính bộ lọc thương hiệu).
 const filteredExceptBrand = computed(() => {
   let l = base.value.slice();
+  // Câu tìm kiếm tự do của khách dùng matchesSearch (mọi từ là điều kiện VÀ, bỏ dấu), KHÁC với
+  // từ khoá phân khúc bên dưới vốn có cú pháp |/+/! riêng — xem data/products.js.
   if (state.q.trim()) {
-    l = l.filter((p) => matchesQuery(p, state.q));
+    l = l.filter((p) => matchesSearch(p, state.q));
   }
   if (state.segmentKeyword) {
     l = l.filter((p) => matchesQuery(p, state.segmentKeyword));

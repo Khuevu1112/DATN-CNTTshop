@@ -16,10 +16,12 @@ import com.fpoly.dto.SupportDtos.FaqDanhMucDto;
 import com.fpoly.dto.SupportDtos.GiaSuaChuaDto;
 import com.fpoly.dto.SupportDtos.KhungGioDto;
 import com.fpoly.dto.SupportDtos.LichHenDto;
+import com.fpoly.dto.SupportDtos.PhamViTanNoiDto;
 import com.fpoly.dto.SupportDtos.TongQuanHoTroDto;
 import com.fpoly.dto.SupportDtos.TraCuuBaoHanhDto;
 import com.fpoly.dto.SupportDtos.TrungTamDto;
 import com.fpoly.dto.SupportDtos.UocTinhDto;
+import com.fpoly.service.AddressService;
 import com.fpoly.service.ServiceAppointmentService;
 import com.fpoly.service.SupportService;
 
@@ -40,6 +42,7 @@ public class SupportApiController {
 
     @Autowired private SupportService supportService;
     @Autowired private ServiceAppointmentService appointmentService;
+    @Autowired private AddressService addressService;
 
     // ===================== Trang chủ hỗ trợ =====================
 
@@ -64,6 +67,34 @@ public class SupportApiController {
     @GetMapping("/trung-tam/{id}")
     public TrungTamDto chiTietTrungTam(@PathVariable Integer id) {
         return supportService.chiTietTrungTam(id);
+    }
+
+    /**
+     * Phạm vi phục vụ TẬN NƠI (kỹ thuật tới nhà) — dùng để bật/tắt lựa chọn "Bảo hành tận nơi"
+     * và nói rõ với khách ngoài vùng là vì sao.
+     *
+     * Công khai: khách chưa đăng nhập vẫn cần biết shop có phục vụ tỉnh mình không. Có đăng
+     * nhập + đã lưu địa chỉ mặc định thì trả thêm kết luận cho chính địa chỉ đó.
+     */
+    @GetMapping("/pham-vi-tan-noi")
+    public PhamViTanNoiDto phamViTanNoi(Authentication auth) {
+        return supportService.phamViTanNoi(tinhCuaKhach(auth));
+    }
+
+    /** Tỉnh trong địa chỉ mặc định của khách; null nếu chưa đăng nhập / chưa có địa chỉ / địa
+     * chỉ cũ chỉ có cột text chưa gắn FK Tỉnh. */
+    private Integer tinhCuaKhach(Authentication auth) {
+        if (auth == null || auth instanceof AnonymousAuthenticationToken) return null;
+        try {
+            return addressService.layDanhSachTheoEmail(auth.getName()).stream()
+                    .filter(a -> a.getProvince() != null)
+                    .sorted((a, b) -> Boolean.compare(
+                            !Boolean.TRUE.equals(a.getIsDefault()), !Boolean.TRUE.equals(b.getIsDefault())))
+                    .map(a -> a.getProvince().getId())
+                    .findFirst().orElse(null);
+        } catch (RuntimeException e) {
+            return null;
+        }
     }
 
     // ===================== Thông tin bảo hành =====================

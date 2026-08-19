@@ -4,6 +4,16 @@ import {
   getMembers, getMemberDetail, getSubscriptionPlans, updateSubscriptionPlan,
 } from '../api/admin';
 import { money, fmtMoneyInput, parseMoneyInput } from '../data/adminData';
+import DataTable from '../components/DataTable.vue';
+
+// Trường lọc cho chế độ thẻ — cùng phễu Excel như các bảng khác (xem components/DataTable.vue).
+const memberCols = [
+  { key: 'fullName', label: 'Hội viên', text: (m) => (m.fullName || 'Chưa đặt tên') + ' · ' + (m.email || '') },
+  { key: 'planName', label: 'Gói' },
+  { key: 'status', label: 'Trạng thái', text: (m) => st(m.status).label },
+  { key: 'startedAt', label: 'Ngày bắt đầu', kieu: 'ngay', text: (m) => fmtDate(m.startedAt) },
+  { key: 'expiresAt', label: 'Ngày hết hạn', kieu: 'ngay', text: (m) => fmtDate(m.expiresAt) },
+];
 
 // Nhúng trong trang "Quản lý tài khoản" (Customers.vue): khi có prop `view` thì bị điều khiển
 // từ ngoài (ẩn thanh chọn nội bộ). Không có prop -> tự chạy độc lập với thanh chọn riêng.
@@ -205,9 +215,13 @@ onMounted(() => {
         <div v-else-if="!filteredMembers.length" style="padding: 50px; text-align: center; color: var(--muted); font-size: 13px">
           {{ members.length ? 'Không tìm thấy hội viên phù hợp.' : 'Chưa có hội viên nào mua gói.' }}
         </div>
-        <div v-else style="max-height: 70vh; overflow-y: auto">
+        <!-- Chế độ THẺ của DataTable: danh sách hội viên là cột chọn (bấm để xem chi tiết bên
+             phải) nên giữ nguyên dạng dòng, nhưng vẫn lọc được theo gói/trạng thái/ngày. -->
+        <DataTable v-else che-do="the" :columns="memberCols" :rows="filteredMembers" row-key="userId" trong="Chưa có hội viên nào mua gói.">
+          <template #the="{ rows }">
+        <div style="max-height: 70vh; overflow-y: auto">
           <div
-            v-for="m in filteredMembers" :key="m.userId"
+            v-for="m in rows" :key="m.userId"
             @click="selectMember(m)"
             :style="{ background: selectedId === m.userId ? 'color-mix(in srgb, var(--acc) 10%, transparent)' : 'transparent' }"
             style="display: flex; align-items: center; gap: 12px; padding: 13px 18px; border-bottom: 1px solid var(--line); cursor: pointer"
@@ -225,6 +239,8 @@ onMounted(() => {
             </div>
           </div>
         </div>
+          </template>
+        </DataTable>
       </div>
 
       <!-- Cột phải: chi tiết hội viên đang chọn -->
@@ -292,7 +308,9 @@ onMounted(() => {
     </div>
 
     <!-- ============ TAB GÓI & ƯU ĐÃI: sửa giá + ưu đãi (admin-only) ============ -->
-    <div v-else>
+    <!-- Bám ĐÚNG 'plans' chứ không phải v-else: prop `view` do trang cha truyền vào, một giá trị
+         lạ (VD 'walkin') mà rơi vào v-else sẽ vẽ nhầm trình sửa giá gói ra màn hình khác. -->
+    <div v-else-if="tab === 'plans'">
       <div v-if="flash.msg"
         :style="{
           background: flash.type === 'ok' ? 'color-mix(in srgb, var(--green) 14%, transparent)' : 'color-mix(in srgb, var(--sale) 14%, transparent)',

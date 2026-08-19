@@ -94,9 +94,11 @@
               style="font-size: 15px; width: 18px; text-align: center"
             ></i>
             <span style="flex: 1">{{ it[1] }}</span>
+            <!-- Badge nhấn: số việc đang chờ admin xử lý (đơn chờ xác nhận, liên hệ chưa đọc...) -->
             <span
-              v-if="badgeOf(it)"
+              v-if="moiCua(it[0])"
               class="mono"
+              :title="'Đang chờ xử lý: ' + moiCua(it[0])"
               style="
                 font-size: 11px;
                 font-weight: 700;
@@ -105,7 +107,22 @@
                 background: color-mix(in srgb, var(--acc) 18%, transparent);
                 color: var(--acc);
               "
-              >{{ badgeOf(it) }}</span
+              >{{ moiCua(it[0]) }}</span
+            >
+            <!-- Badge phụ: TỔNG số bản ghi của mục, luôn hiện nếu mục đó có dữ liệu -->
+            <span
+              v-if="tongCua(it[0])"
+              class="mono"
+              :title="'Tổng số: ' + tongCua(it[0])"
+              style="
+                font-size: 11px;
+                font-weight: 600;
+                padding: 1px 7px;
+                border-radius: 9px;
+                background: color-mix(in srgb, var(--muted) 14%, transparent);
+                color: var(--muted2);
+              "
+              >{{ tongCua(it[0]) }}</span
             >
           </button>
         </template>
@@ -451,11 +468,10 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import {
   NAV_GROUPS,
-  ORDERS,
   initials as initialsOf,
   loadAdminData,
 } from '../data/adminData';
@@ -468,6 +484,7 @@ import {
   getUnreadCount,
   markNotificationRead,
   markAllNotificationsRead,
+  getSidebarCounts,
 } from '../api/admin';
 
 const route = useRoute();
@@ -490,9 +507,30 @@ const groups = computed(() =>
 
 const go = (name) => router.push('/' + name);
 const active = (name) => route.name === name;
-// Số đơn hàng mới (chờ xác nhận) — badge thật thay cho số tĩnh cũ, chỉ áp cho mục "Đơn hàng".
-const newOrderCount = computed(() => ORDERS.filter((o) => o.st === 'pending').length);
-const badgeOf = (it) => (it[0] === 'orders' ? newOrderCount.value || '' : it[3]);
+
+// ===== Số lượng cạnh từng mục sidebar =====
+// { <ten-route>: { tong, moi } } lấy trực tiếp từ CSDL (xem AdminApiController.sidebarCounts).
+// Trước đây chỉ mục "Đơn hàng" có badge, và còn đếm trên mảng ORDERS đã nạp ở client nên hiện
+// 0 cho tới khi trang Đơn hàng được mở lần đầu. Nay mọi mục có dữ liệu đều cho biết TỔNG số
+// bản ghi, kèm badge nhấn riêng cho phần đang chờ admin xử lý.
+const counts = ref({});
+async function refreshCounts() {
+  try {
+    counts.value = await getSidebarCounts();
+  } catch (e) {
+    /* im lặng — sidebar vẫn dùng được khi không lấy được số */
+  }
+}
+/** Tổng số bản ghi; null = mục này không có số để hiển thị (VD Phân tích, Phí giao hàng). */
+const tongCua = (key) => {
+  const c = counts.value[key];
+  return c && c.tong > 0 ? c.tong : null;
+};
+/** Số đang chờ xử lý; null = không có việc tồn. */
+const moiCua = (key) => {
+  const c = counts.value[key];
+  return c && c.moi > 0 ? c.moi : null;
+};
 const initials = computed(() =>
   initialsOf(auth.displayName || 'Quản trị viên'),
 );
@@ -560,8 +598,15 @@ let pollTimer = null;
 onMounted(() => {
   loadAdminData();
   refreshUnreadCount();
-  pollTimer = setInterval(refreshUnreadCount, 30000);
+  refreshCounts();
+  pollTimer = setInterval(() => {
+    refreshUnreadCount();
+    refreshCounts();
+  }, 30000);
 });
+// Vừa xử lý xong 1 việc (duyệt đơn, trả lời liên hệ...) rồi chuyển trang -> lấy lại số ngay,
+// không phải chờ hết nhịp 30s mới thấy badge giảm.
+watch(() => route.name, refreshCounts);
 onUnmounted(() => {
   if (pollTimer) clearInterval(pollTimer);
 });

@@ -52,7 +52,7 @@
                                 <form th:action="@{/cart/update}" method="post"
                                       class="d-flex align-items-center gap-1">
                                     <input type="hidden" name="itemId" th:value="${item.id}">
-                                    <input type="number" name="quantity" min="1"
+                                    <input type="number" name="quantity" min="1" max="20"
                                            th:value="${item.soLuong}"
                                            class="form-control form-control-sm text-center"
                                            style="width:70px">

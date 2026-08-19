@@ -27,8 +27,14 @@ const cardStyle = computed(() => ({
   '--ph': props.p.hue,
 }));
 
+// Tồn kho gộp của cả sản phẩm (mọi biến thể — xem CatalogApiService.tonKhoTatCaBienThe). Thẻ
+// sản phẩm không biết khách sẽ chọn phiên bản nào nên chỉ trả lời được câu "còn hàng nào không";
+// khoá theo đúng phiên bản là việc của trang chi tiết.
+const hetHang = computed(() => (props.p.stock ?? 0) <= 0);
+
 function onAdd(e) {
   e.stopPropagation();
+  if (hetHang.value) return;
   flyToCart(e.currentTarget, imageUrl.value);
   emit('add', props.p.id);
 }
@@ -220,6 +226,36 @@ onBeforeUnmount(() => {
       >
         {{ discount }}
       </div>
+
+      <!-- Hết hàng: phủ mờ ảnh + dán nhãn. Trước đây thẻ sản phẩm không phân biệt gì cả, khách
+           bấm "+" xong mới biết là không mua được. -->
+      <div
+        v-if="hetHang"
+        style="
+          position: absolute;
+          inset: 0;
+          background: color-mix(in srgb, var(--card) 62%, transparent);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        "
+      >
+        <span
+          style="
+            font-family: 'Chakra Petch', sans-serif;
+            font-weight: 700;
+            font-size: 11px;
+            letter-spacing: 1.2px;
+            padding: 6px 12px;
+            border-radius: 7px;
+            background: var(--card2);
+            border: 1px solid rgba(var(--line-rgb), 0.28);
+            color: var(--muted2);
+          "
+        >
+          TẠM HẾT HÀNG
+        </span>
+      </div>
     </div>
     <div
       style="
@@ -330,8 +366,10 @@ onBeforeUnmount(() => {
         </div>
         <button
           @click="onAdd"
-          title="Thêm vào giỏ"
+          :disabled="hetHang"
+          :title="hetHang ? 'Tạm hết hàng' : 'Thêm vào giỏ'"
           class="add-btn"
+          :class="{ 'add-btn-off': hetHang }"
           style="
             flex: none;
             width: 40px;
@@ -478,18 +516,21 @@ onBeforeUnmount(() => {
         </button>
         <button
           @click="onAdd"
-          title="Thêm vào giỏ"
+          :disabled="hetHang"
+          :title="hetHang ? 'Tạm hết hàng' : 'Thêm vào giỏ'"
+          :style="{
+            background: hetHang ? 'rgba(var(--line-rgb),0.14)' : 'var(--acc)',
+            color: hetHang ? 'var(--muted)' : 'var(--acc-ink)',
+            cursor: hetHang ? 'not-allowed' : 'pointer',
+          }"
           style="
             flex: none;
             width: 36px;
             height: 36px;
             border: none;
             border-radius: 9px;
-            background: var(--acc);
-            color: var(--acc-ink);
             font-size: 18px;
             line-height: 1;
-            cursor: pointer;
           "
         >
           +
@@ -510,6 +551,13 @@ onBeforeUnmount(() => {
 .add-btn:hover {
   background: var(--acc) !important;
   color: var(--acc-ink) !important;
+}
+/* Hết hàng: nút vẫn ở đúng chỗ (bố cục thẻ không nhảy) nhưng rõ ràng là bấm không được */
+.add-btn-off,
+.add-btn-off:hover {
+  background: rgba(var(--line-rgb), 0.14) !important;
+  color: var(--muted) !important;
+  cursor: not-allowed !important;
 }
 .pcard-preview {
   position: fixed;

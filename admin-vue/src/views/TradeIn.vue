@@ -23,8 +23,12 @@
       Không có yêu cầu nào.
     </div>
 
-    <div v-else style="display: flex; flex-direction: column; gap: 12px">
-      <div v-for="y in ds" :key="y.id" style="background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px">
+    <!-- Chế độ THẺ của DataTable: giữ nguyên thẻ định giá (ảnh hiện trạng + các bước xử lý),
+         nhưng lọc/sắp xếp được y hệt các bảng khác qua dãy chip phía trên. -->
+    <DataTable v-else che-do="the" :columns="cols" :rows="ds" trong="Chưa có yêu cầu thu cũ nào.">
+      <template #the="{ rows }">
+    <div style="display: flex; flex-direction: column; gap: 12px">
+      <div v-for="y in rows" :key="y.id" style="background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px">
         <div style="display: flex; align-items: flex-start; gap: 14px; flex-wrap: wrap">
           <!-- Ảnh hiện trạng -->
           <div style="display: flex; gap: 6px; flex: none">
@@ -122,6 +126,8 @@
         </div>
       </div>
     </div>
+      </template>
+    </DataTable>
 
     <!-- Phóng to ảnh: kỹ thuật cần soi kỹ vết xước trước khi định giá -->
     <Teleport to="body">
@@ -138,6 +144,20 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue';
 import { resolveImageUrl } from '../api/http';
+import DataTable from '../components/DataTable.vue';
+
+// Trường lọc cho chế độ thẻ — cùng phễu Excel như các bảng khác (xem components/DataTable.vue).
+const cols = [
+  { key: 'model', label: 'Máy', text: (y) => [y.hang, y.model].filter(Boolean).join(' ') || '—' },
+  { key: 'loaiThietBi', label: 'Loại thiết bị' },
+  { key: 'tenKhach', label: 'Khách hàng', text: (y) => y.tenKhach || y.soDienThoaiKhach || '—' },
+  { key: 'tinhTrangKhai', label: 'Tình trạng khai' },
+  { key: 'namMua', label: 'Năm mua', kieu: 'so', text: (y) => (y.namMua ? String(y.namMua) : '—') },
+  { key: 'giaTamTinh', label: 'Giá tạm tính', kieu: 'so', text: (y) => tien(y.giaTamTinh) },
+  { key: 'giaChot', label: 'Giá chốt', kieu: 'so', text: (y) => tien(y.giaChot) },
+  { key: 'trangThai', label: 'Trạng thái', text: (y) => y.nhanTrangThai || y.trangThai },
+  { key: 'createdAt', label: 'Ngày gửi', kieu: 'ngay' },
+];
 import {
   getTradeIns, baoGiaTradeIn, chotGiaTradeIn, capTinDungTradeIn, doiTrangThaiTradeIn,
 } from '../api/admin';

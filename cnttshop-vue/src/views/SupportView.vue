@@ -10,24 +10,36 @@ const chatEl = ref(null);
 // Kênh chat trực tuyến — mở Zalo/Messenger ở tab mới (không có hạ tầng chat nội bộ nên dùng kênh
 // sẵn có, giống trang Liên hệ). Hai luồng tách bạch: tư vấn viên (mua hàng) và kỹ thuật viên
 // (sự cố kỹ thuật/bảo hành) để định tuyến đúng người ngay từ đầu.
+const HOTLINE = '0835344974';
 const CHAT = [
   {
     icon: '💬',
     ten: 'Chat với tư vấn viên',
     mo: 'Tư vấn chọn máy, cấu hình, giá và khuyến mãi. Trực 8:00–22:00 mỗi ngày.',
     nut: 'Nhắn Zalo tư vấn',
-    href: 'https://zalo.me/0835344974',
+    href: 'https://zalo.me/' + HOTLINE,
   },
   {
     icon: '🔧',
     ten: 'Chat với kỹ thuật viên',
     mo: 'Hỏi về sự cố máy, tương thích linh kiện, tình trạng bảo hành và sửa chữa.',
     nut: 'Nhắn Zalo kỹ thuật',
-    href: 'https://zalo.me/0835344974',
+    href: 'https://zalo.me/' + HOTLINE,
+  },
+  {
+    icon: '📞',
+    ten: 'Gọi tổng đài',
+    mo: 'Cần trả lời ngay thì gọi thẳng 0835 344 974, không phải chờ tin nhắn.',
+    nut: 'Gọi 0835 344 974',
+    href: 'tel:' + HOTLINE,
   },
 ];
+
+/** tel: phải điều hướng CÙNG tab — window.open('tel:...') mở tab trắng rồi tự đóng trên phần
+ * lớn trình duyệt, khách tưởng nút hỏng. Link zalo/messenger thì vẫn mở tab mới như cũ. */
 function moChat(href) {
-  window.open(href, '_blank', 'noopener');
+  if (href.startsWith('tel:')) window.location.href = href;
+  else window.open(href, '_blank', 'noopener');
 }
 
 // Trang chủ hỗ trợ: ô tìm kiếm dẫn thẳng sang FAQ + các ô dịch vụ lớn + câu hỏi nổi bật.

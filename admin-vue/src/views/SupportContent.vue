@@ -33,65 +33,38 @@
         </div>
 
         <div class="tbl-wrap">
-          <table class="tbl">
-            <thead>
-              <tr>
-                <th style="min-width: 200px">Tên</th>
-                <th style="min-width: 220px">Địa chỉ</th>
-                <th style="width: 130px">Liên hệ</th>
-                <th style="width: 150px">Nhận sửa</th>
-                <th style="width: 100px">Trạng thái</th>
-                <th style="width: 110px"></th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="c in centers" :key="c.id">
-                <td>
-                  <div style="font-weight: 600; color: var(--text)">{{ c.ten }}</div>
-                  <div style="font-size: 11.5px; color: var(--muted); margin-top: 3px">
-                    {{ c.loai === 'uy_quyen' ? 'Uỷ quyền' : 'Chi nhánh' }}
-                    <span v-if="!c.hienThi" style="color: var(--danger, #ff5d7a)"> · đang ẩn</span>
-                    <span v-if="c.lat == null" style="color: var(--warn, #f5a524)"> · chưa cắm toạ độ</span>
-                  </div>
-                </td>
-                <td style="color: var(--muted2)">
-                  {{ c.diaChi }}
-                  <div v-if="c.tenTinh" style="font-size: 11.5px; color: var(--muted); margin-top: 3px">
-                    {{ c.tenTinh }}
-                  </div>
-                </td>
-                <td style="color: var(--muted2); font-size: 12.3px">
-                  <div v-if="c.dienThoai">{{ c.dienThoai }}</div>
-                  <div v-if="c.gioMoCua" style="font-size: 11.3px; color: var(--muted); margin-top: 3px">
-                    {{ c.gioMoCua }}
-                  </div>
-                </td>
-                <td>
-                  <div style="display: flex; gap: 4px; flex-wrap: wrap">
-                    <span v-for="d in c.dichVu" :key="d" class="mini-tag">{{ tenLoai(d) }}</span>
-                  </div>
-                </td>
-                <td>
-                  <span class="badge" :style="c.nhanDatLich ? okStyle : offStyle">
-                    {{ c.nhanDatLich ? 'Nhận lịch' : 'Không nhận' }}
-                  </span>
-                </td>
-                <td>
-                  <div style="display: flex; gap: 6px; justify-content: flex-end">
-                    <button v-if="coQuyen('edit')" class="ico-btn" @click="moForm('center', c)">
-                      <i class="bi bi-pencil"></i>
-                    </button>
-                    <button v-if="coQuyen('delete')" class="ico-btn danger" @click="xoa('center', c)">
-                      <i class="bi bi-trash"></i>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-              <tr v-if="!centers.length">
-                <td colspan="6" class="empty">Chưa có trung tâm nào.</td>
-              </tr>
-            </tbody>
-          </table>
+          <DataTable :columns="centerCols" :rows="centers" :tim-kiem="ui.search" trong="Chưa có trung tâm nào.">
+            <template #o-ten="{ row: c }">
+              <div style="font-weight: 600; color: var(--text)">{{ c.ten }}</div>
+              <div style="font-size: 11.5px; color: var(--muted); margin-top: 3px">
+                {{ c.loai === 'uy_quyen' ? 'Uỷ quyền' : 'Chi nhánh' }}
+                <span v-if="!c.hienThi" style="color: var(--danger, #ff5d7a)"> · đang ẩn</span>
+                <span v-if="c.lat == null" style="color: var(--warn, #f5a524)"> · chưa cắm toạ độ</span>
+              </div>
+            </template>
+            <template #o-diaChi="{ row: c }">
+              <span style="color: var(--muted2)">{{ c.diaChi }}</span>
+              <div v-if="c.tenTinh" style="font-size: 11.5px; color: var(--muted); margin-top: 3px">{{ c.tenTinh }}</div>
+            </template>
+            <template #o-dienThoai="{ row: c }">
+              <div v-if="c.dienThoai" style="color: var(--muted2); font-size: 12.3px">{{ c.dienThoai }}</div>
+              <div v-if="c.gioMoCua" style="font-size: 11.3px; color: var(--muted); margin-top: 3px">{{ c.gioMoCua }}</div>
+            </template>
+            <template #o-dichVu="{ row: c }">
+              <div style="display: flex; gap: 4px; flex-wrap: wrap">
+                <span v-for="d in c.dichVu" :key="d" class="mini-tag">{{ tenLoai(d) }}</span>
+              </div>
+            </template>
+            <template #o-nhanDatLich="{ row: c }">
+              <span class="badge" :style="c.nhanDatLich ? okStyle : offStyle">{{ c.nhanDatLich ? 'Nhận lịch' : 'Không nhận' }}</span>
+            </template>
+            <template #o-thaoTac="{ row: c }">
+            <div style="display: flex; gap: 6px; justify-content: flex-end">
+              <button v-if="coQuyen('edit')" class="ico-btn" @click="moForm('center', c)"><i class="bi bi-pencil"></i></button>
+              <button v-if="coQuyen('delete')" class="ico-btn danger" @click="xoa('center', c)"><i class="bi bi-trash"></i></button>
+            </div>
+            </template>
+          </DataTable>
         </div>
       </section>
 
@@ -111,59 +84,27 @@
         </div>
 
         <div class="tbl-wrap">
-          <table class="tbl">
-            <thead>
-              <tr>
-                <th style="width: 120px">Thiết bị</th>
-                <th style="min-width: 200px">Hạng mục</th>
-                <th style="width: 110px; text-align: right">Linh kiện</th>
-                <th style="width: 100px; text-align: right">Tiền công</th>
-                <th style="width: 110px; text-align: right">Giá đến</th>
-                <th style="width: 100px">Thời gian</th>
-                <th style="width: 70px; text-align: center">BH</th>
-                <th style="width: 90px; text-align: center">Hiện</th>
-                <th style="width: 110px"></th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="g in prices" :key="g.id">
-                <td><span class="mini-tag">{{ tenLoai(g.loaiThietBi) }}</span></td>
-                <td>
-                  <div style="font-weight: 600; color: var(--text)">{{ g.tenLoi }}</div>
-                  <div v-if="g.ghiChu" style="font-size: 11.5px; color: var(--muted); margin-top: 3px">
-                    {{ g.ghiChu }}
-                  </div>
-                </td>
-                <td style="text-align: right; color: var(--muted2)">{{ fmt(g.giaLinhKien) }}</td>
-                <td style="text-align: right; color: var(--muted2)">{{ fmt(g.tienCong) }}</td>
-                <td style="text-align: right; color: var(--text); font-weight: 600">
-                  {{ g.giaDen != null ? fmt(g.giaDen) : '—' }}
-                </td>
-                <td style="color: var(--muted2); font-size: 12.3px">{{ g.thoiGianDuKien || '—' }}</td>
-                <td style="text-align: center; color: var(--muted2); font-size: 12.3px">
-                  {{ g.baoHanhThang }}t
-                </td>
-                <td style="text-align: center">
-                  <span class="badge" :style="g.hienThi ? okStyle : offStyle">
-                    {{ g.hienThi ? 'Đang hiện' : 'Đang ẩn' }}
-                  </span>
-                </td>
-                <td>
-                  <div style="display: flex; gap: 6px; justify-content: flex-end">
-                    <button v-if="coQuyen('edit')" class="ico-btn" @click="moForm('price', g)">
-                      <i class="bi bi-pencil"></i>
-                    </button>
-                    <button v-if="coQuyen('delete')" class="ico-btn danger" @click="xoa('price', g)">
-                      <i class="bi bi-trash"></i>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-              <tr v-if="!prices.length">
-                <td colspan="9" class="empty">Chưa có hạng mục sửa chữa nào.</td>
-              </tr>
-            </tbody>
-          </table>
+          <DataTable :columns="priceCols" :rows="prices" :tim-kiem="ui.search" trong="Chưa có hạng mục sửa chữa nào.">
+            <template #o-loaiThietBi="{ row: g }"><span class="mini-tag">{{ tenLoai(g.loaiThietBi) }}</span></template>
+            <template #o-tenLoi="{ row: g }">
+              <div style="font-weight: 600; color: var(--text)">{{ g.tenLoi }}</div>
+              <div v-if="g.ghiChu" style="font-size: 11.5px; color: var(--muted); margin-top: 3px">{{ g.ghiChu }}</div>
+            </template>
+            <template #o-giaLinhKien="{ row: g }"><span style="color: var(--muted2)">{{ fmt(g.giaLinhKien) }}</span></template>
+            <template #o-tienCong="{ row: g }"><span style="color: var(--muted2)">{{ fmt(g.tienCong) }}</span></template>
+            <template #o-giaDen="{ row: g }"><span style="font-weight: 600">{{ g.giaDen != null ? fmt(g.giaDen) : '—' }}</span></template>
+            <template #o-thoiGianDuKien="{ row: g }"><span style="color: var(--muted2); font-size: 12.3px">{{ g.thoiGianDuKien || '—' }}</span></template>
+            <template #o-baoHanhThang="{ row: g }"><span style="color: var(--muted2); font-size: 12.3px">{{ g.baoHanhThang }}t</span></template>
+            <template #o-hienThi="{ row: g }">
+              <span class="badge" :style="g.hienThi ? okStyle : offStyle">{{ g.hienThi ? 'Đang hiện' : 'Đang ẩn' }}</span>
+            </template>
+            <template #o-thaoTac="{ row: g }">
+            <div style="display: flex; gap: 6px; justify-content: flex-end">
+              <button v-if="coQuyen('edit')" class="ico-btn" @click="moForm('price', g)"><i class="bi bi-pencil"></i></button>
+              <button v-if="coQuyen('delete')" class="ico-btn danger" @click="xoa('price', g)"><i class="bi bi-trash"></i></button>
+            </div>
+            </template>
+          </DataTable>
         </div>
       </section>
 
@@ -183,40 +124,18 @@
         </div>
 
         <div class="tbl-wrap">
-          <table class="tbl">
-            <thead>
-              <tr>
-                <th style="min-width: 200px">Nhóm hàng</th>
-                <th style="width: 100px; text-align: center">Thời hạn</th>
-                <th style="width: 160px">Tính từ</th>
-                <th style="min-width: 240px">Ghi chú</th>
-                <th style="width: 110px"></th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="p in policies" :key="p.id">
-                <td style="font-weight: 600; color: var(--text)">{{ p.nhomHang }}</td>
-                <td style="text-align: center">
-                  <span class="badge" :style="accStyle">{{ p.soThang }} tháng</span>
-                </td>
-                <td style="color: var(--muted2); font-size: 12.5px">{{ p.tinhTu }}</td>
-                <td style="color: var(--muted2); font-size: 12.5px; line-height: 1.55">{{ p.moTa }}</td>
-                <td>
-                  <div style="display: flex; gap: 6px; justify-content: flex-end">
-                    <button v-if="coQuyen('edit')" class="ico-btn" @click="moForm('policy', p)">
-                      <i class="bi bi-pencil"></i>
-                    </button>
-                    <button v-if="coQuyen('delete')" class="ico-btn danger" @click="xoa('policy', p)">
-                      <i class="bi bi-trash"></i>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-              <tr v-if="!policies.length">
-                <td colspan="5" class="empty">Chưa có chính sách nào.</td>
-              </tr>
-            </tbody>
-          </table>
+          <DataTable :columns="policyCols" :rows="policies" :tim-kiem="ui.search" trong="Chưa có chính sách nào.">
+            <template #o-nhomHang="{ row: p }"><span style="font-weight: 600; color: var(--text)">{{ p.nhomHang }}</span></template>
+            <template #o-soThang="{ row: p }"><span class="badge" :style="accStyle">{{ p.soThang }} tháng</span></template>
+            <template #o-tinhTu="{ row: p }"><span style="color: var(--muted2); font-size: 12.5px">{{ p.tinhTu }}</span></template>
+            <template #o-moTa="{ row: p }"><span style="color: var(--muted2); font-size: 12.5px; line-height: 1.55">{{ p.moTa }}</span></template>
+            <template #o-thaoTac="{ row: p }">
+            <div style="display: flex; gap: 6px; justify-content: flex-end">
+              <button v-if="coQuyen('edit')" class="ico-btn" @click="moForm('policy', p)"><i class="bi bi-pencil"></i></button>
+              <button v-if="coQuyen('delete')" class="ico-btn danger" @click="xoa('policy', p)"><i class="bi bi-trash"></i></button>
+            </div>
+            </template>
+          </DataTable>
         </div>
       </section>
 
@@ -235,56 +154,26 @@
         </div>
 
         <div class="tbl-wrap">
-          <table class="tbl">
-            <thead>
-              <tr>
-                <th style="width: 170px">Danh mục</th>
-                <th style="min-width: 300px">Câu hỏi</th>
-                <th style="width: 90px; text-align: center">Nổi bật</th>
-                <th style="width: 90px; text-align: center">Lượt xem</th>
-                <th style="width: 110px"></th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="f in faqs" :key="f.id">
-                <td><span class="mini-tag">{{ f.tenDanhMuc }}</span></td>
-                <td>
-                  <div style="font-weight: 600; color: var(--text)">{{ f.cauHoi }}</div>
-                  <div
-                    style="
-                      font-size: 11.8px;
-                      color: var(--muted);
-                      margin-top: 4px;
-                      display: -webkit-box;
-                      -webkit-line-clamp: 2;
-                      -webkit-box-orient: vertical;
-                      overflow: hidden;
-                    "
-                  >
-                    {{ f.traLoi }}
-                  </div>
-                </td>
-                <td style="text-align: center">
-                  <span v-if="f.noiBat" class="badge" :style="accStyle">Nổi bật</span>
-                  <span v-else style="color: var(--muted)">—</span>
-                </td>
-                <td class="mono" style="text-align: center; color: var(--muted2)">{{ f.luotXem }}</td>
-                <td>
-                  <div style="display: flex; gap: 6px; justify-content: flex-end">
-                    <button v-if="coQuyen('edit')" class="ico-btn" @click="moForm('faq', f)">
-                      <i class="bi bi-pencil"></i>
-                    </button>
-                    <button v-if="coQuyen('delete')" class="ico-btn danger" @click="xoa('faq', f)">
-                      <i class="bi bi-trash"></i>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-              <tr v-if="!faqs.length">
-                <td colspan="5" class="empty">Chưa có câu hỏi nào.</td>
-              </tr>
-            </tbody>
-          </table>
+          <DataTable :columns="faqCols" :rows="faqs" :tim-kiem="ui.search" trong="Chưa có câu hỏi nào.">
+            <template #o-tenDanhMuc="{ row: f }"><span class="mini-tag">{{ f.tenDanhMuc }}</span></template>
+            <template #o-cauHoi="{ row: f }">
+              <div style="font-weight: 600; color: var(--text)">{{ f.cauHoi }}</div>
+              <div style="font-size: 11.8px; color: var(--muted); margin-top: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden">
+                {{ f.traLoi }}
+              </div>
+            </template>
+            <template #o-noiBat="{ row: f }">
+              <span v-if="f.noiBat" class="badge" :style="accStyle">Nổi bật</span>
+              <span v-else style="color: var(--muted)">—</span>
+            </template>
+            <template #o-luotXem="{ row: f }"><span class="mono" style="color: var(--muted2)">{{ f.luotXem }}</span></template>
+            <template #o-thaoTac="{ row: f }">
+            <div style="display: flex; gap: 6px; justify-content: flex-end">
+              <button v-if="coQuyen('edit')" class="ico-btn" @click="moForm('faq', f)"><i class="bi bi-pencil"></i></button>
+              <button v-if="coQuyen('delete')" class="ico-btn danger" @click="xoa('faq', f)"><i class="bi bi-trash"></i></button>
+            </div>
+            </template>
+          </DataTable>
         </div>
       </section>
     </template>
@@ -454,6 +343,45 @@ import {
   getFaqItems, getFaqCategories, createFaqItem, updateFaqItem, deleteFaqItem,
   getProvinces,
 } from '../api/admin';
+import { ui } from '../uiState';
+import DataTable from '../components/DataTable.vue';
+
+// Cột cho 4 bảng của trang — mỗi cột có phễu lọc/sắp xếp kiểu Excel (xem components/DataTable.vue).
+const centerCols = [
+  { key: 'ten', label: 'Tên', width: '200px',
+    text: (c) => c.ten + ' · ' + (c.loai === 'uy_quyen' ? 'Uỷ quyền' : 'Chi nhánh') },
+  { key: 'diaChi', label: 'Địa chỉ', width: '220px', text: (c) => c.diaChi + (c.tenTinh ? ' · ' + c.tenTinh : '') },
+  { key: 'dienThoai', label: 'Liên hệ', width: '130px', text: (c) => c.dienThoai || '—' },
+  { key: 'dichVu', label: 'Nhận sửa', width: '150px',
+    text: (c) => (c.dichVu || []).map(tenLoai).join(', ') || '—' },
+  { key: 'nhanDatLich', label: 'Trạng thái', width: '100px', text: (c) => (c.nhanDatLich ? 'Nhận lịch' : 'Không nhận') },
+  { key: 'thaoTac', label: '', width: '110px', align: 'right', loc: false },
+];
+const priceCols = [
+  { key: 'loaiThietBi', label: 'Thiết bị', width: '120px', text: (g) => tenLoai(g.loaiThietBi) },
+  { key: 'tenLoi', label: 'Hạng mục', width: '200px' },
+  { key: 'giaLinhKien', label: 'Linh kiện', width: '110px', align: 'right', kieu: 'so', text: (g) => fmt(g.giaLinhKien) },
+  { key: 'tienCong', label: 'Tiền công', width: '100px', align: 'right', kieu: 'so', text: (g) => fmt(g.tienCong) },
+  { key: 'giaDen', label: 'Giá đến', width: '110px', align: 'right', kieu: 'so', text: (g) => (g.giaDen != null ? fmt(g.giaDen) : '—') },
+  { key: 'thoiGianDuKien', label: 'Thời gian', width: '100px', text: (g) => g.thoiGianDuKien || '—' },
+  { key: 'baoHanhThang', label: 'BH', width: '70px', align: 'center', kieu: 'so', text: (g) => g.baoHanhThang + 't' },
+  { key: 'hienThi', label: 'Hiện', width: '90px', align: 'center', text: (g) => (g.hienThi ? 'Đang hiện' : 'Đang ẩn') },
+  { key: 'thaoTac', label: '', width: '110px', align: 'right', loc: false },
+];
+const policyCols = [
+  { key: 'nhomHang', label: 'Nhóm hàng', width: '200px' },
+  { key: 'soThang', label: 'Thời hạn', width: '100px', align: 'center', kieu: 'so', text: (p) => p.soThang + ' tháng' },
+  { key: 'tinhTu', label: 'Tính từ', width: '160px' },
+  { key: 'moTa', label: 'Ghi chú', width: '240px' },
+  { key: 'thaoTac', label: '', width: '110px', align: 'right', loc: false },
+];
+const faqCols = [
+  { key: 'tenDanhMuc', label: 'Danh mục', width: '170px' },
+  { key: 'cauHoi', label: 'Câu hỏi', width: '300px', text: (f) => f.cauHoi + ' ' + (f.traLoi || '') },
+  { key: 'noiBat', label: 'Nổi bật', width: '90px', align: 'center', text: (f) => (f.noiBat ? 'Nổi bật' : '—') },
+  { key: 'luotXem', label: 'Lượt xem', width: '90px', align: 'center', kieu: 'so' },
+  { key: 'thaoTac', label: '', width: '110px', align: 'right', loc: false },
+];
 
 const permissions = usePermissionsStore();
 const coQuyen = (p) => permissions.hasPerm('support_content', p);

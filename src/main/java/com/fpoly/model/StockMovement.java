@@ -35,6 +35,12 @@ public class StockMovement {
     @JoinColumn(name = "created_by")
     private NguoiDung createdBy;
 
+    // Dòng sổ kho này sinh ra từ phiếu nhập nào (NULL nếu là điều chỉnh tay / gộp sản phẩm).
+    // Có nó thì từ lịch sử tồn kho của một biến thể mở ngược ra được chứng từ gốc để đối chiếu.
+    @ManyToOne
+    @JoinColumn(name = "receipt_id")
+    private GoodsReceipt receipt;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
 
@@ -61,4 +67,7 @@ public class StockMovement {
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    public GoodsReceipt getReceipt() { return receipt; }
+    public void setReceipt(GoodsReceipt receipt) { this.receipt = receipt; }
 }

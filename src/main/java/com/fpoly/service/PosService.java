@@ -11,6 +11,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.fpoly.dto.PosDtos;
 import com.fpoly.dto.PosDtos.PosCouponDto;
 import com.fpoly.dto.PosDtos.PosDongHangDto;
 import com.fpoly.dto.PosDtos.PosDongHangRequest;
@@ -70,6 +71,10 @@ public class PosService {
     @Autowired private WarrantyService warrantyService;
     @Autowired private NotificationService notificationService;
     @Autowired private PasswordEncoder passwordEncoder;
+    @Autowired private TonKhoService tonKhoService;
+    @Autowired private FlashSaleService flashSaleService;
+    @Autowired private SubscriptionService subscriptionService;
+    @Autowired private com.fpoly.repository.InstallmentPlanRepository installmentPlanRepo;
 
     /** Địa chỉ gốc dùng để dựng link thanh toán in vào mã QR trên màn hình phụ.
      *
@@ -175,7 +180,76 @@ public class PosService {
                         c.getHetHanLuc()))
                 .toList();
 
-        return new PosUuDaiDto(khuyenMai, tangKem, coupons);
+        return new PosUuDaiDto(khuyenMai, tangKem, coupons,
+                flashSaleDangChay(), hangThanhVien(), goiHoiVien(), traGop());
+    }
+
+    // ==================== Chương trình ưu đãi ở tầm CỬA HÀNG ====================
+    // Bốn nhóm dưới đây KHÔNG gắn với sản phẩm nào trong giỏ — chúng là chính sách chung mà nhân
+    // viên phải đọc được cho khách ngay tại quầy ("mua thêm bao nhiêu thì lên hạng Vàng?", "gói
+    // CNTT Care có gì?", "trả góp 12 tháng lãi bao nhiêu?"). Trước đây thanh ưu đãi POS không có
+    // gì trong số này nên nhân viên phải đoán hoặc gọi hỏi admin.
+
+    /** Đợt Flash Sale đang chạy, null nếu không có. Đọc lại đúng nguồn khách đang thấy. */
+    private PosDtos.PosFlashSaleDto flashSaleDangChay() {
+        var dot = flashSaleService.dangChay();
+        if (dot == null) return null;
+        List<PosDtos.PosFlashSaleItemDto> items = dot.sanPham().stream()
+                .map(i -> new PosDtos.PosFlashSaleItemDto(
+                        i.variantId(), i.productName(), i.sku(),
+                        i.giaGoc(), i.giaSale(), i.phanTramGiam(), i.stock()))
+                .toList();
+        return new PosDtos.PosFlashSaleDto(dot.tieuDe(), dot.batDauLuc(), dot.ketThucLuc(), items);
+    }
+
+    /** Hạng tích luỹ — mốc chi tiêu quy từ mốc xu theo tỉ giá KIẾM (xem MembershipTier). */
+    private List<PosDtos.PosHangThanhVienDto> hangThanhVien() {
+        List<PosDtos.PosHangThanhVienDto> ra = new ArrayList<>();
+        for (MembershipTier t : MembershipTier.values()) {
+            // Mốc lên hạng lưu bằng XU, quy ra tiền theo tỉ giá KIẾM (10.000đ = 1 xu) để nhân
+            // viên đọc cho khách bằng con số họ hiểu được.
+            BigDecimal mucChi = BigDecimal.valueOf(t.getXuToiThieu()).multiply(new BigDecimal("10000"));
+            StringBuilder mo = new StringBuilder();
+            if (t.getPhanTramGiamDon() > 0) mo.append("Giảm ").append(t.getPhanTramGiamDon()).append("% mọi đơn");
+            if (t.isMienPhiNoiThanh()) mo.append(mo.length() > 0 ? " · " : "").append("Miễn phí giao nội thành");
+            if (t.getPhanTramGiamPhiLienTinh() > 0) {
+                mo.append(mo.length() > 0 ? " · " : "")
+                  .append("Giảm ").append(t.getPhanTramGiamPhiLienTinh()).append("% phí liên tỉnh");
+            }
+            ra.add(new PosDtos.PosHangThanhVienDto(t.getTenHienThi(), mucChi,
+                    t.getPhanTramGiamDon(), mo.length() == 0 ? "Hạng khởi đầu" : mo.toString()));
+        }
+        return ra;
+    }
+
+    /** Gói CNTT Care (TRẢ PHÍ) — khác hẳn hạng tích luỹ ở trên, hay bị nhầm nên tách riêng. */
+    private List<PosDtos.PosGoiHoiVienDto> goiHoiVien() {
+        return subscriptionService.danhSachGoi().stream().map(p -> {
+            List<String> ql = new ArrayList<>();
+            if (Boolean.TRUE.equals(p.getFreeInnerShipping())) ql.add("Miễn phí giao nội thành");
+            if (Boolean.TRUE.equals(p.getFreeExpressInner())) ql.add("Miễn phí giao hoả tốc nội thành");
+            if (soNguyen(p.getInterprovinceQuota()) > 0) ql.add(p.getInterprovinceQuota() + " lượt free ship liên tỉnh");
+            if (Boolean.TRUE.equals(p.getWarrantyPriority())) ql.add("Ưu tiên bảo hành");
+            if (soNguyen(p.getCleaningQuota()) > 0) ql.add(p.getCleaningQuota() + " lượt vệ sinh máy");
+            if (Boolean.TRUE.equals(p.getThermalPaste())) ql.add("Tra keo tản nhiệt miễn phí");
+            if (soNguyen(p.getOnsiteWarrantyQuota()) > 0) ql.add(p.getOnsiteWarrantyQuota() + " lượt bảo hành tận nơi");
+            if (soNguyen(p.getLoanerQuota()) > 0) ql.add(p.getLoanerQuota() + " lượt mượn máy");
+            if (Boolean.TRUE.equals(p.getFlashSaleEarly())) ql.add("Vào Flash Sale sớm");
+            if (Boolean.TRUE.equals(p.getPcBuildConsult())) ql.add("Tư vấn build PC riêng");
+            return new PosDtos.PosGoiHoiVienDto(p.getCode(), p.getName(), p.getPrice(),
+                    p.getDurationMonths(), ql);
+        }).toList();
+    }
+
+    private int soNguyen(Integer n) {
+        return n == null ? 0 : n;
+    }
+
+    /** Kỳ hạn trả góp đang mở. */
+    private List<PosDtos.PosTraGopDto> traGop() {
+        return installmentPlanRepo.findByActiveTrueOrderBySoThangAsc().stream()
+                .map(p -> new PosDtos.PosTraGopDto(p.getSoThang(), p.getLaiSuat()))
+                .toList();
     }
 
     // ==================== Chốt đơn ====================
@@ -250,10 +324,15 @@ public class PosService {
         // Khách cầm hàng về ngay tại quầy -> đơn kết thúc luôn, không qua chuỗi giao hàng.
         order.setTrangThai("delivered");
 
+        // Giữ hàng bằng UPDATE có điều kiện (xem TonKhoService): quầy và web bán chung một kho,
+        // nhân viên quét món cuối cùng đúng lúc khách online đặt thì phải có một bên trượt.
         for (OrderItem oi : chiTiet) {
             oi.setOrder(order);
             ProductVariant v = oi.getVariant();
-            if (v.getStock() != null) v.setStock(v.getStock() - oi.getSoLuong());
+            if (!tonKhoService.giuHang(v, oi.getSoLuong())) {
+                throw new RuntimeException("Sản phẩm \"" + oi.getTenSanPham()
+                        + "\" vừa hết hàng (đơn online khác đã lấy). Kiểm tra lại kho trước khi bán.");
+            }
         }
         order.setChiTiet(chiTiet);
 

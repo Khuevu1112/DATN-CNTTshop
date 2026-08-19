@@ -223,25 +223,74 @@ export const productById = (id) => products.find((p) => p.id === id);
  * KHÔNG khớp nếu có workstation/full bộ) — cần vì 1 số cụm từ khoá (VD "rtx") vốn dùng để suy ra
  * PC Gaming lại trùng với PC Workstation/Ảo hoá/Full bộ (cùng dùng card RTX rời), nếu không loại
  * trừ thì các dòng đó sẽ bị đếm/lẫn luôn vào "PC Gaming". */
+/** Bỏ dấu tiếng Việt + hạ chữ thường. Ô tìm kiếm gần như không ai gõ đủ dấu ("man hinh",
+ * "chuot gaming", "ban phim co") trong khi tên sản phẩm trong CSDL thì luôn có dấu — không
+ * chuẩn hoá thì mọi truy vấn kiểu đó trả về rỗng. */
+export function boDau(s) {
+  return String(s || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(new RegExp('[\u0300-\u036f]', 'g'), '')
+    .replace(/đ/g, 'd');
+}
+
+/** Chuỗi "cỏ khô" của 1 sản phẩm để so khớp: tên + hãng + tên danh mục + thông số, đã bỏ dấu.
+ * Có tên danh mục để gõ "man hinh" / "ngoai vi" ra đúng nhóm hàng dù tên sản phẩm không chứa
+ * cụm đó; có specs vì nhiều model thật (VD "MSI Thin 13UC") chỉ lộ phân khúc qua CPU/GPU. */
+function coKho(p) {
+  if (p._coKho) return p._coKho;
+  const tenDanhMuc = (catMeta[p.cat] && catMeta[p.cat].vn) || '';
+  const specText = (p.specs || []).map((s) => s.v || '').join(' ');
+  const ra = boDau([p.name, p.brand, tenDanhMuc, p.cat, specText].join(' '));
+  // Cache trên chính object sản phẩm — ô tìm kiếm gợi ý chạy trên MỖI phím gõ, tính lại chuỗi
+  // này cho cả nghìn sản phẩm mỗi lần là lãng phí thấy rõ.
+  Object.defineProperty(p, '_coKho', { value: ra, enumerable: false, configurable: true, writable: true });
+  return ra;
+}
+
+/** So khớp theo TỪ KHOÁ PHÂN KHÚC (CATEGORY_SEGMENTS) — cú pháp riêng do dự án tự định nghĩa:
+ *   "a|b" = a HOẶC b; "a+b" = a VÀ b; "...!x|y" = loại trừ x hoặc y.
+ * Mỗi phần vẫn so khớp NGUYÊN CỤM như trước (không tự tách theo khoảng trắng): các từ khoá này
+ * được soạn tay theo đúng ngữ nghĩa đó, tách ra sẽ làm "ảo hóa" khớp nhầm bất cứ tên nào chứa
+ * "ao" và "hoa" rời rạc. Điểm DUY NHẤT đổi so với trước: so khớp trên bản bỏ dấu, để dữ liệu
+ * nhập thiếu dấu cũng vào đúng phân khúc. */
 export function matchesQuery(p, q) {
   if (!q || !q.trim()) return true;
   const [includePart, excludePart] = q.split('!');
-  const name = (p.name || '').toLowerCase();
-  const brand = (p.brand || '').toLowerCase();
-  const specText = (p.specs || []).map((s) => s.v || '').join(' ').toLowerCase();
-  const hay = (t) => name.includes(t) || brand.includes(t) || specText.includes(t);
-  // Cú pháp: "a|b" = a HOẶC b; "a+b" = a VÀ b (dùng cho lọc kiểu "chuột gaming" = chuột VÀ
-  // gaming, vì tên sản phẩm ngoại vi lẫn lộn nhiều loại trong một danh mục). Nhóm OR tách bằng
-  // '|', trong mỗi nhóm các phần AND tách bằng '+'.
-  const groups = includePart.toLowerCase().split('|').map((s) => s.trim()).filter(Boolean);
-  const included = groups.some((g) =>
-    g.split('+').map((s) => s.trim()).filter(Boolean).every((t) => hay(t)));
-  if (!included) return false;
+  const hay = coKho(p);
+  const groups = includePart.split('|').map((g) => g.trim()).filter(Boolean);
+  const khopNhom = (g) => boDau(g).split('+').map((t) => t.trim()).filter(Boolean)
+    .every((t) => hay.includes(t));
+  if (!groups.some(khopNhom)) return false;
   if (excludePart) {
-    const excludeTerms = excludePart.toLowerCase().split('|').map((s) => s.trim()).filter(Boolean);
-    if (excludeTerms.some((t) => name.includes(t) || brand.includes(t) || specText.includes(t))) return false;
+    const loaiTru = excludePart.split('|').map((g) => g.trim()).filter(Boolean);
+    if (loaiTru.some((g) => hay.includes(boDau(g)))) return false;
   }
   return true;
+}
+
+/** So khớp CÂU TÌM KIẾM TỰ DO của khách (ô tìm kiếm trên header).
+ *
+ * Khác hẳn matchesQuery ở trên: mọi từ cách nhau bằng khoảng trắng là điều kiện VÀ, không cần
+ * đúng thứ tự. Trước đây ô tìm kiếm dùng chung matchesQuery nên cả câu "laptop asus gaming"
+ * bị coi là MỘT chuỗi con phải xuất hiện nguyên vẹn — không khớp "Laptop Gaming ASUS TUF...",
+ * tức là cứ gõ quá một từ là gần như chắc chắn không ra gì. */
+export function matchesSearch(p, q) {
+  const tu = boDau(q).split(/\s+/).filter(Boolean);
+  if (!tu.length) return true;
+  const hay = coKho(p);
+  return tu.every((t) => hay.includes(t));
+}
+
+/** Điểm liên quan để XẾP HẠNG gợi ý tìm kiếm: khớp ngay đầu tên > khớp trong tên > chỉ khớp
+ * hãng/danh mục/thông số. Số nhỏ hơn = liên quan hơn. */
+export function diemTimKiem(p, q) {
+  const ten = boDau(p.name);
+  const tu = boDau(q).split(/\s+/).filter(Boolean);
+  if (!tu.length) return 3;
+  if (ten.startsWith(tu.join(' '))) return 0;
+  if (tu.every((t) => ten.includes(t))) return 1;
+  return 2;
 }
 
 // ===== Suy ra nhãn EN + màu hue theo tên danh mục =====
@@ -372,6 +421,7 @@ export async function loadDetail(p) {
 
   p.price = basePrice;
   p.specs = (d.specs || []).map((s) => ({ k: s.key, v: s.value }));
+  p._coKho = null; // specs vừa đổi -> bỏ cache chuỗi so khớp (xem coKho)
   p.cfg = cfg.length ? cfg : null;
   p.description = d.description;
   p.promotions = d.promotions || [];
@@ -397,3 +447,23 @@ export function resolveVariantId(p, sel) {
   );
   return (match || p._variants[0]).id;
 }
+
+/** Biến thể ứng với tổ hợp option đang chọn — cần cả object (không chỉ id) để đọc tồn kho
+ * thật của ĐÚNG phiên bản khách đang xem, thay vì tồn gộp của cả sản phẩm. */
+export function resolveVariant(p, sel) {
+  const id = resolveVariantId(p, sel);
+  if (id == null) return null;
+  return (p._variants || []).find((v) => v.id === id) || null;
+}
+
+/** Tồn kho của phiên bản đang chọn. Chưa nạp chi tiết (chưa có _variants) thì lùi về tồn gộp
+ * của sản phẩm — đủ đúng cho thẻ sản phẩm ở danh sách. */
+export function tonKhoDangChon(p, sel) {
+  const v = p && p._variants && p._variants.length ? resolveVariant(p, sel) : null;
+  if (v) return v.stock ?? 0;
+  return p?.stock ?? 0;
+}
+
+/** Ngưỡng cảnh báo "sắp hết hàng" — dưới mức này thì hiện số lượng còn lại để khách biết mà
+ * quyết nhanh, trên mức này chỉ cần biết là còn hàng. */
+export const NGUONG_SAP_HET = 5;

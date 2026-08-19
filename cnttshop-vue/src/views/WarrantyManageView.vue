@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted, watch } from 'vue';
 import { state, actions, accent } from '../store.js';
 import {
   fetchMyWarranties,
@@ -7,6 +7,7 @@ import {
   submitWarrantyRequest,
   fetchServiceCenters,
   fetchMyAppointments,
+  fetchPhamViTanNoi,
 } from '../api.js';
 import { tenLoaiThietBi, ngayVN, isoDate } from '../data/supportMeta.js';
 import { fmt } from '../data/products.js';
@@ -66,6 +67,22 @@ const form = reactive({
 const sending = ref(false);
 const formError = ref('');
 const formOk = ref('');
+
+// ===== Phạm vi phục vụ tận nơi =====
+// Kỹ thuật viên xuất phát từ chi nhánh nên chỉ tỉnh CÓ chi nhánh mới đi tận nơi được. Trước đây
+// form không kiểm gì: khách ở tỉnh không có chi nhánh vẫn chọn được "Bảo hành tận nơi", bị báo
+// phụ phí 150.000đ, rồi mới biết không phục vụ được khi CSKH gọi lại.
+// hoTro === null = chưa xác định (chưa có địa chỉ) -> vẫn cho chọn nhưng nhắc thêm địa chỉ.
+const phamVi = ref(null);
+const tanNoiBiChan = computed(() => phamVi.value?.hoTro === false);
+const tenTinhPhucVu = computed(() =>
+  (phamVi.value?.tinhPhucVu || []).map((t) => t.tenTinh).join(', '));
+
+// Khách đang chọn tận nơi mà sau khi biết là ngoài vùng -> tự kéo về "mang tới cửa hàng" để
+// không có lúc nào form ở trạng thái chắc chắn gửi lỗi.
+watch(tanNoiBiChan, (chan) => {
+  if (chan && form.hinhThuc === 'tan_noi') form.hinhThuc = 'cua_hang';
+});
 
 const ngayToiThieu = isoDate(new Date());
 
@@ -129,13 +146,15 @@ async function tai() {
   }
   dangTai.value = true;
   try {
-    const [ws, cs, appts] = await Promise.all([
+    const [ws, cs, appts, pv] = await Promise.all([
       fetchMyWarranties(),
       fetchServiceCenters().catch(() => []),
       fetchMyAppointments().catch(() => []),
+      fetchPhamViTanNoi().catch(() => null),
     ]);
     warranties.value = ws;
     centers.value = cs;
+    phamVi.value = pv;
     history.value = appts
       .filter((a) => a.trangThai === 'hoan_thanh')
       .sort((a, b) => String(b.ngayHen).localeCompare(String(a.ngayHen)));
@@ -217,11 +236,16 @@ onMounted(tai);
                   <small>Miễn phụ phí</small>
                 </span>
               </label>
-              <label class="bh-radio" :class="{ on: form.hinhThuc === 'tan_noi' }">
-                <input type="radio" value="tan_noi" v-model="form.hinhThuc" />
+              <label
+                class="bh-radio"
+                :class="{ on: form.hinhThuc === 'tan_noi', off: tanNoiBiChan }"
+                :title="tanNoiBiChan ? 'Khu vực của bạn chưa có chi nhánh' : ''"
+              >
+                <input type="radio" value="tan_noi" v-model="form.hinhThuc" :disabled="tanNoiBiChan" />
                 <span>
                   <b>Bảo hành tận nơi</b>
-                  <small>Phụ phí {{ fmt(PHU_PHI_TAN_NOI) }}</small>
+                  <small v-if="tanNoiBiChan">Chưa phục vụ khu vực của bạn</small>
+                  <small v-else>Phụ phí {{ fmt(PHU_PHI_TAN_NOI) }}</small>
                 </span>
               </label>
             </div>
@@ -256,11 +280,24 @@ onMounted(tai);
             </div>
           </div>
 
-          <div
-            v-if="form.hinhThuc === 'tan_noi'"
-            class="sp-alert info"
-            style="margin: 0"
-          >
+          <!-- Ngoài vùng: nói rõ vì sao + phục vụ ở đâu + làm gì thay thế, thay vì chỉ khoá nút -->
+          <div v-if="tanNoiBiChan" class="sp-alert warn" style="margin: 0">
+            Địa chỉ của bạn<template v-if="phamVi?.tenTinhCuaToi"> ({{ phamVi.tenTinhCuaToi }})</template>
+            nằm ngoài phạm vi phục vụ tận nơi — kỹ thuật viên xuất phát từ chi nhánh nên shop chỉ
+            tới tận nơi trong<template v-if="tenTinhPhucVu"> {{ tenTinhPhucVu }}</template>.
+            Bạn có thể mang máy tới cửa hàng gần nhất, hoặc gửi máy về trung tâm bảo hành — gọi
+            <a href="tel:0835344974" style="color: inherit; font-weight: 700">0835 344 974</a>
+            để được hướng dẫn đóng gói và cước gửi.
+          </div>
+
+          <!-- Chưa có địa chỉ nào gắn Tỉnh -> chưa kết luận được, nhắc khách bổ sung trước -->
+          <div v-else-if="form.hinhThuc === 'tan_noi' && phamVi && phamVi.hoTro === null" class="sp-alert info" style="margin: 0">
+            Shop chưa biết bạn ở đâu để cử kỹ thuật viên. Vui lòng thêm địa chỉ trong mục
+            <b>Tài khoản</b> trước khi gửi yêu cầu tận nơi.
+            <template v-if="tenTinhPhucVu"> Hiện shop phục vụ tận nơi tại: {{ tenTinhPhucVu }}.</template>
+          </div>
+
+          <div v-else-if="form.hinhThuc === 'tan_noi'" class="sp-alert info" style="margin: 0">
             Bảo hành tận nơi áp dụng phụ phí {{ fmt(PHU_PHI_TAN_NOI) }} cho chi phí đi lại. Kỹ thuật
             sẽ gọi xác nhận địa chỉ và thời gian.
           </div>
@@ -457,6 +494,12 @@ onMounted(tai);
 .bh-radio.on {
   border-color: var(--acc, #c6ff4a);
   background: color-mix(in srgb, var(--acc, #c6ff4a) 8%, transparent);
+}
+/* Hình thức không khả dụng (VD tận nơi ngoài vùng phục vụ) — vẫn thấy được để khách biết là có
+   dịch vụ đó, nhưng rõ ràng là không chọn được. */
+.bh-radio.off {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 .bh-radio input {
   accent-color: var(--acc, #c6ff4a);

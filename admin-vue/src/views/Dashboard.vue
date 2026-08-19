@@ -299,117 +299,25 @@
             Xem tất cả →
           </button>
         </div>
-        <table style="width: 100%; border-collapse: collapse; font-size: 13px">
-          <thead>
-            <tr>
-              <th
-                style="
-                  text-align: left;
-                  padding: 9px 18px;
-                  font-size: 11px;
-                  font-weight: 600;
-                  color: var(--muted);
-                  text-transform: uppercase;
-                  letter-spacing: 0.4px;
-                "
-              >
-                Mã đơn
-              </th>
-              <th
-                style="
-                  text-align: left;
-                  padding: 9px 12px;
-                  font-size: 11px;
-                  font-weight: 600;
-                  color: var(--muted);
-                  text-transform: uppercase;
-                  letter-spacing: 0.4px;
-                "
-              >
-                Khách hàng
-              </th>
-              <th
-                style="
-                  text-align: right;
-                  padding: 9px 12px;
-                  font-size: 11px;
-                  font-weight: 600;
-                  color: var(--muted);
-                  text-transform: uppercase;
-                  letter-spacing: 0.4px;
-                "
-              >
-                Tổng tiền
-              </th>
-              <th
-                style="
-                  text-align: left;
-                  padding: 9px 18px;
-                  font-size: 11px;
-                  font-weight: 600;
-                  color: var(--muted);
-                  text-transform: uppercase;
-                  letter-spacing: 0.4px;
-                "
-              >
-                Trạng thái
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="o in recent"
-              :key="o.code"
-              style="border-top: 1px solid var(--line); cursor: pointer"
-              @click="router.push('/orders')"
+        <DataTable :columns="recentCols" :rows="recent" row-key="code" trong="Chưa có đơn hàng." :hien-chan="false">
+          <template #o-code="{ row: o }">
+            <span class="mono" style="color: var(--acc); font-weight: 600">{{ o.code }}</span>
+          </template>
+          <template #o-customer="{ row: o }">
+            <span style="color: var(--text)">{{ o.customer }}</span>
+          </template>
+          <template #o-total="{ row: o }">
+            <span class="mono" style="font-weight: 700">{{ money(o.total) }}</span>
+          </template>
+          <template #o-stLabel="{ row: o }">
+            <span
+              style="display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; padding: 3px 9px; border-radius: 20px"
+              :style="{ background: o.stBg, color: o.stColor }"
             >
-              <td
-                class="mono"
-                style="padding: 11px 18px; color: var(--acc); font-weight: 600"
-              >
-                {{ o.code }}
-              </td>
-              <td style="padding: 11px 12px; color: var(--text)">
-                {{ o.customer }}
-              </td>
-              <td
-                class="mono"
-                style="
-                  padding: 11px 12px;
-                  text-align: right;
-                  color: var(--text);
-                  font-weight: 600;
-                "
-              >
-                {{ money(o.total) }}
-              </td>
-              <td style="padding: 11px 18px">
-                <span
-                  style="
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 5px;
-                    font-size: 11.5px;
-                    font-weight: 600;
-                    padding: 3px 9px;
-                    border-radius: 20px;
-                  "
-                  :style="{ background: o.stBg, color: o.stColor }"
-                  ><span
-                    style="width: 6px; height: 6px; border-radius: 50%"
-                    :style="{ background: o.stColor }"
-                  ></span
-                  >{{ o.stLabel }}</span
-                >
-              </td>
-            </tr>
-            <tr v-if="!recent.length">
-              <td colspan="4" style="padding: 18px; color: var(--muted)">
-                Chưa có đơn hàng.
-              </td>
-            </tr>
-          </tbody>
-        </table>
+              <span style="width: 6px; height: 6px; border-radius: 50%" :style="{ background: o.stColor }"></span>{{ o.stLabel }}
+            </span>
+          </template>
+        </DataTable>
       </div>
 
       <div
@@ -528,6 +436,15 @@ import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { getDashboard } from '../api/admin';
 import StockMovementModal from '../components/StockMovementModal.vue';
+import DataTable from '../components/DataTable.vue';
+
+// Cột cho DataTable — phễu lọc/sắp xếp kiểu Excel (xem components/DataTable.vue).
+const recentCols = [
+  { key: 'code', label: 'Mã đơn' },
+  { key: 'customer', label: 'Khách hàng' },
+  { key: 'total', label: 'Tổng tiền', align: 'right', kieu: 'so', text: (o) => money(o.total) },
+  { key: 'stLabel', label: 'Trạng thái' },
+];
 import {
   money as fmtMoney,
   short,

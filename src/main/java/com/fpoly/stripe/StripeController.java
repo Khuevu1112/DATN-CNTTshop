@@ -17,9 +17,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.view.RedirectView;
 
 import com.fpoly.model.Order;
-import com.fpoly.model.OrderStatusLog;
 import com.fpoly.model.Payment;
-import com.fpoly.repository.OrderStatusLogRepository;
 import com.fpoly.repository.PaymentRepository;
 import com.fpoly.service.OrderService;
 import com.stripe.exception.SignatureVerificationException;
@@ -40,9 +38,6 @@ public class StripeController {
 
     @Autowired
     private PaymentRepository paymentRepo;
-
-    @Autowired
-    private OrderStatusLogRepository statusLogRepo;
 
     @Autowired
     private OrderService orderService;
@@ -179,18 +174,10 @@ public class StripeController {
         payment.setPaidAt(LocalDateTime.now());
         paymentRepo.save(payment);
 
-        order.setTrangThai("confirmed");
-
-        OrderStatusLog log = new OrderStatusLog();
-        log.setOrder(order);
-        log.setTrangThai("confirmed");
-        log.setGhiChu("Thanh toán Stripe thành công");
-        statusLogRepo.save(log);
-
-        // Chỉ tới giờ mới thật sự trừ kho + xoá giỏ hàng + gửi thông báo/mail "đã thanh toán"
-        // + cộng xu (xem OrderService để hiểu vì sao phải hoãn tới lúc này thay vì làm ngay
-        // khi tạo đơn).
-        orderService.xacNhanThanhToanGatewayThanhCong(order);
+        // Chốt đơn + xoá giỏ + thông báo/mail "đã thanh toán" + cộng xu. Hàm này cũng xử lý
+        // trường hợp tiền về SAU khi đơn đã tự huỷ vì hết 5 phút giữ hàng (thử giữ lại hàng,
+        // không còn thì để đơn huỷ và mở việc hoàn tiền) — xem OrderService.
+        orderService.chotDonSauThanhToanGateway(order, "Thanh toán Stripe thành công");
     }
 
     private RedirectView redirectToOrderResult(Integer orderId, String paymentStatus) {

@@ -2,6 +2,10 @@ import http from './http'
 
 export const getDashboard = () => http.get('/admin/dashboard').then(r => r.data)
 
+// Số liệu hiển thị cạnh từng mục sidebar: { <ten-route>: { tong, moi } } — xem
+// AdminApiController.sidebarCounts.
+export const getSidebarCounts = () => http.get('/admin/sidebar-counts').then(r => r.data)
+
 export const getNotifications = () => http.get('/admin/notifications').then(r => r.data)
 export const getUnreadCount = () => http.get('/admin/notifications/unread-count').then(r => r.data.count)
 export const markNotificationRead = (id) => http.post(`/admin/notifications/${id}/read`)
@@ -59,6 +63,17 @@ export const updatePermissionCell = (department, featureKey, permKeys) =>
 
 export const getStaffAccounts = () => http.get('/admin/customers/staff').then(r => r.data)
 export const createStaffAccount = (payload) => http.post('/admin/customers', payload).then(r => r.data)
+
+// ===== Nhập kho theo chứng từ: nhà cung cấp + phiếu nhập nhiều dòng =====
+// Xem GoodsReceiptService / AdminGoodsReceiptApiController.
+export const getSuppliers = (tatCa = false) =>
+  http.get('/admin/suppliers', { params: tatCa ? { tatCa: true } : {} }).then(r => r.data)
+export const createSupplier = (payload) => http.post('/admin/suppliers', payload).then(r => r.data)
+export const updateSupplier = (id, payload) => http.put(`/admin/suppliers/${id}`, payload).then(r => r.data)
+
+export const getGoodsReceipts = () => http.get('/admin/goods-receipts').then(r => r.data)
+export const getGoodsReceiptDetail = (id) => http.get(`/admin/goods-receipts/${id}`).then(r => r.data)
+export const createGoodsReceipt = (payload) => http.post('/admin/goods-receipts', payload).then(r => r.data)
 
 export const searchStockVariants = (keyword) =>
   http.get('/admin/stock-movements/variant-search', { params: { keyword } }).then(r => r.data)

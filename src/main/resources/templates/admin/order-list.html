@@ -65,8 +65,8 @@
                     <td th:text="${order.maDonHang}"></td>
                     <td th:text="${order.nguoiDung.email}"></td>
                     <td>
-                        <div th:text="${order.diaChiGiao != null ? order.diaChiGiao.tenNguoiNhan : 'Mua tại showroom'}"></div>
-                        <small class="text-muted" th:text="${order.diaChiGiao != null ? order.diaChiGiao.soDienThoai : (order.nguoiDung != null ? order.nguoiDung.soDienThoai : '-')}"></small>
+                        <div th:text="${order.tenNguoiNhanHienThi != null ? order.tenNguoiNhanHienThi : 'Mua tại showroom'}"></div>
+                        <small class="text-muted" th:text="${order.soDienThoaiNhanHienThi != null ? order.soDienThoaiNhanHienThi : '-'}"></small>
                     </td>
                     <td class="fw-bold text-danger"
                         th:text="${#numbers.formatDecimal(order.tongTien,0,'COMMA',0,'POINT')} + '₫'"></td>
@@ -78,6 +78,7 @@
                             <span th:case="'shipped'"    class="badge bg-primary">Đang giao</span>
                             <span th:case="'delivered'"  class="badge bg-success">Hoàn tất</span>
                             <span th:case="'cancelled'"  class="badge bg-secondary">Đã hủy</span>
+                            <span th:case="'returned'"   class="badge bg-warning text-dark">Hoàn hàng</span>
                             <span th:case="'refunded'"   class="badge bg-dark">Đã hoàn tiền</span>
                         </span>
                     </td>

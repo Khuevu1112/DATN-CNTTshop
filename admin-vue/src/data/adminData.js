@@ -60,9 +60,17 @@ export const STATUS = {
   shipped: { label: 'Đang giao', color: '#a855f7' },
   delivered: { label: 'Hoàn tất', color: '#22d39a' },
   cancelled: { label: 'Đã huỷ', color: '#ff3b5c' },
+  // Hai mốc CUỐI khác nhau: "Hoàn hàng" = hàng đã về kho nhưng TIỀN CHƯA TRẢ;
+  // "Hoàn tiền" = đã chuyển tiền lại cho khách (chỉ tới được sau Hoàn hàng).
+  returned: { label: 'Hoàn hàng', color: '#f59e0b' },
   refunded: { label: 'Hoàn tiền', color: '#94a3b8' },
 };
 const stBgOf = (c) => 'color-mix(in srgb,' + c + ' 16%, transparent)';
+
+/** Ngưỡng cảnh báo "sắp hết hàng" (tồn <= mức này). PHẢI khớp NGUONG_SAP_HET bên
+ * cnttshop-vue/src/data/products.js — hai bên nói khác nhau thì admin thấy "còn hàng" trong khi
+ * trang khách đã hiện "sắp hết". */
+export const NGUONG_SAP_HET = 5;
 
 export const PRODUCTS = reactive([]);
 export const ORDERS = reactive([]);
@@ -148,6 +156,7 @@ function mapOrder(o) {
     stColor: meta.color,
     stBg: stBgOf(meta.color),
     date: fmtDateTime(o.createdAt),
+    createdAtRaw: o.createdAt, // bản thô để DataTable sắp xếp/lọc theo khoảng ngày
     item: o.itemSummary,
     init: initials(o.customerName || '?'),
     paymentMethod: o.paymentMethod,
@@ -173,6 +182,7 @@ function mapCustomer(c, i) {
     spent,
     spentFmt: money(spent),
     joined: fmtMonthYear(c.joinedAt),
+    joinedRaw: c.joinedAt, // bản thô để DataTable sắp xếp/lọc theo khoảng ngày
     active: !!c.isActive,
     hue: [210, 265, 150, 190, 32, 330][i % 6],
   };
@@ -201,7 +211,13 @@ function mapCoupon(c) {
       ? Number(c.discountValue) + '%' + (c.maxDiscountAmount ? ` (tối đa ${money(Number(c.maxDiscountAmount))})` : '')
       : money(Number(c.discountValue)),
     min: min > 0 ? money(min) : 'Không',
+    // Bản SỐ/NGÀY thô của các cột đã format — DataTable cần chúng để sắp xếp và lọc khoảng
+    // min–max cho đúng (so chuỗi "1.000.000₫" với "900.000₫" sẽ ra sai thứ tự).
+    giaTriSo: Number(c.discountValue || 0),
+    donToiThieuSo: min,
+    hetHanLuc: c.expiresAt || null,
     used: max ? used + '/' + max : used + '',
+    daDungSo: used,
     usedPct: max ? Math.round((used / max) * 100) + '%' : '—',
     exp: fmtDateFull(c.expiresAt),
     xuCost: c.xuCost || null,
@@ -281,6 +297,7 @@ export const NAV_GROUPS = [
     items: [
       ['orders', 'Đơn hàng', 'bi-receipt'],
       ['products', 'Sản phẩm', 'bi-box-seam'],
+      ['goods-receipts', 'Nhập kho', 'bi-box-arrow-in-down'],
       ['kit-templates', 'Mẫu cấu hình', 'bi-diagram-3'],
       ['trade-in', 'Thu cũ đổi mới', 'bi-arrow-repeat'],
     ],
@@ -352,6 +369,7 @@ export function statusBreak() {
     'confirmed',
     'pending',
     'cancelled',
+    'returned',
     'refunded',
   ]
     .map((k) => {

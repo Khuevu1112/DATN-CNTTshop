@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<!--
+  PHIẾU NHẬP KHO — bản để IN / lưu PDF.
+
+  Trang đứng độc lập, KHÔNG dùng layout admin: bản in không được dính sidebar, header hay nút
+  bấm nào. Chỉ nhúng CSS tại chỗ để mở bằng URL là in được ngay, không phụ thuộc tài nguyên
+  ngoài (máy in ở kho thường không có mạng).
+-->
+<html xmlns:th="http://www.thymeleaf.org" lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <title th:text="'Phiếu nhập kho ' + ${phieu.maPhieu}">Phiếu nhập kho</title>
+  <style>
+    /* Khổ A4, lề 14mm — vừa với máy in văn phòng phổ thông */
+    @page { size: A4; margin: 14mm; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Times New Roman', Times, serif;
+      font-size: 13px;
+      color: #000;
+      background: #f0f0f0;
+      margin: 0;
+      padding: 20px;
+    }
+    .to {
+      background: #fff;
+      max-width: 210mm;
+      margin: 0 auto;
+      padding: 16mm 14mm;
+      box-shadow: 0 4px 22px rgba(0, 0, 0, 0.18);
+    }
+
+    .dau { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; }
+    .cty { font-size: 13.5px; line-height: 1.5; }
+    .cty b { font-size: 15px; text-transform: uppercase; }
+    .mau { text-align: right; font-size: 11.5px; color: #333; line-height: 1.5; }
+
+    h1 { text-align: center; font-size: 20px; margin: 16px 0 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .ngay { text-align: center; font-size: 12.5px; font-style: italic; margin-bottom: 4px; }
+    .so { text-align: center; font-size: 13px; margin-bottom: 16px; }
+    .so b { letter-spacing: 0.5px; }
+
+    .kv { line-height: 1.85; }
+    .kv .nhan { display: inline-block; min-width: 132px; }
+    .cham { border-bottom: 1px dotted #666; }
+
+    table { width: 100%; border-collapse: collapse; margin: 14px 0 10px; font-size: 12.5px; }
+    th, td { border: 1px solid #000; padding: 6px 8px; }
+    th { background: #eee; font-weight: bold; text-align: center; }
+    td.so-lieu { text-align: right; font-variant-numeric: tabular-nums; }
+    td.giua { text-align: center; }
+    tfoot td { font-weight: bold; background: #f7f7f7; }
+
+    .bang-chu { font-style: italic; margin: 6px 0 4px; }
+    .ghi-chu { margin-top: 8px; font-size: 12.5px; }
+
+    .ky { display: flex; justify-content: space-around; margin-top: 34px; text-align: center; font-size: 12.5px; }
+    .ky > div { width: 30%; }
+    .ky b { display: block; text-transform: uppercase; margin-bottom: 2px; }
+    .ky i { font-size: 11.5px; color: #444; }
+    .cho-ky { height: 62px; }
+
+    /* Thanh nút chỉ để thao tác trên màn hình — biến mất khi in */
+    .thanh { max-width: 210mm; margin: 0 auto 14px; display: flex; gap: 9px; justify-content: flex-end; }
+    .thanh button {
+      padding: 9px 18px; border-radius: 8px; border: 1px solid #999;
+      background: #fff; font-size: 13px; cursor: pointer; font-family: inherit;
+    }
+    .thanh button.chinh { background: #111; color: #fff; border-color: #111; font-weight: bold; }
+    @media print {
+      body { background: #fff; padding: 0; }
+      .to { box-shadow: none; padding: 0; max-width: none; }
+      .thanh { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="thanh">
+  <button onclick="window.close()">Đóng</button>
+  <button class="chinh" onclick="window.print()">In phiếu</button>
+</div>
+
+<div class="to">
+  <div class="dau">
+    <div class="cty">
+      <b>CNTTShop</b><br />
+      Số 6 Trần Phú, Ngô Quyền, Hải Phòng<br />
+      ĐT: 0835 344 974 &nbsp;·&nbsp; MST: 0201234567
+    </div>
+    <div class="mau">
+      Mẫu số 01 - VT<br />
+      (Ban hành theo Thông tư 200/2014/TT-BTC)
+    </div>
+  </div>
+
+  <h1>Phiếu nhập kho</h1>
+  <div class="ngay" th:text="'Ngày ' + ${#temporals.format(phieu.ngayNhap, 'dd')} + ' tháng ' + ${#temporals.format(phieu.ngayNhap, 'MM')} + ' năm ' + ${#temporals.format(phieu.ngayNhap, 'yyyy')}"></div>
+  <div class="so">Số: <b th:text="${phieu.maPhieu}"></b></div>
+
+  <div class="kv">
+    <div>
+      <span class="nhan">Nhà cung cấp:</span>
+      <span class="cham" th:text="${phieu.supplier != null ? phieu.supplier.ten : '.....................................................'}"></span>
+    </div>
+    <div th:if="${phieu.supplier != null and phieu.supplier.maSoThue != null}">
+      <span class="nhan">Mã số thuế:</span>
+      <span class="cham" th:text="${phieu.supplier.maSoThue}"></span>
+    </div>
+    <div th:if="${phieu.supplier != null and phieu.supplier.diaChi != null}">
+      <span class="nhan">Địa chỉ:</span>
+      <span class="cham" th:text="${phieu.supplier.diaChi}"></span>
+    </div>
+    <div>
+      <span class="nhan">Số hoá đơn:</span>
+      <span class="cham" th:text="${phieu.soHoaDon != null ? phieu.soHoaDon : '(chưa có hoá đơn)'}"></span>
+      <span th:if="${phieu.ngayHoaDon != null}">
+        &nbsp;·&nbsp; Ngày hoá đơn:
+        <span class="cham" th:text="${#temporals.format(phieu.ngayHoaDon, 'dd/MM/yyyy')}"></span>
+      </span>
+    </div>
+    <div>
+      <span class="nhan">Nhập tại kho:</span>
+      <span class="cham">Kho CNTTShop — Số 6 Trần Phú, Ngô Quyền, Hải Phòng</span>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 34px">STT</th>
+        <th>Tên hàng hoá</th>
+        <th style="width: 108px">Mã SKU</th>
+        <th style="width: 62px">Đơn vị</th>
+        <th style="width: 62px">Số lượng</th>
+        <th style="width: 96px">Đơn giá</th>
+        <th style="width: 108px">Thành tiền</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr th:each="d, i : ${phieu.chiTiet}">
+        <td class="giua" th:text="${i.count}"></td>
+        <td>
+          <span th:text="${d.tenSanPham}"></span>
+          <div th:if="${d.ghiChu != null}" style="font-size: 11.5px; font-style: italic; color: #444"
+               th:text="${d.ghiChu}"></div>
+        </td>
+        <td class="giua" th:text="${d.sku}"></td>
+        <td class="giua">Cái</td>
+        <td class="so-lieu" th:text="${d.soLuong}"></td>
+        <td class="so-lieu" th:text="${#numbers.formatDecimal(d.donGia, 0, 'POINT', 0, 'COMMA')}"></td>
+        <td class="so-lieu" th:text="${#numbers.formatDecimal(d.thanhTien, 0, 'POINT', 0, 'COMMA')}"></td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="4" style="text-align: right">Cộng tiền hàng</td>
+        <td class="so-lieu" th:text="${phieu.tongSoLuong()}"></td>
+        <td></td>
+        <td class="so-lieu" th:text="${#numbers.formatDecimal(phieu.tienHang, 0, 'POINT', 0, 'COMMA')}"></td>
+      </tr>
+      <tr th:if="${phieu.vatPercent != null and phieu.vatPercent.signum() > 0}">
+        <td colspan="6" style="text-align: right"
+            th:text="'Thuế GTGT (' + ${#numbers.formatDecimal(phieu.vatPercent, 0, 0)} + '%)'"></td>
+        <td class="so-lieu" th:text="${#numbers.formatDecimal(phieu.tienVat, 0, 'POINT', 0, 'COMMA')}"></td>
+      </tr>
+      <tr>
+        <td colspan="6" style="text-align: right">TỔNG CỘNG THANH TOÁN</td>
+        <td class="so-lieu" th:text="${#numbers.formatDecimal(phieu.tongTien, 0, 'POINT', 0, 'COMMA')}"></td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <!-- Dòng bắt buộc trên chứng từ kế toán: chống sửa con số sau khi đã ký -->
+  <div class="bang-chu">
+    Số tiền bằng chữ: <span th:text="${tienBangChu}"></span>
+  </div>
+
+  <div class="ghi-chu" th:if="${phieu.ghiChu != null}">
+    Ghi chú: <span th:text="${phieu.ghiChu}"></span>
+  </div>
+
+  <div class="ky">
+    <div>
+      <b>Người lập phiếu</b>
+      <i>(Ký, họ tên)</i>
+      <div class="cho-ky"></div>
+      <span th:text="${phieu.nguoiLap != null ? phieu.nguoiLap.hoTen : ''}"></span>
+    </div>
+    <div>
+      <b>Người giao hàng</b>
+      <i>(Ký, họ tên)</i>
+      <div class="cho-ky"></div>
+    </div>
+    <div>
+      <b>Thủ kho</b>
+      <i>(Ký, họ tên)</i>
+      <div class="cho-ky"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Mở từ nút "In phiếu" bên admin-vue -> ?in=1 để bật thẳng hộp thoại in, đỡ một cú bấm.
+  if (new URLSearchParams(location.search).get('in') === '1') window.print();
+</script>
+</body>
+</html>

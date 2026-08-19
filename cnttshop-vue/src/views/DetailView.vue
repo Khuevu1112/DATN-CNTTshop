@@ -9,6 +9,8 @@ import {
   silverTokensFor,
   renderDescription,
   resolveVariantId,
+  tonKhoDangChon,
+  NGUONG_SAP_HET,
 } from '../data/products.js';
 import { state, actions, accent } from '../store.js';
 import { fetchProductReviews, API_ORIGIN, resolveImageUrl } from '../api.js';
@@ -122,6 +124,14 @@ const specRows = computed(() => {
   });
 });
 
+// ===== Tồn kho của ĐÚNG phiên bản đang chọn =====
+// Trang này trước đây in cứng "● Còn hàng" cho mọi sản phẩm, kể cả món đã hết sạch — khách bấm
+// Thêm giỏ rồi mới nhận lỗi ở bước thanh toán. Tồn phải đọc theo biến thể đang chọn, vì đổi
+// dung lượng/màu là đổi hẳn một dòng kho khác.
+const tonKho = computed(() => (sp.value ? tonKhoDangChon(sp.value, state.cfgSel) : 0));
+const hetHang = computed(() => tonKho.value <= 0);
+const sapHet = computed(() => tonKho.value > 0 && tonKho.value <= NGUONG_SAP_HET);
+
 const detail = computed(() => {
   if (!sp.value) return null;
   const p = sp.value;
@@ -170,10 +180,12 @@ const promotions = computed(() => (sp.value && sp.value.promotions) || []);
 const bundles = computed(() => (sp.value && sp.value.bundles) || []);
 
 function onAdd(e) {
+  if (hetHang.value) return;
   flyToCart(e.currentTarget, mainImageUrl.value);
   actions.addToCart(sp.value.id, state.cfgSel);
 }
 async function onBuy() {
+  if (hetHang.value) return;
   await actions.addToCart(sp.value.id, state.cfgSel);
   actions.goCart();
 }
@@ -393,7 +405,13 @@ function onInstallment() {
           <span style="color: var(--muted); font-size: 13px"
             >{{ detail.reviews }} đánh giá</span
           >
-          <span style="color: var(--green); font-size: 13px; font-weight: 600"
+          <span v-if="hetHang" style="color: var(--sale); font-size: 13px; font-weight: 600"
+            >● Tạm hết hàng</span
+          >
+          <span v-else-if="sapHet" style="color: var(--amber); font-size: 13px; font-weight: 600"
+            >● Sắp hết — chỉ còn {{ tonKho }}</span
+          >
+          <span v-else style="color: var(--green); font-size: 13px; font-weight: 600"
             >● Còn hàng</span
           >
         </div>
@@ -559,10 +577,12 @@ function onInstallment() {
         >
           <button
             @click="onAdd"
+            :disabled="hetHang"
             :style="{
-              border: '1px solid ' + accent,
-              background: 'color-mix(in srgb, ' + accent + ' 14%, transparent)',
-              color: accent,
+              border: '1px solid ' + (hetHang ? 'rgba(var(--line-rgb),0.22)' : accent),
+              background: hetHang ? 'transparent' : 'color-mix(in srgb, ' + accent + ' 14%, transparent)',
+              color: hetHang ? 'var(--muted)' : accent,
+              cursor: hetHang ? 'not-allowed' : 'pointer',
             }"
             style="
               flex: 1;
@@ -571,34 +591,54 @@ function onInstallment() {
               font-family: 'Plus Jakarta Sans', sans-serif;
               font-weight: 700;
               font-size: 15px;
-              cursor: pointer;
             "
           >
             Thêm vào giỏ
           </button>
           <button
             @click="onBuy"
+            :disabled="hetHang"
             :style="{
-              background: accent,
-              boxShadow:
-                '0 10px 26px color-mix(in srgb, ' +
-                accent +
-                ' 38%, transparent)',
+              background: hetHang ? 'rgba(var(--line-rgb),0.16)' : accent,
+              color: hetHang ? 'var(--muted)' : 'var(--acc-ink)',
+              cursor: hetHang ? 'not-allowed' : 'pointer',
+              boxShadow: hetHang
+                ? 'none'
+                : '0 10px 26px color-mix(in srgb, ' + accent + ' 38%, transparent)',
             }"
             style="
               flex: 1;
               height: 54px;
               border: none;
               border-radius: 13px;
-              color: var(--acc-ink);
               font-family: 'Plus Jakarta Sans', sans-serif;
               font-weight: 700;
               font-size: 15px;
-              cursor: pointer;
             "
           >
-            Mua ngay
+            {{ hetHang ? 'Tạm hết hàng' : 'Mua ngay' }}
           </button>
+        </div>
+
+        <!-- Hết hàng: nói rõ phải làm gì tiếp, thay vì để 2 nút xám không giải thích -->
+        <div
+          v-if="hetHang"
+          style="
+            margin: -12px 0 24px;
+            background: color-mix(in srgb, var(--sale) 10%, transparent);
+            border: 1px solid color-mix(in srgb, var(--sale) 26%, transparent);
+            border-radius: 12px;
+            padding: 12px 15px;
+            font-size: 12.8px;
+            line-height: 1.6;
+            color: var(--muted2);
+          "
+        >
+          Phiên bản này đang tạm hết hàng<template v-if="detail.hasCfg">
+            — bạn thử chọn phiên bản khác ở phần tuỳ chọn bên trên</template>.
+          Bấm ❤ Yêu thích để được báo ngay khi có hàng lại, hoặc gọi
+          <a href="tel:0835344974" :style="{ color: accent }" style="font-weight: 700; text-decoration: none">0835 344 974</a>
+          để hỏi lịch về hàng.
         </div>
 
         <!-- So sánh: 1 thanh ngang rộng bằng cả hàng Thêm giỏ + Mua ngay ở trên, mở drawer so

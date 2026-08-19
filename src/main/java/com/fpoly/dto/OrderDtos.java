@@ -52,11 +52,15 @@ public class OrderDtos {
             LocalDateTime createdAt, Integer itemCount
     ) {}
 
+    /** hanGiuHang: hạn giữ hàng của đơn thanh toán qua cổng redirect — FE đếm ngược tới mốc
+     * này rồi tự làm mới trạng thái đơn. null = đơn không có đếm ngược (COD/chuyển khoản/POS)
+     * hoặc đã thanh toán xong. */
     public record OrderDetailDto(
             Integer id, String orderCode, String status, BigDecimal subtotal, BigDecimal discountAmount,
             BigDecimal shippingFee, String shippingOptionLabel, String shippingEta,
             BigDecimal totalAmount, LocalDateTime createdAt, AddressDto address,
-            List<OrderItemDto> items, List<OrderStatusLogDto> statusHistory, PaymentDto payment
+            List<OrderItemDto> items, List<OrderStatusLogDto> statusHistory, PaymentDto payment,
+            LocalDateTime hanGiuHang
     ) {}
 
     // cartItemIds null/rỗng = thanh toán toàn bộ giỏ hàng (giữ tương thích cũ); có giá trị =

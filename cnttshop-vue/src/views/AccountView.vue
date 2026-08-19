@@ -394,7 +394,9 @@ const orders = ref([]);
 const orderDetail = ref(null);
 const ORDER_STATUS_LABEL = {
   pending: 'Chờ xác nhận', confirmed: 'Đã xác nhận', processing: 'Đang xử lý',
-  shipped: 'Đang giao', delivered: 'Hoàn tất', cancelled: 'Đã hủy', refunded: 'Đã hoàn tiền',
+  shipped: 'Đang giao', delivered: 'Hoàn tất', cancelled: 'Đã hủy',
+  // Tách bạch: hàng đã về kho shop (tiền chưa trả) vs tiền đã chuyển lại cho khách.
+  returned: 'Hoàn hàng (chờ hoàn tiền)', refunded: 'Đã hoàn tiền',
 };
 
 async function loadOrders() {

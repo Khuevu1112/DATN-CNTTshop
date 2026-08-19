@@ -54,9 +54,13 @@
     </div>
 
     <!-- Danh sách -->
-    <div v-else style="display: flex; flex-direction: column; gap: 12px">
+    <!-- Chế độ THẺ của DataTable: giữ nguyên thẻ lịch hẹn (mô tả dài + nút xử lý theo bước),
+         nhưng lọc/sắp xếp được y hệt các bảng khác qua dãy chip phía trên. -->
+    <DataTable v-else che-do="the" :columns="cols" :rows="danhSach" trong="Chưa có lịch hẹn nào.">
+      <template #the="{ rows }">
+    <div style="display: flex; flex-direction: column; gap: 12px">
       <div
-        v-for="l in danhSach"
+        v-for="l in rows"
         :key="l.id"
         style="background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px"
       >
@@ -176,12 +180,27 @@
         </div>
       </div>
     </div>
+      </template>
+    </DataTable>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { getServiceAppointments, updateAppointmentStatus } from '../api/admin';
+import DataTable from '../components/DataTable.vue';
+
+// Trường lọc cho chế độ thẻ — cùng phễu Excel như các bảng khác (xem components/DataTable.vue).
+const cols = [
+  { key: 'maLich', label: 'Mã lịch' },
+  { key: 'hoTen', label: 'Khách hàng', text: (l) => l.hoTen + (l.dienThoai ? ' · ' + l.dienThoai : '') },
+  { key: 'tenTrungTam', label: 'Trung tâm' },
+  { key: 'loaiThietBi', label: 'Thiết bị', text: (l) => tenLoai(l.loaiThietBi) },
+  { key: 'ngayHen', label: 'Ngày hẹn', kieu: 'ngay' },
+  { key: 'khungGio', label: 'Khung giờ', text: (l) => l.khungGio || '—' },
+  { key: 'trangThai', label: 'Trạng thái', text: (l) => l.nhanTrangThai || l.trangThai },
+  { key: 'chiPhi', label: 'Chi phí', kieu: 'so', text: (l) => (l.chiPhi != null ? Number(l.chiPhi).toLocaleString('vi-VN') + '₫' : 'Miễn phí') },
+];
 
 const danhSach = ref([]);
 const tatCa = ref([]);

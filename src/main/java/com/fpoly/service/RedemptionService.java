@@ -44,6 +44,7 @@ public class RedemptionService {
     @Autowired private CouponRepository couponRepo;
     @Autowired private NguoiDungRepository nguoiDungRepo;
     @Autowired private UserAddressRepository addressRepo;
+    @Autowired private TonKhoService tonKhoService;
     @Autowired private OrderRepository orderRepo;
     @Autowired private OrderStatusLogRepository statusLogRepo;
     @Autowired private PaymentRepository paymentRepo;
@@ -254,7 +255,7 @@ public class RedemptionService {
 
         Order order = new Order();
         order.setNguoiDung(user);
-        order.setDiaChiGiao(address);
+        order.chupLaiDiaChi(address);
         order.setTienHang(BigDecimal.ZERO);
         order.setTienGiamGia(BigDecimal.ZERO);
         order.setPhiVanChuyen(BigDecimal.ZERO);
@@ -270,7 +271,11 @@ public class RedemptionService {
         oi.setSoLuong(1);
         order.setChiTiet(List.of(oi));
 
-        variant.setStock(variant.getStock() - 1);
+        // Giữ hàng bằng UPDATE có điều kiện (xem TonKhoService) thay vì đọc-rồi-ghi: hai khách
+        // cùng đổi món quà cuối cùng thì chỉ một người thành công.
+        if (!tonKhoService.giuHang(variant, 1)) {
+            throw new RuntimeException("Quà tặng \"" + item.getTen() + "\" vừa hết, bạn chọn phần quà khác nhé.");
+        }
 
         Order saved = orderRepo.save(order);
 

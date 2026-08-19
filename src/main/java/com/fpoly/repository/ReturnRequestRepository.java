@@ -20,4 +20,9 @@ public interface ReturnRequestRepository extends JpaRepository<ReturnRequest, In
 
     @Query("SELECT r FROM ReturnRequest r JOIN FETCH r.user WHERE r.trangThai = :tt ORDER BY r.createdAt DESC")
     List<ReturnRequest> findByTrangThaiForAdmin(@Param("tt") String trangThai);
+
+    /** Yêu cầu đổi trả của một đơn ĐÃ được cộng lại kho — dùng để không cộng kho lần hai khi
+     * admin chuyển chính đơn đó sang trạng thái "Hoàn hàng" (xem OrderService.capNhatTrangThai). */
+    @Query("SELECT r FROM ReturnRequest r WHERE r.order.id = :orderId AND r.daHoanKho = true")
+    List<ReturnRequest> findDaHoanKhoTheoDon(@Param("orderId") Integer orderId);
 }

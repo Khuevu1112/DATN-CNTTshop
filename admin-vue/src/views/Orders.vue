@@ -484,9 +484,28 @@
             >
               Cập nhật trạng thái
             </div>
+            <!-- Đang ở đâu + mốc đó nghĩa là gì. Trước đây chỉ có ô chọn trần, "Hoàn hàng" và
+                 "Hoàn tiền" nhìn như hai cách gọi của cùng một việc. -->
+            <div
+              v-if="detail.statusMeta"
+              style="
+                background: var(--card2);
+                border: 1px solid var(--line2);
+                border-radius: 10px;
+                padding: 10px 12px;
+                margin-bottom: 10px;
+                font-size: 12px;
+                line-height: 1.55;
+                color: var(--muted2);
+              "
+            >
+              Hiện tại: <b style="color: var(--text)">{{ detail.statusMeta.label }}</b><br />
+              {{ detail.statusMeta.hint }}
+            </div>
+
             <select
               v-model="statusDraft"
-              :disabled="detail.st === 'cancelled' || detail.st === 'delivered'"
+              :disabled="!coTheDoiTrangThai"
               style="
                 width: 100%;
                 height: 42px;
@@ -500,20 +519,28 @@
                 cursor: pointer;
               "
             >
-              <option value="pending">Chờ xác nhận</option>
-              <option value="confirmed">Đã xác nhận</option>
-              <option value="processing">Đang xử lý</option>
-              <option value="shipped">Đang giao</option>
-              <option value="delivered">Hoàn tất</option>
-              <option value="cancelled">Đã huỷ</option>
-              <option value="refunded">Hoàn tiền</option>
+              <option value="">— Chọn trạng thái mới —</option>
+              <!-- Chỉ những bước chuyển backend cho phép từ trạng thái hiện tại
+                   (OrderService.trangThaiChoPhep) — không liệt kê cứng cả 7 mốc rồi để người
+                   dùng chọn xong mới báo lỗi. -->
+              <option v-for="tt in trangThaiChoPhep" :key="tt.value" :value="tt.value">
+                {{ tt.label }}
+              </option>
             </select>
-            <div v-if="detail.st === 'cancelled' || detail.st === 'delivered'" style="font-size: 11.5px; color: var(--muted); margin-bottom: 10px">
-              Đơn đã {{ detail.st === 'cancelled' ? 'huỷ' : 'hoàn tất' }}, không thể đổi trạng thái.
+
+            <div
+              v-if="hintTrangThaiChon"
+              style="font-size: 11.5px; color: var(--muted2); line-height: 1.5; margin-bottom: 10px"
+            >
+              → {{ hintTrangThaiChon }}
+            </div>
+
+            <div v-if="!coTheDoiTrangThai" style="font-size: 11.5px; color: var(--muted); margin-bottom: 10px">
+              Đơn đã {{ (detail.statusMeta?.label || '').toLowerCase() }}, không thể đổi trạng thái nữa.
             </div>
             <button
               @click="saveStatus"
-              :disabled="savingStatus || detail.st === 'cancelled' || detail.st === 'delivered'"
+              :disabled="savingStatus || !coTheDoiTrangThai || !statusDraft"
               style="
                 width: 100%;
                 height: 42px;
@@ -648,127 +675,50 @@
             >
           </button>
         </div>
-        <table style="width: 100%; border-collapse: collapse; font-size: 13px">
-          <thead>
-            <tr style="background: var(--card2)">
-              <th
-                v-for="h in heads"
-                :key="h.t"
-                :style="{
-                  textAlign: h.a || 'left',
-                  padding: '10px 16px',
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  color: 'var(--muted)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '.4px',
-                }"
+        <DataTable
+          :columns="cols"
+          :rows="rows"
+          row-key="code"
+          :tim-kiem="ui.search"
+          click-duoc
+          trong="Chưa có đơn hàng nào."
+          @row-click="openDetail"
+        >
+          <template #o-code="{ row }">
+            <span class="mono" style="color: var(--acc); font-weight: 600">{{ row.code }}</span>
+          </template>
+          <template #o-customer="{ row }">
+            <div style="display: flex; align-items: center; gap: 10px">
+              <div
+                class="mono"
+                style="width: 32px; height: 32px; border-radius: 8px; flex: none; background: var(--card2); color: var(--muted2); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700"
               >
-                {{ h.t }}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="o in rows"
-              :key="o.code"
-              @click="openDetail(o)"
-              style="border-top: 1px solid var(--line); cursor: pointer"
+                {{ row.init }}
+              </div>
+              <div style="min-width: 0">
+                <div style="font-size: 12.5px; color: var(--text); font-weight: 500">{{ row.customer }}</div>
+                <div style="font-size: 11px; color: var(--muted)">{{ row.email }}</div>
+              </div>
+            </div>
+          </template>
+          <template #o-item="{ row }">
+            <span style="color: var(--muted2); font-size: 12px">{{ row.item }}</span>
+          </template>
+          <template #o-date="{ row }">
+            <span style="color: var(--muted2); font-size: 12px">{{ row.date }}</span>
+          </template>
+          <template #o-total="{ row }">
+            <span class="mono" style="font-weight: 700">{{ row.totalFmt }}</span>
+          </template>
+          <template #o-stLabel="{ row }">
+            <span
+              style="display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; padding: 3px 9px; border-radius: 20px"
+              :style="{ background: row.stBg, color: row.stColor }"
             >
-              <td
-                class="mono"
-                style="padding: 12px 16px; color: var(--acc); font-weight: 600"
-              >
-                {{ o.code }}
-              </td>
-              <td style="padding: 12px 12px">
-                <div style="display: flex; align-items: center; gap: 10px">
-                  <div
-                    class="mono"
-                    style="
-                      width: 32px;
-                      height: 32px;
-                      border-radius: 8px;
-                      flex: none;
-                      background: var(--card2);
-                      color: var(--muted2);
-                      display: flex;
-                      align-items: center;
-                      justify-content: center;
-                      font-size: 11px;
-                      font-weight: 700;
-                    "
-                  >
-                    {{ o.init }}
-                  </div>
-                  <div style="min-width: 0">
-                    <div
-                      style="
-                        font-size: 12.5px;
-                        color: var(--text);
-                        font-weight: 500;
-                      "
-                    >
-                      {{ o.customer }}
-                    </div>
-                    <div style="font-size: 11px; color: var(--muted)">
-                      {{ o.email }}
-                    </div>
-                  </div>
-                </div>
-              </td>
-              <td
-                style="
-                  padding: 12px 12px;
-                  color: var(--muted2);
-                  font-size: 12px;
-                  max-width: 200px;
-                "
-              >
-                {{ o.item }}
-              </td>
-              <td
-                style="
-                  padding: 12px 12px;
-                  color: var(--muted2);
-                  font-size: 12px;
-                "
-              >
-                {{ o.date }}
-              </td>
-              <td
-                class="mono"
-                style="
-                  padding: 12px 12px;
-                  text-align: right;
-                  color: var(--text);
-                  font-weight: 700;
-                "
-              >
-                {{ o.totalFmt }}
-              </td>
-              <td style="padding: 12px 16px">
-                <span
-                  style="
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 5px;
-                    font-size: 11.5px;
-                    font-weight: 600;
-                    padding: 3px 9px;
-                    border-radius: 20px;
-                  "
-                  :style="{ background: o.stBg, color: o.stColor }"
-                  ><span
-                    style="width: 6px; height: 6px; border-radius: 50%"
-                    :style="{ background: o.stColor }"
-                  ></span
-                  >{{ o.stLabel }}</span
-                >
-              </td>
-            </tr>
-          </tbody>
-        </table>
+              <span style="width: 6px; height: 6px; border-radius: 50%" :style="{ background: row.stColor }"></span>{{ row.stLabel }}
+            </span>
+          </template>
+        </DataTable>
       </div>
     </div>
   </div>
@@ -780,6 +730,7 @@ import { ORDERS, money, short, refreshAdminOrders } from '../data/adminData';
 import { ui } from '../uiState';
 import { updateOrderStatus, confirmOrderPayment, getAdminOrderDetail } from '../api/admin';
 import { resolveImageUrl } from '../api/http';
+import DataTable from '../components/DataTable.vue';
 const filter = ref('all');
 const detail = ref(null);
 const statusDraft = ref('pending');
@@ -811,9 +762,19 @@ async function loadDetailExtra(id) {
   }
 }
 
+// Danh sách bước chuyển hợp lệ do BACKEND quyết định (kèm mô tả) — xem
+// OrderService.trangThaiChoPhep. Chưa nạp xong phần chi tiết thì để rỗng, ô chọn tạm khoá.
+const trangThaiChoPhep = computed(() => detail.value?.allowedStatuses || []);
+const coTheDoiTrangThai = computed(() => trangThaiChoPhep.value.length > 0);
+const hintTrangThaiChon = computed(
+  () => trangThaiChoPhep.value.find((t) => t.value === statusDraft.value)?.hint || '',
+);
+
 function openDetail(o) {
   detail.value = { ...o };
-  statusDraft.value = o.st;
+  // Để TRỐNG chứ không đặt sẵn trạng thái hiện tại: trạng thái hiện tại không nằm trong danh
+  // sách được chọn nữa, và bắt admin chọn có chủ đích thì không bấm nhầm "Lưu" ra hành động lạ.
+  statusDraft.value = '';
   loadDetailExtra(o.id);
 }
 
@@ -821,6 +782,7 @@ async function saveStatus() {
   savingStatus.value = true;
   try {
     await updateOrderStatus(detail.value.id, statusDraft.value);
+    statusDraft.value = '';
     await refreshAdminOrders();
     const fresh = ORDERS.find((o) => o.id === detail.value.id);
     detail.value = fresh ? { ...fresh } : null;
@@ -846,13 +808,14 @@ async function confirmPayment() {
     confirmingPayment.value = false;
   }
 }
-const heads = [
-  { t: 'Mã đơn' },
-  { t: 'Khách hàng' },
-  { t: 'Sản phẩm' },
-  { t: 'Ngày đặt' },
-  { t: 'Tổng tiền', a: 'right' },
-  { t: 'Trạng thái' },
+// Cột cho DataTable — mỗi cột có phễu lọc/sắp xếp kiểu Excel (xem components/DataTable.vue).
+const cols = [
+  { key: 'code', label: 'Mã đơn' },
+  { key: 'customer', label: 'Khách hàng', text: (r) => r.customer + ' · ' + r.email },
+  { key: 'item', label: 'Sản phẩm' },
+  { key: 'date', label: 'Ngày đặt', kieu: 'ngay', value: (r) => r.createdAtRaw, text: (r) => r.date },
+  { key: 'total', label: 'Tổng tiền', align: 'right', kieu: 'so', value: (r) => r.total, text: (r) => r.totalFmt },
+  { key: 'stLabel', label: 'Trạng thái' },
 ];
 const stKeys = [
   'all',
@@ -862,8 +825,11 @@ const stKeys = [
   'shipped',
   'delivered',
   'cancelled',
+  'returned',
   'refunded',
 ];
+// "Hoàn hàng" (hàng đã về kho, tiền CHƯA trả) tách hẳn khỏi "Hoàn tiền" (đã chuyển tiền cho
+// khách) — xem OrderService.MO_TA_TRANG_THAI.
 const stLabels = {
   all: 'Tất cả',
   pending: 'Chờ xác nhận',
@@ -872,6 +838,7 @@ const stLabels = {
   shipped: 'Đang giao',
   delivered: 'Hoàn tất',
   cancelled: 'Đã huỷ',
+  returned: 'Hoàn hàng',
   refunded: 'Hoàn tiền',
 };
 const tabs = computed(() =>
@@ -882,16 +849,11 @@ const tabs = computed(() =>
       k === 'all' ? ORDERS.length : ORDERS.filter((o) => o.st === k).length,
   })),
 );
-const rows = computed(() => {
-  const q = ui.search.trim().toLowerCase();
-  return ORDERS.filter(
-    (o) =>
-      (filter.value === 'all' || o.st === filter.value) &&
-      (!q ||
-        o.code.toLowerCase().includes(q) ||
-        o.customer.toLowerCase().includes(q)),
-  );
-});
+// Tìm theo từ khoá đã do DataTable đảm nhận (quét mọi cột, bỏ dấu) — ở đây chỉ còn lọc theo
+// tab trạng thái phía trên bảng.
+const rows = computed(() =>
+  ORDERS.filter((o) => filter.value === 'all' || o.st === filter.value),
+);
 const stats = computed(() => [
   {
     label: 'Tổng đơn',

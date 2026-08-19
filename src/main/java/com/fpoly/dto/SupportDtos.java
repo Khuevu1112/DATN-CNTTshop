@@ -128,6 +128,23 @@ public class SupportDtos {
 
     // ===================== Trang chủ hỗ trợ =====================
 
+    // ===================== Phạm vi phục vụ tận nơi =====================
+
+    /**
+     * Phạm vi kỹ thuật viên có thể tới tận nơi.
+     *
+     * hoTro/tenTinhCuaToi chỉ có nghĩa khi API được gọi bởi khách đã đăng nhập VÀ đã có địa chỉ
+     * mặc định; khách vãng lai / chưa có địa chỉ thì hoTro=null (chưa xác định được) và FE chỉ
+     * hiển thị danh sách tỉnh phục vụ để khách tự đối chiếu.
+     */
+    public record PhamViTanNoiDto(
+            List<TinhPhucVuDto> tinhPhucVu,
+            Boolean hoTro,
+            String tenTinhCuaToi
+    ) {}
+
+    public record TinhPhucVuDto(Integer provinceId, String tenTinh, int soTrungTam) {}
+
     /** Số liệu tổng hợp cho trang chủ hỗ trợ — gọi một lần thay vì để FE gọi 4 API rồi tự đếm. */
     public record TongQuanHoTroDto(
             int soTrungTam, int soTinhCoTrungTam, int soCauHoi, int soHangMucSuaChua,

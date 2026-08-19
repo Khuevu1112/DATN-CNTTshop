@@ -172,7 +172,12 @@ router.beforeEach(async (to, from) => {
 
   if (to.name === 'category') {
     state.brandFilter = [];
-    state.q = '';
+    // Từ khoá tìm kiếm nằm TRONG URL (?q=...), không phải chỉ trong state: trước đây dòng này
+    // là `state.q = ''` vô điều kiện, nên gõ vào ô tìm kiếm rồi Enter (actions.onSearchEnter
+    // đẩy sang trang danh mục) là từ khoá bị xoá sạch ngay trước khi trang kịp lọc — kết quả
+    // luôn là "toàn bộ sản phẩm". Đọc lại từ query cũng giúp F5 / chia sẻ link giữ nguyên
+    // kết quả tìm.
+    state.q = to.query.q || '';
     state.priceMin = 0;
     state.priceMax = 70000000;
     state.minRating = 0;
@@ -583,7 +588,15 @@ export const actions = {
   setQ: (v) => {
     state.q = v;
   },
-  onSearchEnter: () => actions.goCat('all'),
+  /** Enter ở ô tìm kiếm -> mở trang "Tất cả danh mục" kèm từ khoá trong URL. Giữ nguyên danh
+   * mục đang xem nếu khách đang ở một danh mục cụ thể (tìm trong phạm vi đó là ý muốn tự nhiên
+   * hơn), trừ khi họ đang ở nơi khác thì mở toàn bộ. */
+  onSearchEnter: () => {
+    const cur = router.currentRoute.value;
+    const cat = cur.name === 'category' ? (cur.params.cat || 'all') : 'all';
+    const q = (state.q || '').trim();
+    return router.push({ name: 'category', params: { cat }, query: q ? { q } : {} });
+  },
   setSort: (v) => {
     state.sort = v;
   },
@@ -723,4 +736,12 @@ window.addEventListener('auth:expired', () => {
   actions.logout();
   actions.showToast('Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại');
   actions.openLogin();
+});
+
+// ===== Khách vãng lai mở trang chỉ dành cho tài khoản (router.beforeEach đã chặn và chuyển
+// hướng sang /dang-nhap) -> nhớ điểm đến để quay lại đúng chỗ đó sau khi đăng nhập xong, và
+// nói rõ vì sao bị chuyển hướng. =====
+window.addEventListener('auth:can-dang-nhap', (e) => {
+  state.loginPrev = e.detail;
+  actions.showToast('Vui lòng đăng nhập để tiếp tục');
 });

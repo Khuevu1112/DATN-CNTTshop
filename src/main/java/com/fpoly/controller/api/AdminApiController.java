@@ -425,6 +425,12 @@ public class AdminApiController {
         result.put("deliveryLat", order.getViDoGiao());
         result.put("deliveryLng", order.getKinhDoGiao());
         result.put("shippingDistanceKm", order.getKhoangCachGiaoKm());
+        // Chỉ những bước chuyển HỢP LỆ từ trạng thái hiện tại, kèm giải thích ý nghĩa từng mốc
+        // (xem OrderService.MO_TA_TRANG_THAI). Trước đây admin-vue liệt kê cứng cả 7 trạng thái
+        // rồi để backend từ chối — người dùng chọn xong mới biết là không được, và không có chỗ
+        // nào nói rõ "Hoàn hàng" khác "Hoàn tiền" ở điểm gì.
+        result.put("statusMeta", orderService.moTaTrangThai(order.getTrangThai()));
+        result.put("allowedStatuses", orderService.trangThaiChoPhep(order.getTrangThai()));
         return result;
     }
 
@@ -1059,6 +1065,69 @@ public class AdminApiController {
             out.add(m);
         }
         return out;
+    }
+
+    /**
+     * Số lượng hiển thị cạnh từng mục trên sidebar admin.
+     *
+     * Mỗi mục trả về 2 con số: "tong" = tổng số bản ghi đang có, "moi" = số bản ghi ĐANG CHỜ
+     * admin xử lý. Trước đây sidebar chỉ có đúng một badge (đơn chờ xác nhận) và còn tính từ
+     * mảng ORDERS đã nạp sẵn ở client, nên các mục khác không cho biết có bao nhiêu việc, và
+     * riêng số đơn cũng sai khi danh sách đơn chưa được nạp.
+     *
+     * Cố tình KHÔNG gắn @RequirePermission: đây là số liệu tổng hợp của nhiều phân hệ, mà
+     * sidebar vốn đã ẩn sạch các mục phòng ban không có quyền xem (xem AdminLayout.groups) —
+     * gắn quyền của một phân hệ cụ thể vào đây sẽ chặn nhầm cả những mục họ được phép xem.
+     */
+    @GetMapping("/sidebar-counts")
+    public Map<String, Object> sidebarCounts() {
+        Map<String, Object> r = new HashMap<>();
+        r.put("orders", demTongVaMoi("[ORDER]", "status IN ('pending')"));
+        r.put("products", demTongVaMoi("PRODUCT WHERE is_active=1", null));
+        r.put("kit-templates", demTongVaMoi("KIT_TEMPLATE", null));
+        // Phiếu nhập kho: "moi" = phiếu CHƯA có số hoá đơn, tức kế toán còn phải đòi hoá đơn
+        // của nhà cung cấp rồi bổ sung vào — đúng là việc đang tồn.
+        r.put("goods-receipts", demTongVaMoi("GOODS_RECEIPT", "so_hoa_don IS NULL"));
+        r.put("trade-in", demTongVaMoi("TRADE_IN_REQUEST", "trang_thai='cho_dinh_gia'"));
+        r.put("customers", demTongVaMoi("[USER] WHERE role='customer'", null));
+        r.put("contacts", demTongVaMoi("CONTACT_MESSAGE", "status='new'"));
+        r.put("warranty", demTongVaMoi("WARRANTY_REQUEST", "request_status='pending'"));
+        r.put("service-appointments", demTongVaMoi("SERVICE_APPOINTMENT", "trang_thai='cho_xac_nhan'"));
+        r.put("returns", demTongVaMoi("RETURN_REQUEST", "trang_thai='cho_xu_ly'"));
+        r.put("coupons", demTongVaMoi("COUPON", null));
+        r.put("articles", demTongVaMoi("ARTICLE", "trang_thai='draft'"));
+        return r;
+    }
+
+    /**
+     * Đếm tổng + đếm "đang chờ xử lý" cho 1 bảng.
+     *
+     * tuBang có thể kèm sẵn mệnh đề WHERE (VD "PRODUCT WHERE is_active=1"), khi đó điều kiện
+     * "đang chờ" được nối bằng AND. Chỉ nhận chuỗi HẰNG viết ngay trong sidebarCounts() ở trên,
+     * không bao giờ nhận dữ liệu từ request — nên ghép chuỗi ở đây là an toàn.
+     *
+     * Bảng chưa tồn tại (CSDL chưa chạy migration tương ứng) thì trả 0 thay vì làm hỏng cả
+     * sidebar chỉ vì một phân hệ chưa cài.
+     */
+    private Map<String, Object> demTongVaMoi(String tuBang, String dieuKienMoi) {
+        Map<String, Object> m = new HashMap<>();
+        m.put("tong", demAnToan("SELECT COUNT(*) FROM " + tuBang));
+        if (dieuKienMoi == null) {
+            m.put("moi", 0);
+        } else {
+            String noi = tuBang.toUpperCase().contains(" WHERE ") ? " AND " : " WHERE ";
+            m.put("moi", demAnToan("SELECT COUNT(*) FROM " + tuBang + noi + dieuKienMoi));
+        }
+        return m;
+    }
+
+    private long demAnToan(String sql) {
+        try {
+            Object v = em.createNativeQuery(sql).getSingleResult();
+            return v == null ? 0L : ((Number) v).longValue();
+        } catch (RuntimeException e) {
+            return 0L;
+        }
     }
 
     @GetMapping("/notifications")

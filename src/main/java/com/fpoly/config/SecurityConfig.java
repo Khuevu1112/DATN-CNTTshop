@@ -170,6 +170,10 @@ public class SecurityConfig {
                     .requestMatchers("/cart/**", "/orders/**", "/account/addresses/**").hasAnyRole(STAFF_AND_CUSTOMER_ROLES)
                     .requestMatchers("/pc-config/**").hasAnyRole(STAFF_AND_CUSTOMER_ROLES)
                     .requestMatchers("/admin/orders/**", "/admin/gio-hang/**").hasAnyRole(STAFF_ROLES)
+                    // Bản IN phiếu nhập kho (Thymeleaf, mở ở tab mới từ admin-vue) — xem
+                    // AdminGoodsReceiptController. Chỉ đọc, nhưng là chứng từ nội bộ nên vẫn
+                    // giới hạn trong nhân sự.
+                    .requestMatchers("/admin/goods-receipts/**").hasAnyRole(STAFF_ROLES)
                     .anyRequest().authenticated()
             )
             .userDetailsService(userDetailsService)

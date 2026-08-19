@@ -43,6 +43,12 @@ public class WarrantyService {
     @Autowired
     private com.fpoly.repository.ServiceCenterRepository serviceCenterRepo;
 
+    @Autowired
+    private AddressService addressService;
+
+    @Autowired
+    private SupportService supportService;
+
     private static final List<String> VALID_REQUEST_STATUS =
             List.of("pending", "accepted", "processing", "resolved", "rejected");
 
@@ -136,6 +142,7 @@ public class WarrantyService {
         String ht = "tan_noi".equals(hinhThuc) ? "tan_noi" : "cua_hang";
         request.setHinhThuc(ht);
         if ("tan_noi".equals(ht)) {
+            kiemTraPhamViTanNoi(email);
             request.setPhuPhi(PHU_PHI_TAN_NOI);
             request.setCenter(null);
         } else {
@@ -148,6 +155,34 @@ public class WarrantyService {
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy cửa hàng đã chọn.")));
         }
         requestRepo.save(request);
+    }
+
+    /**
+     * Chặn yêu cầu tận nơi ngoài vùng phục vụ.
+     *
+     * Kỹ thuật viên xuất phát từ chi nhánh, nên chỉ những tỉnh CÓ chi nhánh mới đi tận nơi được
+     * (xem SupportService.tinhPhucVuTanNoi). Trước đây form không kiểm gì cả: khách ở tỉnh
+     * không có chi nhánh vẫn chọn được "Bảo hành tận nơi", bị tính phụ phí 150.000đ, rồi mới
+     * biết là không phục vụ được khi CSKH gọi lại — kiểm ngay ở đây để chuyện đó không xảy ra
+     * dù gọi API trực tiếp.
+     */
+    private void kiemTraPhamViTanNoi(String email) {
+        Integer tinhKhach = addressService.layDanhSachTheoEmail(email).stream()
+                .filter(a -> a.getProvince() != null)
+                .sorted((a, b) -> Boolean.compare(
+                        !Boolean.TRUE.equals(a.getIsDefault()), !Boolean.TRUE.equals(b.getIsDefault())))
+                .map(a -> a.getProvince().getId())
+                .findFirst().orElse(null);
+
+        if (tinhKhach == null) {
+            throw new RuntimeException("Bảo hành tận nơi cần địa chỉ để kỹ thuật viên tới. "
+                    + "Vui lòng thêm địa chỉ trong mục Tài khoản rồi gửi lại yêu cầu.");
+        }
+        if (!supportService.tinhPhucVuTanNoi().contains(tinhKhach)) {
+            throw new RuntimeException("Rất tiếc, khu vực của bạn chưa có chi nhánh nên shop chưa "
+                    + "phục vụ tận nơi. Bạn có thể mang máy tới cửa hàng gần nhất, hoặc gửi máy "
+                    + "về trung tâm bảo hành — gọi 0835 344 974 để được hướng dẫn.");
+        }
     }
 
     public List<WarrantyRequest> getRequests(Integer warrantyId) {

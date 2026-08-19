@@ -20,8 +20,14 @@ public interface OrderRepository extends JpaRepository<Order, Integer> {
 
     Optional<Order> findByMaDonHang(String maDonHang);
 
+    List<Order> findByDiaChiGiao(com.fpoly.model.UserAddress diaChiGiao);
+
     // Ứng viên tự huỷ do quá hạn giữ hàng 24h (xem OrderService.huyDonHetHanThanhToan).
     List<Order> findByTrangThaiAndCreatedAtBefore(String trangThai, LocalDateTime cutoff);
+
+    // Đơn qua cổng redirect đã hết 5 phút giữ hàng mà chưa trả tiền — quét mỗi phút để trả
+    // hàng lại kho (xem OrderService.giaiPhongDonHetHanGiuHang).
+    List<Order> findByTrangThaiAndHanGiuHangNotNullAndHanGiuHangBefore(String trangThai, LocalDateTime moc);
 
     /**
      * Lọc đơn hàng theo trạng thái (tuỳ chọn), khoảng ngày đặt (tuỳ chọn) và tên/email khách hàng (tuỳ chọn).

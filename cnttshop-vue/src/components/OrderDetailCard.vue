@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
 import { fmt } from '../data/products.js';
 import { actions } from '../store.js';
 import { uploadPaymentProof, cancelOrder, resolveImageUrl } from '../api.js';
@@ -22,9 +22,42 @@ const gatewayPayUrl = computed(() => {
   return `http://localhost:8080${path}?paymentId=${props.order.payment?.id}`;
 });
 
+// ===== Đồng hồ giữ hàng =====
+// Hàng đã bị trừ khỏi kho ngay khi đặt đơn, nên trong lúc khách này thanh toán thì người khác
+// thấy sản phẩm "tạm hết hàng". Đổi lại, đơn qua cổng redirect chỉ được giữ 5 phút (backend
+// trả hạn qua order.hanGiuHang); hết hạn thì đơn tự huỷ và hàng về kho. Phải hiện rõ đồng hồ,
+// nếu không khách sẽ quay lại sau 10 phút và không hiểu vì sao đơn biến mất.
+const conLai = ref(0); // mili-giây còn lại
+let dongHo = null;
+let daBaoHetGio = false; // chỉ nạp lại đơn ĐÚNG MỘT LẦN khi đồng hồ về 0
+
+function capNhatConLai() {
+  const han = props.order.hanGiuHang;
+  conLai.value = han ? Math.max(0, new Date(han).getTime() - Date.now()) : 0;
+  // Vừa hết giờ -> nạp lại đơn để thấy trạng thái "Đã huỷ" thật từ server thay vì đoán ở client.
+  // Không lặp: nhịp đếm chạy mỗi giây, bỏ cờ này là mỗi giây một request.
+  if (han && conLai.value === 0 && !daBaoHetGio) {
+    daBaoHetGio = true;
+    emit('updated');
+  }
+}
+
+const dangGiuHang = computed(() => conLai.value > 0);
+const dongHoGiuHang = computed(() => {
+  const giay = Math.ceil(conLai.value / 1000);
+  return String(Math.floor(giay / 60)).padStart(2, '0') + ':' + String(giay % 60).padStart(2, '0');
+});
+
+watch(() => props.order.hanGiuHang, () => { daBaoHetGio = false; capNhatConLai(); }, { immediate: true });
+onMounted(() => { dongHo = setInterval(capNhatConLai, 1000); });
+onBeforeUnmount(() => { if (dongHo) clearInterval(dongHo); });
+
+// "Hoàn hàng" = hàng đã về kho shop, TIỀN CHƯA TRẢ; "Đã hoàn tiền" = tiền đã chuyển lại.
+// Hai mốc tách bạch để khách không tưởng đã nhận tiền khi mới trả hàng.
 const STATUS_LABEL = {
   pending: 'Chờ xác nhận', confirmed: 'Đã xác nhận', processing: 'Đang xử lý',
-  shipped: 'Đang giao', delivered: 'Hoàn tất', cancelled: 'Đã hủy', refunded: 'Đã hoàn tiền',
+  shipped: 'Đang giao', delivered: 'Hoàn tất', cancelled: 'Đã hủy',
+  returned: 'Hoàn hàng (chờ hoàn tiền)', refunded: 'Đã hoàn tiền',
 };
 const PAYMENT_STATUS_LABEL = {
   pending: 'Chưa thanh toán', paid: 'Đã thanh toán', failed: 'Thất bại',
@@ -36,7 +69,7 @@ const PAYMENT_STATUS_LABEL = {
 const HISTORY_EVENT_LABELS = {
   pending: 'Đặt hàng', paid: 'Đã thanh toán', confirmed: 'Đã xác nhận',
   processing: 'Đang xử lý', shipped: 'Bắt đầu giao hàng', delivered: 'Giao hàng thành công',
-  cancelled: 'Đã huỷ đơn', refunded: 'Đã hoàn tiền',
+  cancelled: 'Đã huỷ đơn', returned: 'Hàng đã về kho shop', refunded: 'Đã hoàn tiền',
 };
 function fmtLogTime(iso) {
   const d = new Date(iso);
@@ -155,8 +188,13 @@ async function confirmCancel() {
       </div>
 
       <div v-else-if="['stripe_card', 'vnpay'].includes(order.payment.methodCode) && order.payment.status === 'pending'" style="margin-top: 10px">
-        <div style="font-size: 12px; color: var(--muted2); margin-bottom: 8px">
-          Đơn hàng chưa hoàn tất thanh toán. Đơn được giữ trong vòng <strong style="color: var(--amber)">24 giờ</strong> kể từ khi đặt hàng, sau đó sẽ tự động bị hủy.
+        <div v-if="dangGiuHang" style="font-size: 12px; color: var(--muted2); margin-bottom: 8px">
+          Shop đang giữ hàng cho bạn — còn
+          <strong class="mono" style="color: var(--amber); font-size: 14px">{{ dongHoGiuHang }}</strong>
+          để hoàn tất thanh toán. Hết giờ, đơn sẽ tự huỷ và hàng được trả lại kho cho khách khác.
+        </div>
+        <div v-else style="font-size: 12px; color: var(--muted2); margin-bottom: 8px">
+          Đơn hàng chưa hoàn tất thanh toán và đã hết thời gian giữ hàng — đơn sẽ được huỷ tự động trong ít phút tới.
         </div>
         <a :href="gatewayPayUrl"
           style="display: inline-block; height: 36px; line-height: 36px; padding: 0 16px; border-radius: 9px; background: var(--acc,#c6ff4a); color: var(--acc-ink); font-weight: 700; font-size: 12.5px; text-decoration: none">

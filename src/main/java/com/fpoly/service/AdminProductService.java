@@ -348,12 +348,36 @@ public class AdminProductService {
             }
         });
 
+        // Trùng TÊN trong cùng danh mục cũng phải chặn, không chỉ trùng slug: khách tìm theo tên
+        // chứ không theo slug, nên hai bản ghi khác slug mà cùng tên vẫn hiện ra thành hai thẻ
+        // y hệt nhau trong kết quả tìm kiếm. Catalog từng có 95 bản ghi kiểu này do dữ liệu mẫu
+        // (xem 84_dedup_products.sql) — chặn ở đây để không tạo thêm.
+        // Chỉ so với sản phẩm ĐANG HIỂN THỊ: các bản trùng cũ đã bị ẩn, không nên chặn admin
+        // sửa lại chính chúng.
+        String tenMoi = req.name().trim();
+        productRepo.findByIsActiveTrue().stream()
+                .filter(x -> !x.getId().equals(selfId))
+                .filter(x -> x.getCategory() != null && x.getCategory().getId().equals(category.getId()))
+                .filter(x -> x.getName() != null && x.getName().trim().equalsIgnoreCase(tenMoi))
+                .findFirst()
+                .ifPresent(x -> {
+                    throw new RuntimeException("Danh mục này đã có sản phẩm tên \"" + x.getName()
+                            + "\" (mã #" + x.getId() + "). Đặt tên khác để khách không thấy hai kết quả giống hệt nhau.");
+                });
+
         product.setName(req.name().trim());
         product.setSlug(slug);
         product.setDescription(req.description());
         product.setCategory(category);
         product.setIsActive(req.isActive() == null || req.isActive());
-        product.setWarrantyMonths(req.warrantyMonths() != null ? req.warrantyMonths() : 36);
+        // Số tháng bảo hành đi thẳng vào ngày hết hạn của phiếu bảo hành khi đơn giao xong
+        // (WarrantyService.createWarranty) — số âm tạo ra phiếu hết hạn từ trước khi được cấp,
+        // số quá lớn thì tràn ngày. Chặn tại chỗ nhập.
+        Integer bh = req.warrantyMonths();
+        if (bh != null && (bh < 0 || bh > 120)) {
+            throw new RuntimeException("Thời hạn bảo hành phải từ 0 đến 120 tháng");
+        }
+        product.setWarrantyMonths(bh != null ? bh : 36);
         if (product.getCreatedAt() == null) {
             product.setCreatedAt(LocalDateTime.now());
         }
@@ -432,12 +456,37 @@ public class AdminProductService {
         Map<String, OptionValue> valueByKey = new HashMap<>();
         if (options == null) return valueByKey;
 
+        // Hai nhóm tuỳ chọn TRÙNG TÊN trong cùng sản phẩm làm trang chi tiết vẽ hai ô chọn y
+        // hệt nhau, và nhãn biến thể trong admin bị lặp ("i5 / 16GB / i5 / 16GB"). Dữ liệu mẫu
+        // từng dính đúng lỗi này (xem 85_dedup_product_options.sql) — chặn ngay ở cửa vào để
+        // không tái diễn qua form quản trị.
+        Set<String> tenNhomDaGap = new HashSet<>();
+        for (OptionRequest req : options) {
+            if (req.optionName() == null || req.optionName().isBlank()) continue;
+            String ten = req.optionName().trim();
+            if (!tenNhomDaGap.add(ten.toLowerCase())) {
+                throw new RuntimeException("Có 2 nhóm tuỳ chọn cùng tên \"" + ten
+                        + "\". Mỗi nhóm phải có tên riêng, hoặc gộp các giá trị vào chung một nhóm.");
+            }
+        }
+
         int groupIndex = 0;
         for (OptionRequest req : options) {
             if (req.optionName() == null || req.optionName().isBlank()) {
                 groupIndex++;
                 continue;
             }
+            // Giá trị trùng nhau trong CÙNG một nhóm cũng vô nghĩa: khách thấy 2 lựa chọn giống
+            // hệt, và variant nối vào cái nào cũng được -> không xác định.
+            Set<String> giaTriDaGap = new HashSet<>();
+            for (OptionValueRequest vr : req.values() == null ? List.<OptionValueRequest>of() : req.values()) {
+                if (vr.value() == null || vr.value().isBlank()) continue;
+                if (!giaTriDaGap.add(vr.value().trim().toLowerCase())) {
+                    throw new RuntimeException("Nhóm \"" + req.optionName().trim() + "\" có 2 giá trị trùng nhau: \""
+                            + vr.value().trim() + "\".");
+                }
+            }
+
             ProductOption option = new ProductOption();
             option.setProduct(product);
             option.setOptionName(req.optionName());
@@ -502,15 +551,42 @@ public class AdminProductService {
             }
         }
 
-        // 2) Giá / tồn kho hợp lệ.
+        // 2) Giá / giá gốc / tồn kho / SKU hợp lệ.
+        Set<String> skuDaGap = new HashSet<>();
         for (VariantRequest req : variants) {
-            if (req.price() == null || req.price().signum() < 0) {
-                throw new RuntimeException(
-                        "Giá biến thể \"" + (req.sku() == null ? "" : req.sku()) + "\" không hợp lệ");
+            String nhan = (req.sku() == null || req.sku().isBlank()) ? "(chưa đặt SKU)" : req.sku();
+
+            // signum() < 0 (cũ) cho lọt giá = 0: sản phẩm bán 0đ lọt ra trang chủ, khách đặt
+            // được đơn 0đ, và mọi phép tính % giảm giá chia cho 0.
+            if (req.price() == null || req.price().signum() <= 0) {
+                throw new RuntimeException("Giá biến thể \"" + nhan + "\" phải lớn hơn 0đ");
+            }
+            // Giá gốc là giá GẠCH NGANG, phải cao hơn giá bán thì mới có nghĩa. Nhập ngược lại
+            // làm thẻ sản phẩm hiện mức giảm ÂM (VD "-15%" khi thật ra là tăng giá).
+            if (req.originalPrice() != null && req.originalPrice().signum() > 0
+                    && req.originalPrice().compareTo(req.price()) < 0) {
+                throw new RuntimeException("Giá gốc của biến thể \"" + nhan
+                        + "\" đang thấp hơn giá bán. Giá gốc là giá gạch ngang, phải cao hơn giá bán.");
             }
             if (req.stock() != null && req.stock() < 0) {
-                throw new RuntimeException(
-                        "Tồn kho biến thể \"" + (req.sku() == null ? "" : req.sku()) + "\" không được âm");
+                throw new RuntimeException("Tồn kho biến thể \"" + nhan + "\" không được âm");
+            }
+
+            // SKU là UNIQUE trong CSDL. Không kiểm ở đây thì admin nhập trùng sẽ nhận nguyên
+            // văn lỗi ràng buộc SQL, không biết trùng với cái gì.
+            if (req.sku() != null && !req.sku().isBlank()) {
+                String sku = req.sku().trim();
+                if (!skuDaGap.add(sku.toLowerCase())) {
+                    throw new RuntimeException("SKU \"" + sku + "\" bị lặp giữa các biến thể của "
+                            + "chính sản phẩm này. Mỗi biến thể phải có SKU riêng.");
+                }
+                List<ProductVariant> trung = variantRepo.findTrungSku(sku, product.getId());
+                if (!trung.isEmpty()) {
+                    String tenSpKhac = trung.get(0).getProduct() != null
+                            ? trung.get(0).getProduct().getName() : "sản phẩm khác";
+                    throw new RuntimeException("SKU \"" + sku + "\" đã được dùng cho \""
+                            + tenSpKhac + "\". SKU phải là duy nhất trên toàn hệ thống.");
+                }
             }
         }
 

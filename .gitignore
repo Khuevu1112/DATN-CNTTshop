@@ -37,3 +37,17 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Rác/artifact KHÔNG đưa vào repo ###
+# Bản kết xuất CSDL (vài MB, đổi liên tục — dùng các file migration trong database/ thay thế)
+CNTTDB.sql
+CNTTSHOPDB
+*.bak
+# Trang HTML lưu từ trình duyệt + bản dựng thử giao diện, chỉ là tư liệu tham khảo lúc thiết kế
+*_files/
+Compare Drawer Redesign.html
+Recreate support interface pages/
+# Ảnh chụp mã nguồn gửi qua lại
+*.zip
+# File tạm
+*.tmp

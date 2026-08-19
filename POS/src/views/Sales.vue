@@ -8,6 +8,7 @@
       </div>
       <div class="actions">
         <button class="ghost" @click="moUuDai">🎁 Ưu đãi</button>
+        <button class="ghost" @click="$router.push('/tra-cuu')">🔎 Tra cứu &amp; Bảo hành</button>
         <button class="ghost" @click="openDisplay">Màn hình khách ↗</button>
         <button class="ghost" @click="logout">Đăng xuất</button>
       </div>
@@ -226,6 +227,9 @@
         <button :class="{ on: uuDaiTab === 'coupon' }" @click="uuDaiTab = 'coupon'">
           Coupon <b v-if="uuDai.coupon.length">{{ uuDai.coupon.length }}</b>
         </button>
+        <button :class="{ on: uuDaiTab === 'chuongTrinh' }" @click="uuDaiTab = 'chuongTrinh'">
+          Chương trình
+        </button>
       </div>
 
       <div class="uud-body">
@@ -257,7 +261,7 @@
           </div>
         </template>
 
-        <template v-else>
+        <template v-else-if="uuDaiTab === 'coupon'">
           <div v-if="!uuDai.coupon.length" class="uud-empty">Không có mã giảm giá nào đang chạy.</div>
           <div v-for="c in uuDai.coupon" :key="c.ma" class="uud-card uud-cp" @click="dungCoupon(c.ma)">
             <div class="uud-ma tnum">{{ c.ma }}</div>
@@ -269,6 +273,55 @@
               <span v-if="c.soLuotConLai != null">Còn {{ c.soLuotConLai }} lượt</span>
               <span v-else>Không giới hạn lượt</span>
               · Bấm để áp mã
+            </div>
+          </div>
+        </template>
+
+        <!-- ===== Chương trình ở tầm cửa hàng ===== -->
+        <template v-else>
+          <!-- Flash Sale đang chạy -->
+          <div class="uud-nhom">⚡ Flash Sale</div>
+          <div v-if="!uuDai.flashSale" class="uud-empty">Hiện không có đợt Flash Sale nào đang chạy.</div>
+          <template v-else>
+            <div class="uud-card">
+              <div class="uud-sp">{{ uuDai.flashSale.tieuDe || 'Flash Sale' }}</div>
+              <div class="uud-gia">Kết thúc {{ gioNgay(uuDai.flashSale.ketThucLuc) }}</div>
+            </div>
+            <div v-for="it in uuDai.flashSale.sanPham" :key="it.variantId" class="uud-card">
+              <div class="uud-nd">{{ it.tenSanPham }}</div>
+              <div class="uud-gia tnum">
+                <b style="color:#c6ff4a">{{ fmt(it.giaSale) }}</b>
+                <s style="margin-left:6px">{{ fmt(it.giaGoc) }}</s>
+                <span v-if="it.phanTramGiam"> · -{{ it.phanTramGiam }}%</span>
+                <span v-if="it.soLuongConLai != null"> · còn {{ it.soLuongConLai }}</span>
+              </div>
+            </div>
+          </template>
+
+          <!-- Hạng thành viên tích luỹ -->
+          <div class="uud-nhom">🏅 Hạng thành viên (tích luỹ theo chi tiêu)</div>
+          <div v-for="h in uuDai.hangThanhVien" :key="h.ten" class="uud-card">
+            <div class="uud-sp">{{ h.ten }}</div>
+            <div class="uud-nd">{{ h.moTa }}</div>
+            <div class="uud-gia tnum" v-if="h.mucChiToiThieu > 0">Đạt khi đã mua từ {{ fmt(h.mucChiToiThieu) }}</div>
+          </div>
+
+          <!-- Gói hội viên trả phí -->
+          <div class="uud-nhom">💳 Gói CNTT Care (trả phí)</div>
+          <div v-if="!uuDai.goiHoiVien.length" class="uud-empty">Chưa mở bán gói nào.</div>
+          <div v-for="g in uuDai.goiHoiVien" :key="g.ma" class="uud-card">
+            <div class="uud-sp">{{ g.ten }}</div>
+            <div class="uud-gia tnum">{{ fmt(g.gia) }} / {{ g.soThang }} tháng</div>
+            <div v-for="(q, i) in g.quyenLoi" :key="i" class="uud-nd">· {{ q }}</div>
+          </div>
+
+          <!-- Trả góp -->
+          <div class="uud-nhom">🧾 Trả góp</div>
+          <div v-if="!uuDai.traGop.length" class="uud-empty">Chưa mở kỳ hạn trả góp nào.</div>
+          <div v-for="t in uuDai.traGop" :key="t.soThang" class="uud-card">
+            <div class="uud-nd">
+              {{ t.soThang }} tháng ·
+              <b>{{ Number(t.laiSuatNam) === 0 ? 'lãi suất 0%' : 'lãi ' + t.laiSuatNam + '%/năm' }}</b>
             </div>
           </div>
         </template>
@@ -444,8 +497,16 @@ function clampXu() {
 // đang quét hàng. Gom 3 mục vào một thanh trượt để tra tại chỗ, không phải rời màn hình bán hàng.
 const uuDaiMo = ref(false)
 const uuDaiTab = ref('khuyenMai')
-const uuDai = ref({ khuyenMai: [], tangKem: [], coupon: [] })
+// Bốn mục sau (flashSale/hangThanhVien/goiHoiVien/traGop) là chương trình ở tầm CỬA HÀNG, không
+// gắn với sản phẩm trong đơn — nhân viên phải đọc được cho khách ngay tại quầy. Xem PosService.uuDai.
+const uuDai = ref({
+  khuyenMai: [], tangKem: [], coupon: [],
+  flashSale: null, hangThanhVien: [], goiHoiVien: [], traGop: [],
+})
 const uuDaiLoading = ref(false)
+
+const gioNgay = (d) =>
+  d ? new Date(d).toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) : '—'
 
 async function taiUuDai() {
   uuDaiLoading.value = true
@@ -715,6 +776,14 @@ onUnmounted(() => {
 .uud-tabs button.on { background: var(--acc); border-color: var(--acc); color: var(--acc-ink); }
 .uud-tabs b { font-weight: 800; }
 .uud-body { flex: 1; overflow: auto; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.uud-nhom {
+  font-size: 12px;
+  font-weight: 700;
+  color: #c6ff4a;
+  letter-spacing: .3px;
+  margin: 16px 0 8px;
+}
+.uud-nhom:first-child { margin-top: 0; }
 .uud-empty { padding: 30px 10px; text-align: center; color: var(--muted); font-size: 12.5px; line-height: 1.6; }
 .uud-card { background: var(--card2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 13px; }
 .uud-sp { font-size: 11px; color: var(--muted); margin-bottom: 5px; }

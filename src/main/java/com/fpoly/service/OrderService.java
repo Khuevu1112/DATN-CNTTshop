@@ -3,6 +3,7 @@ package com.fpoly.service;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -90,6 +91,12 @@ public class OrderService {
     @Autowired
     private AfterShipApiService afterShipApiService;
 
+    @Autowired
+    private TonKhoService tonKhoService;
+
+    @Autowired
+    private com.fpoly.repository.ReturnRequestRepository returnRequestRepo;
+
     @PersistenceContext
     private EntityManager em;
 
@@ -101,6 +108,17 @@ public class OrderService {
      * thanh toán) — không áp dụng cho COD vì COD vốn chỉ thu tiền khi giao, không phải "chưa
      * thanh toán" theo nghĩa cần giữ hàng chờ. Xem huyDonHetHanThanhToan(). */
     private static final long GIO_GIU_HANG_CHO_THANH_TOAN = 24;
+
+    /** Đơn qua cổng redirect (Stripe/VNPay) chỉ được GIỮ HÀNG bấy nhiêu phút.
+     *
+     * Hàng bị trừ kho ngay khi tạo đơn để 2 khách không cùng mua được món cuối cùng — nhưng
+     * chính vì thế không thể giữ lâu: mỗi phút giữ là một phút món hàng hiện "tạm hết hàng"
+     * với mọi người khác dù có thể khách kia đã bỏ đi. 5 phút đủ để thao tác xong một lượt
+     * thanh toán thẻ/QR, và ngắn để hàng quay lại kệ nhanh nếu khách bỏ dở.
+     *
+     * KHÁC với GIO_GIU_HANG_CHO_THANH_TOAN (24h) ở trên — mốc đó dành cho chuyển khoản, nơi
+     * admin phải đối soát bằng tay nên không thể ép 5 phút. */
+    private static final long PHUT_GIU_HANG_THANH_TOAN = 5;
 
     /** Đặt hàng từ giao diện Thymeleaf cũ — mặc định thanh toán COD. */
     @Transactional
@@ -189,6 +207,9 @@ public class OrderService {
             throw new RuntimeException("Giỏ hàng đang trống");
         }
 
+        // Kiểm tra sớm cho THÔNG BÁO ĐẸP (báo ngay trước khi tính tiền, tính ship, trừ xu...).
+        // Đây KHÔNG phải chốt chặn chống bán quá kho — hai khách song song đều có thể qua được
+        // bước này; chốt chặn thật là lệnh giữ hàng có điều kiện ở phía dưới (TonKhoService).
         for (CartItem ci : items) {
             ProductVariant v = ci.getVariant();
             if (v.getStock() != null && v.getStock() < ci.getSoLuong()) {
@@ -252,7 +273,9 @@ public class OrderService {
 
         Order order = new Order();
         order.setNguoiDung(user);
-        order.setDiaChiGiao(address);
+        // Chụp lại địa chỉ (tên/SĐT/địa chỉ đầy đủ + toạ độ) thay vì chỉ giữ FK — khách sửa hoặc
+        // xoá địa chỉ trong sổ sau khi đặt thì đơn này vẫn hiển thị đúng nơi đã giao.
+        order.chupLaiDiaChi(address);
         order.setTienHang(tienHang);
         order.setTienGiamGia(tienGiamGia);
         order.setPhiVanChuyen(phiVanChuyen);
@@ -266,20 +289,32 @@ public class OrderService {
             order.setNhanTuyChonGiaoHang(tuyChonGiaoHang.label());
             order.setThoiGianGiaoDuKien(tuyChonGiaoHang.eta());
         }
-        // Chụp lại toạ độ điểm giao + quãng đường đã dùng để tính phí — khách sửa/xoá địa chỉ
-        // sau khi đặt thì admin vẫn thấy đúng nơi phải giao và đối chiếu được phí ship của đơn.
-        order.setViDoGiao(address.getLatitude());
-        order.setKinhDoGiao(address.getLongitude());
+        // Quãng đường đã dùng để tính phí, lưu để admin đối chiếu được phí ship của đơn.
+        // (Toạ độ điểm giao đã được chụp cùng địa chỉ ở chupLaiDiaChi phía trên.)
         order.setKhoangCachGiaoKm(khoangCachGiao);
 
-        // Đơn qua cổng redirect (Stripe) chỉ thực sự "chốt" khi thanh toán thành công (callback
-        // /payment/stripe/return hoặc webhook) — trừ kho + xoá giỏ ngay bây giờ là sai nếu khách
-        // huỷ/đóng trang giữa chừng. COD/chuyển khoản thì chốt ngay vì không có bước redirect.
+        // Đơn qua cổng redirect (Stripe/VNPay) chỉ thực sự "chốt" khi thanh toán thành công
+        // (callback /payment/stripe/return hoặc webhook) — giỏ hàng vì thế chưa bị xoá ngay bây
+        // giờ, để khách huỷ/đóng trang giữa chừng thì hàng vẫn còn nguyên trong giỏ.
         boolean choTraSauKhiThanhToan = laCongThanhToanRedirect(paymentMethodCode);
 
+        // KHO thì ngược lại: trừ NGAY cho mọi hình thức thanh toán. Trước đây đơn redirect
+        // không trừ kho tới lúc trả tiền xong, nên còn đúng 1 máy mà 2 khách cùng bấm mua thì
+        // cả hai đều đặt được và người trả sau mua phải món không còn tồn tại. Giữ hàng ngay
+        // lúc tạo đơn khiến sản phẩm lập tức hiện "tạm hết hàng" với người khác; đổi lại đơn
+        // redirect chỉ được giữ PHUT_GIU_HANG_THANH_TOAN phút rồi tự nhả (xem
+        // giaiPhongDonHetHanGiuHang) để hàng không bị treo vì một khách bỏ dở.
         List<OrderItem> chiTiet = new ArrayList<>();
         for (CartItem ci : items) {
             ProductVariant v = ci.getVariant();
+
+            if (!tonKhoService.giuHang(v, ci.getSoLuong())) {
+                // Người khác vừa lấy mất trong lúc khách này đang ở trang thanh toán. Ném lỗi
+                // -> cả transaction rollback, những dòng đã giữ trước đó trong cùng đơn cũng
+                // được trả lại kho, không để lại hàng bị treo.
+                throw new RuntimeException("Sản phẩm \"" + v.getProduct().getName()
+                        + "\" vừa được người khác đặt hết. Vui lòng bỏ khỏi giỏ hoặc giảm số lượng rồi thử lại.");
+            }
 
             OrderItem oi = new OrderItem();
             oi.setOrder(order);
@@ -290,12 +325,11 @@ public class OrderService {
             oi.setSoLuong(ci.getSoLuong());
 
             chiTiet.add(oi);
-
-            if (!choTraSauKhiThanhToan) {
-                v.setStock(v.getStock() - ci.getSoLuong());
-            }
         }
         order.setChiTiet(chiTiet);
+        if (choTraSauKhiThanhToan) {
+            order.setHanGiuHang(LocalDateTime.now().plusMinutes(PHUT_GIU_HANG_THANH_TOAN));
+        }
 
         Order saved = orderRepo.save(order);
 
@@ -373,10 +407,16 @@ public class OrderService {
                 // Không chặn luồng đặt hàng nếu gửi mail thất bại
             }
         } else {
+            // Hai hạn giữ hàng KHÁC NHAU: cổng redirect (Stripe/VNPay) trả tiền ngay tại chỗ
+            // nên chỉ giữ 5 phút; chuyển khoản phải chờ admin đối soát nên giữ 24h.
+            String hanGiu = choTraSauKhiThanhToan
+                    ? PHUT_GIU_HANG_THANH_TOAN + " phút"
+                    : GIO_GIU_HANG_CHO_THANH_TOAN + " giờ";
             notificationService.taoChoUser(
                     user.getId(), "order_awaiting_payment", "Đơn hàng đang chờ thanh toán",
-                    "Đơn hàng " + saved.getMaDonHang() + " đã được ghi nhận nhưng CHƯA hoàn tất thanh toán. Vui lòng thanh toán trong vòng "
-                            + GIO_GIU_HANG_CHO_THANH_TOAN + " giờ, nếu không đơn sẽ tự động bị huỷ và hàng được giải phóng.",
+                    "Đơn hàng " + saved.getMaDonHang() + " đã được ghi nhận nhưng CHƯA hoàn tất thanh toán. "
+                            + "Shop đang giữ hàng cho bạn, vui lòng thanh toán trong vòng " + hanGiu
+                            + ", nếu không đơn sẽ tự động bị huỷ và hàng được trả lại kho.",
                     "/tai-khoan/don-hang"
             );
             try {
@@ -404,18 +444,92 @@ public class OrderService {
                 || (paymentMethodCode != null && paymentMethodCode.startsWith("vnpay"));
     }
 
-    /** Gọi khi cổng thanh toán redirect (Stripe) báo thành công (return hoặc webhook, xem
-     * StripeController) — lúc này mới thật sự trừ kho + xoá các dòng giỏ hàng tương ứng (đã cố
-     * tình chưa làm ở lúc tạo đơn, xem datHangTuGioHang) để khách không mất hàng trong giỏ nếu
-     * huỷ/đóng trang giữa chừng, đồng thời gửi thông báo/mail xác nhận đã thanh toán. */
+    /** Gọi khi cổng thanh toán redirect (Stripe/VNPay) báo thành công (return hoặc webhook, xem
+     * StripeController) — chốt đơn: gỡ hạn giữ hàng (hàng đã là của khách này, không còn đếm
+     * ngược) + xoá các dòng giỏ hàng tương ứng (cố tình chưa xoá lúc tạo đơn để khách không mất
+     * hàng trong giỏ nếu huỷ/đóng trang giữa chừng) + gửi thông báo/mail xác nhận.
+     *
+     * KHÔNG trừ kho ở đây nữa: kho đã bị trừ ngay lúc tạo đơn cho MỌI hình thức thanh toán
+     * (xem datHangTuGioHang) để hai khách không cùng mua được món cuối cùng. */
+    /**
+     * Chốt đơn sau khi cổng thanh toán (Stripe/VNPay) báo thành công.
+     *
+     * Xử lý cả trường hợp TIỀN VỀ MUỘN: đơn chỉ được giữ hàng 5 phút, khách trả tiền ở phút thứ
+     * 6 thì tác vụ quét đã huỷ đơn và trả hàng lại kho từ trước. Trước đây hai controller cổng
+     * thanh toán đều gán thẳng trạng thái "confirmed" bất kể đơn đang ở đâu — đơn đã huỷ sẽ
+     * sống lại trong khi hàng của nó có thể đã bán cho người khác.
+     *
+     * Nay: thử GIỮ LẠI hàng.
+     *   - Giữ được  -> đơn hồi sinh về "confirmed", khách không mất gì.
+     *   - Không còn -> đơn ở nguyên "cancelled", báo cho khách và tạo việc hoàn tiền cho admin.
+     *     Thà hoàn tiền một khách còn hơn hứa giao món hàng không tồn tại.
+     *
+     * @param ghiChuLog nội dung ghi vào lịch sử, do controller truyền vào để nói rõ cổng nào.
+     * @return true nếu đơn được chốt thành công.
+     */
+    @Transactional
+    public boolean chotDonSauThanhToanGateway(Order order, String ghiChuLog) {
+        if ("cancelled".equals(order.getTrangThai())) {
+            if (!giuLaiHangChoDonDaHuy(order)) {
+                OrderStatusLog logHong = new OrderStatusLog();
+                logHong.setOrder(order);
+                logHong.setTrangThai("cancelled");
+                logHong.setGhiChu(ghiChuLog + " NHƯNG đơn đã hết hạn giữ hàng và hàng đã bán hết"
+                        + " — cần hoàn tiền cho khách.");
+                statusLogRepo.save(logHong);
+
+                notificationService.taoChoUser(
+                        order.getNguoiDung().getId(), "order_expired",
+                        "Đơn " + order.getMaDonHang() + " không thể hoàn tất",
+                        "Thanh toán của bạn về sau khi hết thời gian giữ hàng và sản phẩm đã hết. "
+                                + "Shop sẽ hoàn lại toàn bộ số tiền này, bộ phận CSKH sẽ liên hệ với bạn.",
+                        "/tai-khoan/don-hang");
+                notificationService.tao("refund_needed", "Cần hoàn tiền đơn " + order.getMaDonHang(),
+                        "Khách đã thanh toán sau khi đơn tự huỷ do hết hạn giữ hàng, hàng không còn."
+                                + " Vui lòng hoàn tiền.", "/orders");
+                return false;
+            }
+            OrderStatusLog logHoiSinh = new OrderStatusLog();
+            logHoiSinh.setOrder(order);
+            logHoiSinh.setTrangThai("confirmed");
+            logHoiSinh.setGhiChu(ghiChuLog + " (về sau hạn giữ hàng nhưng vẫn còn hàng — đơn được khôi phục)");
+            statusLogRepo.save(logHoiSinh);
+        } else {
+            OrderStatusLog log = new OrderStatusLog();
+            log.setOrder(order);
+            log.setTrangThai("confirmed");
+            log.setGhiChu(ghiChuLog);
+            statusLogRepo.save(log);
+        }
+
+        order.setTrangThai("confirmed");
+        xacNhanThanhToanGatewayThanhCong(order);
+        return true;
+    }
+
+    /** Giữ lại toàn bộ hàng của một đơn đã bị huỷ. Trả false nếu bất kỳ dòng nào không còn đủ —
+     * khi đó những dòng vừa giữ được sẽ được nhả ra ngay, không để hàng treo lơ lửng. */
+    private boolean giuLaiHangChoDonDaHuy(Order order) {
+        List<OrderItem> daGiu = new ArrayList<>();
+        for (OrderItem oi : order.getChiTiet()) {
+            if (tonKhoService.giuHang(oi.getVariant(), oi.getSoLuong())) {
+                daGiu.add(oi);
+            } else {
+                for (OrderItem tra : daGiu) {
+                    tonKhoService.traHang(tra.getVariant(), tra.getSoLuong());
+                }
+                return false;
+            }
+        }
+        return true;
+    }
+
     @Transactional
     public void xacNhanThanhToanGatewayThanhCong(Order order) {
         if (order.getChiTiet() == null) return;
 
-        for (OrderItem oi : order.getChiTiet()) {
-            ProductVariant v = oi.getVariant();
-            v.setStock(v.getStock() - oi.getSoLuong());
-        }
+        order.setHanGiuHang(null);
+        orderRepo.save(order);
 
         Cart cart = cartService.layHoacTaoCart(order.getNguoiDung().getEmail());
         List<Integer> variantIds = order.getChiTiet().stream()
@@ -490,8 +604,16 @@ public class OrderService {
             throw new RuntimeException("Đơn hàng đã thanh toán, không thể tự hủy. Vui lòng liên hệ hỗ trợ.");
         }
 
+        // Khoá huỷ từ lúc hàng bắt đầu rời kho. "shipped" trở đi thì hàng đã ở ngoài đường,
+        // bấm huỷ không làm nó quay lại được — đường đi đúng là từ chối nhận, hàng về kho rồi
+        // admin chuyển sang "Hoàn hàng" (xem capNhatTrangThai).
         if (!"pending".equals(order.getTrangThai()) && !"confirmed".equals(order.getTrangThai())) {
-            throw new RuntimeException("Đơn hàng đang ở trạng thái không thể hủy");
+            if ("shipped".equals(order.getTrangThai())) {
+                throw new RuntimeException("Đơn đang trên đường giao nên không huỷ được. Bạn có thể "
+                        + "từ chối nhận hàng khi shipper tới, hoặc gọi 0835 344 974 để được hỗ trợ.");
+            }
+            throw new RuntimeException("Đơn hàng đang ở trạng thái \""
+                    + nhanTrangThaiDon(order.getTrangThai()) + "\", không thể huỷ.");
         }
 
         String ghiChu = (lyDoKhach == null || lyDoKhach.isBlank())
@@ -503,20 +625,15 @@ public class OrderService {
     /** Logic huỷ đơn dùng chung cho khách tự huỷ (huyDon) và tự động huỷ khi hết hạn giữ hàng
      * 24h (huyDonHetHanThanhToan) — tách riêng để không lặp lại phần hoàn kho. */
     private void huyDonNoiBo(Order order, String ghiChu) {
-        Payment payment = layPaymentCuaDon(order);
-
-        // Đơn qua cổng redirect (Stripe) chưa thanh toán (payment khác "paid" — đơn "paid" đã
-        // bị chặn hủy trước khi gọi tới đây) thì chưa từng bị trừ kho lúc tạo đơn (xem
-        // datHangTuGioHang), nên không được cộng lại ở đây kẻo dư kho ảo.
-        boolean tungTruKho = payment == null || !laCongThanhToanRedirect(payment.getPaymentMethod().getCode());
-        if (tungTruKho) {
-            for (OrderItem oi : order.getChiTiet()) {
-                ProductVariant v = oi.getVariant();
-                v.setStock(v.getStock() + oi.getSoLuong());
-            }
+        // Trả hàng về kho vô điều kiện: từ nay MỌI đơn đều đã trừ kho ngay lúc tạo (kể cả đơn
+        // qua cổng redirect chưa trả tiền — xem datHangTuGioHang), nên không còn trường hợp
+        // "chưa từng trừ kho" để phải phân biệt.
+        for (OrderItem oi : order.getChiTiet()) {
+            tonKhoService.traHang(oi.getVariant(), oi.getSoLuong());
         }
 
         order.setTrangThai("cancelled");
+        order.setHanGiuHang(null);
         orderRepo.save(order);
 
         OrderStatusLog log = new OrderStatusLog();
@@ -532,6 +649,48 @@ public class OrderService {
         tradeInService.hoanTinDungNeuDonBiHuy(order.getId(), order.getTradeInCreditId());
         // Tương tự: hoàn lại lượt free ship liên tỉnh của gói hội viên nếu đơn đã tiêu.
         subscriptionService.hoanLuotTheoDon(order);
+    }
+
+    /**
+     * Quét mỗi phút: đơn qua cổng redirect đã hết hạn GIỮ HÀNG (PHUT_GIU_HANG_THANH_TOAN phút)
+     * mà vẫn chưa thanh toán -> huỷ đơn, TRẢ HÀNG VỀ KHO để người khác mua được.
+     *
+     * Đây là vế thứ hai của việc trừ kho ngay lúc tạo đơn (xem datHangTuGioHang): giữ hàng cho
+     * người đang thanh toán là đúng, nhưng giữ mãi thì một khách bỏ dở đủ để món hàng "tạm hết
+     * hàng" vĩnh viễn. Nhịp 1 phút để hàng quay lại kệ gần như ngay khi hết hạn — khác hẳn
+     * huyDonHetHanThanhToan bên dưới (mốc 24h cho chuyển khoản, quét 30 phút/lần là đủ).
+     */
+    @Scheduled(fixedRate = 60 * 1000)
+    @Transactional
+    public void giaiPhongDonHetHanGiuHang() {
+        List<Order> ungVien = orderRepo.findByTrangThaiAndHanGiuHangNotNullAndHanGiuHangBefore(
+                "pending", LocalDateTime.now());
+
+        for (Order order : ungVien) {
+            Payment payment = layPaymentCuaDon(order);
+            // Đã trả tiền xong nhưng callback về muộn hơn lúc quét -> chỉ gỡ đồng hồ, giữ đơn.
+            if (payment != null && "paid".equals(payment.getStatus())) {
+                order.setHanGiuHang(null);
+                orderRepo.save(order);
+                continue;
+            }
+
+            huyDonNoiBo(order, "Tự động huỷ do quá " + PHUT_GIU_HANG_THANH_TOAN
+                    + " phút chưa hoàn tất thanh toán — hàng đã được trả lại kho");
+
+            if (payment != null) {
+                payment.setStatus("failed");
+                paymentRepo.save(payment);
+            }
+
+            notificationService.taoChoUser(
+                    order.getNguoiDung().getId(), "order_expired",
+                    "Đơn hàng " + order.getMaDonHang() + " đã hết hạn giữ hàng",
+                    "Đơn của bạn bị huỷ do chưa thanh toán trong " + PHUT_GIU_HANG_THANH_TOAN
+                            + " phút. Hàng đã được trả lại kho, bạn có thể đặt lại nếu vẫn còn hàng.",
+                    "/tai-khoan/don-hang"
+            );
+        }
     }
 
     /** Quét định kỳ mỗi 30 phút: đơn "pending" quá GIO_GIU_HANG_CHO_THANH_TOAN giờ mà vẫn chưa
@@ -585,28 +744,27 @@ public class OrderService {
     @Transactional
     public void capNhatTrangThai(Integer orderId, String trangThaiMoi, String ghiChu) {
         Order order = layDonById(orderId);
+        String trangThaiCu = order.getTrangThai();
 
-        if ("cancelled".equals(order.getTrangThai()) || "delivered".equals(order.getTrangThai())) {
-            throw new RuntimeException("Không thể thay đổi trạng thái của đơn hàng này");
+        // "delivered" KHÔNG còn nằm trong danh sách khoá: khách vẫn có thể trả hàng sau khi đã
+        // nhận (đổi trả 7 ngày), lúc đó đơn phải đi tiếp sang "returned". Chỉ hai trạng thái
+        // thật sự đóng sổ mới cấm sửa.
+        if (TRANG_THAI_KET_THUC.contains(trangThaiCu)) {
+            throw new RuntimeException("Đơn đã " + nhanTrangThaiDon(trangThaiCu).toLowerCase()
+                    + ", không thể đổi trạng thái nữa.");
         }
 
-        kiemTraChuyenTrangThaiHopLe(order.getTrangThai(), trangThaiMoi);
+        kiemTraChuyenTrangThaiHopLe(trangThaiCu, trangThaiMoi);
 
         if ("cancelled".equals(trangThaiMoi)) {
-            // Đơn qua cổng redirect (Stripe) chưa thanh toán thì chưa từng bị trừ kho lúc tạo
-            // đơn (xem datHangTuGioHang) — không được cộng lại kẻo dư kho ảo. Cùng logic với
-            // huyDonNoiBo, tách riêng vì hàm này không đi qua huyDonNoiBo (admin có thể set thẳng
-            // trạng thái "cancelled" từ bất kỳ trạng thái hợp lệ nào, không chỉ pending/confirmed).
-            Payment paymentHienTai = layPaymentCuaDon(order);
-            boolean tungTruKho = paymentHienTai == null
-                    || !laCongThanhToanRedirect(paymentHienTai.getPaymentMethod().getCode())
-                    || "paid".equals(paymentHienTai.getStatus());
-            if (tungTruKho) {
-                for (OrderItem oi : order.getChiTiet()) {
-                    ProductVariant v = oi.getVariant();
-                    v.setStock(v.getStock() + oi.getSoLuong());
-                }
+            // Trả hàng về kho vô điều kiện — mọi đơn đều đã trừ kho ngay lúc tạo (xem
+            // datHangTuGioHang), không còn trường hợp "chưa từng trừ kho" để phải phân biệt.
+            // Hàm này không đi qua huyDonNoiBo vì admin có thể set thẳng trạng thái "cancelled"
+            // từ bất kỳ trạng thái hợp lệ nào, không chỉ pending/confirmed.
+            for (OrderItem oi : order.getChiTiet()) {
+                tonKhoService.traHang(oi.getVariant(), oi.getSoLuong());
             }
+            order.setHanGiuHang(null);
 
             // Đơn có trừ xu (đổi quà, xem RedemptionService.doiQua — hoặc dùng xu giảm giá
             // ngay lúc thanh toán, xem datHangTuGioHang) mà bị huỷ -> hoàn lại xu đã trừ,
@@ -617,14 +775,28 @@ public class OrderService {
             subscriptionService.hoanLuotTheoDon(order);
         }
 
-        // Hoàn tiền = khách trả lại HÀNG cho shop, nên hàng phải quay về kho. Chỉ tới được từ
-        // "shipped" (xem CHUYEN_TRANG_THAI_HOP_LE) nghĩa là đơn chắc chắn đã bị trừ kho lúc tạo,
-        // không cần kiểm tra tungTruKho như nhánh cancelled ở trên.
-        if ("refunded".equals(trangThaiMoi)) {
-            for (OrderItem oi : order.getChiTiet()) {
-                ProductVariant v = oi.getVariant();
-                v.setStock((v.getStock() == null ? 0 : v.getStock()) + oi.getSoLuong());
+        // HOÀN HÀNG = hàng vật lý đã quay về kho -> cộng lại tồn ở ĐÂY, không phải ở "refunded".
+        // Trước đây chỉ có "refunded" nên hai việc khác hẳn nhau (hàng về kho / tiền về túi
+        // khách) bị gộp làm một; giờ tách ra thì mỗi việc phải nằm đúng chỗ của nó, và cộng kho
+        // hai lần cho cùng một đơn (returned rồi refunded) là dư hàng ảo.
+        if ("returned".equals(trangThaiMoi)) {
+            // Có thể khách đã gửi yêu cầu đổi trả riêng cho đúng món này và CSKH đã duyệt —
+            // luồng đó tự cộng kho rồi (ReturnRequestService.hoanTonKho). Cộng thêm lần nữa ở
+            // đây là dư hàng ảo, nên trừ ra phần đã được cộng.
+            Map<Integer, Integer> daCong = new HashMap<>();
+            for (com.fpoly.model.ReturnRequest r : returnRequestRepo.findDaHoanKhoTheoDon(order.getId())) {
+                if (r.getVariant() == null) continue;
+                int sl = r.getSoLuong() != null && r.getSoLuong() > 0 ? r.getSoLuong() : 1;
+                daCong.merge(r.getVariant().getId(), sl, Integer::sum);
             }
+            for (OrderItem oi : order.getChiTiet()) {
+                int conPhaiCong = oi.getSoLuong() - daCong.getOrDefault(oi.getVariant().getId(), 0);
+                if (conPhaiCong > 0) tonKhoService.traHang(oi.getVariant(), conPhaiCong);
+            }
+            // Khách trả hàng thì các ưu đãi đã tiêu cho đơn cũng phải trả lại.
+            walletService.hoanXuNeuDonBiHuy(order);
+            tradeInService.hoanTinDungNeuDonBiHuy(order.getId(), order.getTradeInCreditId());
+            subscriptionService.hoanLuotTheoDon(order);
         }
 
         order.setTrangThai(trangThaiMoi);
@@ -645,6 +817,9 @@ public class OrderService {
             }
         }
 
+        // Nhảy cọc: ghi bù các mốc bị bỏ qua TRƯỚC dòng mốc đích, để timeline vẫn đúng thứ tự.
+        ghiNhatKyCacMocBoQua(order, trangThaiCu, trangThaiMoi);
+
         OrderStatusLog log = new OrderStatusLog();
         log.setOrder(order);
         log.setTrangThai(trangThaiMoi);
@@ -654,25 +829,145 @@ public class OrderService {
         guiThongBaoVaMailTheoTrangThai(order, trangThaiMoi);
     }
 
-    /** Trạng thái kế tiếp hợp lệ cho từng trạng thái hiện tại. Trước đây admin set thẳng được
-     * pending -> delivered, bỏ qua cả shipped: đơn tự nhận là đã giao trong khi chưa từng rời
-     * kho, đồng thời tạo phiếu bảo hành + tự đánh dấu COD đã thu tiền. Huỷ thì cho phép từ bất
-     * kỳ trạng thái chưa kết thúc nào (hàng có thể hỏng/khách đổi ý ở mọi khâu). */
-    private static final Map<String, List<String>> CHUYEN_TRANG_THAI_HOP_LE = Map.of(
-            "pending",    List.of("confirmed", "cancelled"),
-            "confirmed",  List.of("processing", "cancelled"),
-            "processing", List.of("shipped", "cancelled"),
-            "shipped",    List.of("delivered", "cancelled", "refunded")
+    /**
+     * CHUỖI XỬ LÝ CHÍNH của một đơn, theo đúng thứ tự thực tế hàng đi qua.
+     *
+     * Ý nghĩa từng mốc (xem thêm MO_TA_TRANG_THAI — nội dung này được trả cho admin-vue để
+     * hiện ngay cạnh ô chọn trạng thái, tránh mỗi người hiểu một kiểu):
+     *   pending    Đơn vừa tạo, chưa ai xác nhận.
+     *   confirmed  Shop đã nhận đơn, cam kết có hàng.
+     *   processing Đang soạn/đóng gói, HÀNG VẪN CÒN TRONG KHO.
+     *   shipped    Đã bàn giao vận chuyển — hàng đang trên đường, không còn nằm trong tay shop.
+     *   delivered  Khách đã nhận, đơn kết thúc bình thường.
+     */
+    private static final List<String> CHUOI_XU_LY =
+            List.of("pending", "confirmed", "processing", "shipped", "delivered");
+
+    /** Chỉ số của trạng thái trong chuỗi chính; -1 nếu là trạng thái kết thúc bất thường. */
+    private static int viTriTrongChuoi(String trangThai) {
+        return CHUOI_XU_LY.indexOf(trangThai);
+    }
+
+    /**
+     * Các nhánh RỜI khỏi chuỗi chính, khai riêng vì chúng không đi theo thứ tự tiến dần:
+     *   cancelled  Huỷ đơn — CHỈ khi hàng còn trong kho (pending/confirmed/processing). Từ
+     *              "shipped" trở đi hàng đã ở ngoài, "huỷ" là vô nghĩa: hàng vẫn đang đi, phải
+     *              đợi kết quả giao rồi mới xử lý tiếp bằng "returned".
+     *   returned   Hàng đã QUAY VỀ kho shop (khách từ chối nhận, hoặc trả lại sau khi nhận).
+     *              Tiền chưa trả. Chỉ có nghĩa khi hàng từng rời kho.
+     *   refunded   Đã chuyển tiền lại cho khách. Chỉ tới được SAU khi hàng đã về (returned) —
+     *              không ai hoàn tiền khi hàng còn ở đâu đó ngoài đường.
+     */
+    private static final Map<String, List<String>> NHANH_NGOAI_CHUOI = Map.of(
+            "pending",    List.of("cancelled"),
+            "confirmed",  List.of("cancelled"),
+            "processing", List.of("cancelled"),
+            "shipped",    List.of("returned"),
+            "delivered",  List.of("returned"),
+            "returned",   List.of("refunded")
     );
 
+    /** Trạng thái đã đóng sổ — không đổi đi đâu được nữa. */
+    private static final List<String> TRANG_THAI_KET_THUC = List.of("cancelled", "refunded");
+
+    /** Mô tả ngắn gọn từng trạng thái, trả cho admin-vue hiển thị cạnh ô chọn. */
+    public static final Map<String, String> MO_TA_TRANG_THAI = Map.of(
+            "pending",    "Đơn vừa tạo, chưa ai xác nhận. Khách vẫn tự huỷ được.",
+            "confirmed",  "Shop đã nhận đơn và cam kết có hàng. Chưa đóng gói.",
+            "processing", "Đang soạn/đóng gói. Hàng vẫn còn trong kho, vẫn huỷ được.",
+            "shipped",    "Đã bàn giao vận chuyển, hàng đang trên đường. TỪ ĐÂY KHÔNG HUỶ ĐƯỢC — nếu khách từ chối nhận thì chuyển sang Hoàn hàng.",
+            "delivered",  "Khách đã nhận hàng. Đơn kết thúc bình thường, phiếu bảo hành được tạo.",
+            "cancelled",  "Huỷ trước khi hàng rời kho. Hàng đã trả lại kho, xu/tín dụng đã hoàn.",
+            "returned",   "Hàng đã quay về kho shop. TIỀN CHƯA TRẢ — chuyển sang Hoàn tiền sau khi đã chuyển khoản cho khách.",
+            "refunded",   "Đã chuyển tiền lại cho khách. Đơn đóng sổ."
+    );
+
+    /**
+     * Kiểm tra một bước chuyển trạng thái, cho phép NHẢY CỌC tiến về phía trước.
+     *
+     * Trước đây bắt đi từng bước một: đơn giao ngay trong ngày vẫn phải bấm lần lượt
+     * confirmed -> processing -> shipped -> delivered, bốn lần bấm cho một việc. Nay admin
+     * nhảy thẳng tới mốc thật sự đang đúng cũng được — nhưng LỊCH SỬ VẪN GHI ĐỦ các mốc bị
+     * bỏ qua (xem ghiNhatKyCacMocBoQua), nên timeline đơn hàng khách nhìn thấy không có lỗ hổng.
+     *
+     * Vẫn cấm ĐI LÙI (delivered -> processing) vì lịch sử đơn phải là một chiều: hàng đã giao
+     * rồi thì không thể "đang đóng gói" trở lại.
+     */
     private void kiemTraChuyenTrangThaiHopLe(String hienTai, String moi) {
         if (hienTai.equals(moi)) {
             throw new RuntimeException("Đơn hàng đã ở trạng thái " + nhanTrangThaiDon(moi));
         }
-        List<String> choPhep = CHUYEN_TRANG_THAI_HOP_LE.getOrDefault(hienTai, List.of());
-        if (!choPhep.contains(moi)) {
-            throw new RuntimeException("Không thể chuyển đơn từ \"" + nhanTrangThaiDon(hienTai)
-                    + "\" sang \"" + nhanTrangThaiDon(moi) + "\". Vui lòng đi theo đúng thứ tự xử lý đơn.");
+        if (!MO_TA_TRANG_THAI.containsKey(moi)) {
+            throw new RuntimeException("Trạng thái không hợp lệ: " + moi);
+        }
+        if (NHANH_NGOAI_CHUOI.getOrDefault(hienTai, List.of()).contains(moi)) {
+            return;
+        }
+
+        int tu = viTriTrongChuoi(hienTai);
+        int den = viTriTrongChuoi(moi);
+        if (tu >= 0 && den > tu) {
+            return; // tiến tới bất kỳ mốc nào phía sau trong chuỗi chính
+        }
+
+        if (tu >= 0 && den >= 0) {
+            throw new RuntimeException("Không thể lùi đơn từ \"" + nhanTrangThaiDon(hienTai)
+                    + "\" về \"" + nhanTrangThaiDon(moi) + "\". Trạng thái đơn chỉ đi một chiều.");
+        }
+        if ("cancelled".equals(moi)) {
+            throw new RuntimeException("Đơn đã bàn giao vận chuyển thì không huỷ được nữa. "
+                    + "Nếu khách từ chối nhận, chuyển sang \"Hoàn hàng\" khi hàng đã về kho.");
+        }
+        throw new RuntimeException("Không thể chuyển đơn từ \"" + nhanTrangThaiDon(hienTai)
+                + "\" sang \"" + nhanTrangThaiDon(moi) + "\".");
+    }
+
+    /**
+     * Các trạng thái admin ĐƯỢC PHÉP chuyển sang từ trạng thái hiện tại, kèm mô tả — admin-vue
+     * dùng để chỉ hiện đúng những lựa chọn hợp lệ thay vì liệt kê hết rồi để backend từ chối.
+     * Trả về danh sách rỗng nếu đơn đã đóng sổ.
+     */
+    public List<Map<String, String>> trangThaiChoPhep(String hienTai) {
+        if (TRANG_THAI_KET_THUC.contains(hienTai)) return List.of();
+        List<String> ma = new ArrayList<>();
+        int tu = viTriTrongChuoi(hienTai);
+        if (tu >= 0) {
+            for (int i = tu + 1; i < CHUOI_XU_LY.size(); i++) ma.add(CHUOI_XU_LY.get(i));
+        }
+        ma.addAll(NHANH_NGOAI_CHUOI.getOrDefault(hienTai, List.of()));
+
+        List<Map<String, String>> ra = new ArrayList<>();
+        for (String m : ma) {
+            ra.add(Map.of("value", m, "label", nhanTrangThaiDon(m),
+                    "hint", MO_TA_TRANG_THAI.getOrDefault(m, "")));
+        }
+        return ra;
+    }
+
+    /** Nhãn + mô tả của trạng thái hiện tại, để admin-vue giải thích ngay đơn đang ở đâu. */
+    public Map<String, String> moTaTrangThai(String trangThai) {
+        return Map.of("value", trangThai, "label", nhanTrangThaiDon(trangThai),
+                "hint", MO_TA_TRANG_THAI.getOrDefault(trangThai, ""));
+    }
+
+    /**
+     * Ghi vào lịch sử các mốc bị NHẢY CỌC bỏ qua, để timeline đơn hàng không mất mắt xích.
+     *
+     * VD admin đang ở "confirmed" nhảy thẳng tới "delivered": lịch sử vẫn có dòng "Đang xử lý"
+     * và "Đang giao", kèm ghi chú nói rõ đây là mốc suy ra chứ không phải admin bấm từng bước —
+     * khách xem timeline thấy đủ hành trình, còn shop truy lại vẫn biết sự thật.
+     */
+    private void ghiNhatKyCacMocBoQua(Order order, String tuTrangThai, String denTrangThai) {
+        int tu = viTriTrongChuoi(tuTrangThai);
+        int den = viTriTrongChuoi(denTrangThai);
+        if (tu < 0 || den < 0) return;
+        for (int i = tu + 1; i < den; i++) {
+            OrderStatusLog log = new OrderStatusLog();
+            log.setOrder(order);
+            log.setTrangThai(CHUOI_XU_LY.get(i));
+            log.setGhiChu("Tự ghi nhận khi đơn được cập nhật thẳng sang \""
+                    + nhanTrangThaiDon(denTrangThai) + "\"");
+            statusLogRepo.save(log);
         }
     }
 
@@ -728,6 +1023,18 @@ public class OrderService {
                     // Không chặn luồng cập nhật trạng thái nếu gửi mail thất bại
                 }
             }
+            // Hai mốc mới sau khi tách "hoàn hàng" khỏi "hoàn tiền" — phải nói rõ đang ở khâu
+            // nào, vì trước đây khách nhận thông báo "đã hoàn tiền" ngay lúc mới trả hàng.
+            case "returned" -> {
+                tieuDe = "Đơn hàng " + order.getMaDonHang() + " đã được hoàn về shop";
+                noiDung = "Shop đã nhận lại hàng của đơn này và đang kiểm tra. Tiền sẽ được hoàn "
+                        + "sau khi kiểm hàng xong, bạn sẽ nhận thông báo riêng khi tiền được chuyển.";
+            }
+            case "refunded" -> {
+                tieuDe = "Đơn hàng " + order.getMaDonHang() + " đã được hoàn tiền";
+                noiDung = "Shop đã hoàn tiền cho đơn này. Tuỳ ngân hàng, tiền có thể về tài khoản "
+                        + "của bạn sau 1–3 ngày làm việc.";
+            }
             default -> {
                 tieuDe = "Đơn hàng " + order.getMaDonHang() + " cập nhật trạng thái";
                 noiDung = "Đơn hàng của bạn hiện: " + nhanTrangThaiDon(trangThai);
@@ -752,6 +1059,7 @@ public class OrderService {
             case "shipped" -> "Đang giao";
             case "delivered" -> "Hoàn tất";
             case "cancelled" -> "Đã hủy";
+            case "returned" -> "Hoàn hàng";
             case "refunded" -> "Đã hoàn tiền";
             default -> status;
         };

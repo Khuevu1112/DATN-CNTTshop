@@ -150,7 +150,7 @@
 
             <div class="row5">
               <label style="font-size: 12.5px; color: var(--muted2); white-space: nowrap">Bảo hành (tháng)</label>
-              <input class="fld" type="number" min="0" v-model.number="form.warrantyMonths" placeholder="36" style="width: 90px" />
+              <input class="fld" type="number" min="0" max="120" v-model.number="form.warrantyMonths" placeholder="36" style="width: 90px" />
             </div>
 
             <div v-for="(s, i) in form.specs" :key="'spec' + i" class="row5">
@@ -205,7 +205,9 @@
               <input class="fld" v-model="v.sku" placeholder="SKU (để trống tự sinh)" />
               <input class="fld" type="text" inputmode="numeric" :value="fmtMoneyInput(v.price)" @input="v.price = parseMoneyInput($event.target.value)" placeholder="Giá bán" />
               <input class="fld" type="text" inputmode="numeric" :value="fmtMoneyInput(v.originalPrice)" @input="v.originalPrice = parseMoneyInput($event.target.value)" placeholder="Giá gốc" />
-              <input class="fld" type="number" v-model.number="v.stock" placeholder="Số lượng còn" />
+              <!-- min="0": tồn kho âm bị backend từ chối (AdminProductService.saveVariants),
+                   chặn luôn ở ô nhập để admin không phải bấm Lưu mới biết. -->
+              <input class="fld" type="number" min="0" v-model.number="v.stock" placeholder="Số lượng còn" />
               <button class="rm" @click="form.variants.splice(i, 1)"><i class="bi bi-trash3"></i></button>
             </div>
           </div>

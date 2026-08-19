@@ -122,68 +122,70 @@
           <div style="flex: 1"></div>
           <span class="mono" style="font-size: 11.5px; color: var(--muted)">{{ rows.length }} mã</span>
         </div>
-        <table style="width: 100%; border-collapse: collapse; font-size: 13px">
-          <thead>
-            <tr style="background: var(--card2)">
-              <th v-for="h in heads" :key="h.t" class="th" :style="{ textAlign: h.a || 'left' }">{{ h.t }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="!rows.length">
-              <td :colspan="heads.length" style="padding: 30px; text-align: center; color: var(--muted); font-size: 12.5px">
-                Chưa có mã khuyến mãi nào.
-              </td>
-            </tr>
-            <tr v-for="c in rows" :key="c.code" style="border-top: 1px solid var(--line)">
-              <td class="mono" style="padding: 12px 18px; color: var(--acc); font-weight: 700; letter-spacing: 0.5px">{{ c.code }}</td>
-              <td style="padding: 12px 12px">
-                <span style="font-size: 11.5px; font-weight: 600" :style="{ color: c.typeColor }">{{ c.type }}</span>
-              </td>
-              <td class="mono" style="padding: 12px 12px; text-align: right; color: var(--text); font-weight: 700">{{ c.value }}</td>
-              <td class="mono" style="padding: 12px 12px; text-align: right; color: var(--muted2); font-size: 12px">{{ c.min }}</td>
-              <td style="padding: 12px 12px">
-                <div style="display: flex; align-items: center; gap: 8px">
-                  <span class="mono" style="font-size: 11.5px; color: var(--muted2); white-space: nowrap">{{ c.used }}</span>
-                  <!-- Mã không giới hạn lượt (usedPct = '—') thì không vẽ thanh tiến độ: không có
-                       mẫu số nên mọi bề rộng đều vô nghĩa. -->
-                  <div v-if="c.usedPct !== '—'" style="flex: 1; height: 5px; border-radius: 4px; background: var(--card2); overflow: hidden">
-                    <div style="height: 100%; background: var(--acc); border-radius: 4px" :style="{ width: c.usedPct }"></div>
-                  </div>
-                </div>
-              </td>
-              <td style="padding: 12px 12px; color: var(--muted2); font-size: 12px">{{ c.exp }}</td>
-              <td class="mono" style="padding: 12px 12px; text-align: right; font-size: 12px" :style="{ color: c.xuCost ? '#d9b34a' : 'var(--muted2)' }">
-                {{ c.xuCost ? '🪙 ' + c.xuCost : '—' }}
-              </td>
-              <td style="padding: 12px 12px; text-align: center">
-                <span
-                  v-if="c.stackable"
-                  :title="c.exclusiveGroup ? `Loại trừ với mã cùng nhóm: ${c.exclusiveGroup}` : 'Cộng dồn được với mọi mã khác'"
-                  style="font-size: 11px; font-weight: 600; color: var(--green); display: inline-flex; align-items: center; gap: 4px"
-                >
-                  <i class="bi bi-link-45deg"></i> Cộng dồn
-                </span>
-                <span v-else style="font-size: 11px; color: var(--muted2)">Đi 1 mình</span>
-              </td>
-              <td style="padding: 12px 18px">
-                <span
-                  style="display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; padding: 3px 9px; border-radius: 20px"
-                  :style="{ background: c.stBg, color: c.stColor }"
-                >
-                  <span style="width: 6px; height: 6px; border-radius: 50%" :style="{ background: c.stColor }"></span>{{ c.stText }}
-                </span>
-              </td>
-              <td style="padding: 12px 18px; text-align: right">
-                <button
-                  @click="removeCoupon(c)"
-                  style="width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--line2); background: var(--card); color: var(--sale); cursor: pointer"
-                >
-                  <i class="bi bi-trash3" style="font-size: 12px"></i>
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <DataTable
+          :columns="cols"
+          :rows="rows"
+          row-key="code"
+          :tim-kiem="ui.search"
+          trong="Chưa có mã khuyến mãi nào."
+        >
+          <template #o-code="{ row }">
+            <span class="mono" style="color: var(--acc); font-weight: 700; letter-spacing: 0.5px">{{ row.code }}</span>
+          </template>
+          <template #o-type="{ row }">
+            <span style="font-size: 11.5px; font-weight: 600" :style="{ color: row.typeColor }">{{ row.type }}</span>
+          </template>
+          <template #o-value="{ row }">
+            <span class="mono" style="font-weight: 700">{{ row.value }}</span>
+          </template>
+          <template #o-min="{ row }">
+            <span class="mono" style="color: var(--muted2); font-size: 12px">{{ row.min }}</span>
+          </template>
+          <template #o-used="{ row }">
+            <div style="display: flex; align-items: center; gap: 8px">
+              <span class="mono" style="font-size: 11.5px; color: var(--muted2); white-space: nowrap">{{ row.used }}</span>
+              <!-- Mã không giới hạn lượt (usedPct = '—') thì không vẽ thanh tiến độ: không có
+                   mẫu số nên mọi bề rộng đều vô nghĩa. -->
+              <div v-if="row.usedPct !== '—'" style="flex: 1; height: 5px; border-radius: 4px; background: var(--card2); overflow: hidden">
+                <div style="height: 100%; background: var(--acc); border-radius: 4px" :style="{ width: row.usedPct }"></div>
+              </div>
+            </div>
+          </template>
+          <template #o-exp="{ row }">
+            <span style="color: var(--muted2); font-size: 12px">{{ row.exp }}</span>
+          </template>
+          <template #o-xuCost="{ row }">
+            <span class="mono" style="font-size: 12px" :style="{ color: row.xuCost ? '#d9b34a' : 'var(--muted2)' }">
+              {{ row.xuCost ? '🪙 ' + row.xuCost : '—' }}
+            </span>
+          </template>
+          <template #o-stackable="{ row }">
+            <span
+              v-if="row.stackable"
+              :title="row.exclusiveGroup ? `Loại trừ với mã cùng nhóm: ${row.exclusiveGroup}` : 'Cộng dồn được với mọi mã khác'"
+              style="font-size: 11px; font-weight: 600; color: var(--green); display: inline-flex; align-items: center; gap: 4px"
+            >
+              <i class="bi bi-link-45deg"></i> Cộng dồn
+            </span>
+            <span v-else style="font-size: 11px; color: var(--muted2)">Đi 1 mình</span>
+          </template>
+          <template #o-stText="{ row }">
+            <span
+              style="display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 600; padding: 3px 9px; border-radius: 20px"
+              :style="{ background: row.stBg, color: row.stColor }"
+            >
+              <span style="width: 6px; height: 6px; border-radius: 50%" :style="{ background: row.stColor }"></span>{{ row.stText }}
+            </span>
+          </template>
+          <template #o-thaoTac="{ row }">
+            <button
+              @click="removeCoupon(row)"
+              style="width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--line2); background: var(--card); color: var(--sale); cursor: pointer"
+            >
+              <i class="bi bi-trash3" style="font-size: 12px"></i>
+            </button>
+          </template>
+        </DataTable>
       </div>
     </div>
 
@@ -200,6 +202,7 @@ import { COUPONS, refreshAdminCoupons } from '../data/adminData';
 import { createCoupon, deleteCoupon } from '../api/admin';
 import { ui } from '../uiState';
 import FlashSalePanel from '../components/FlashSalePanel.vue';
+import DataTable from '../components/DataTable.vue';
 
 const tab = ref('coupons');
 const TABS = [
@@ -219,27 +222,26 @@ const form = reactive({
 });
 const error = ref('');
 const saving = ref(false);
-const heads = [
-  { t: 'Mã' },
-  { t: 'Loại' },
-  { t: 'Giá trị', a: 'right' },
-  { t: 'Đơn tối thiểu', a: 'right' },
-  { t: 'Đã dùng' },
-  { t: 'Hạn' },
-  { t: 'Giá xu', a: 'right' },
-  { t: 'Cộng dồn', a: 'center' },
-  { t: 'Trạng thái' },
-  { t: '' },
+// Cột cho DataTable: mỗi cột tự có phễu lọc/sắp xếp kiểu Excel (xem components/DataTable.vue).
+// value/text tách riêng khi giá trị dùng để LỌC khác chuỗi hiển thị (VD số tiền đã format).
+const cols = [
+  { key: 'code', label: 'Mã' },
+  { key: 'type', label: 'Loại' },
+  { key: 'value', label: 'Giá trị', align: 'right', kieu: 'so', value: (r) => r.giaTriSo, text: (r) => r.value },
+  { key: 'min', label: 'Đơn tối thiểu', align: 'right', kieu: 'so', value: (r) => r.donToiThieuSo, text: (r) => r.min },
+  { key: 'used', label: 'Đã dùng', kieu: 'so', value: (r) => r.daDungSo, text: (r) => r.used },
+  { key: 'exp', label: 'Hạn', kieu: 'ngay', value: (r) => r.hetHanLuc, text: (r) => r.exp },
+  { key: 'xuCost', label: 'Giá xu', align: 'right', kieu: 'so', text: (r) => (r.xuCost ? '🪙 ' + r.xuCost : '—') },
+  { key: 'stackable', label: 'Cộng dồn', align: 'center', text: (r) => (r.stackable ? 'Cộng dồn' : 'Đi 1 mình') },
+  { key: 'stText', label: 'Trạng thái' },
+  { key: 'thaoTac', label: '', align: 'right', loc: false },
 ];
 const statusFilter = ref('all');
-const rows = computed(() => {
-  const q = ui.search.trim().toLowerCase();
-  return COUPONS.filter(
-    (c) =>
-      (statusFilter.value === 'all' || c.status === statusFilter.value) &&
-      (!q || c.code.toLowerCase().includes(q)),
-  );
-});
+// Tìm theo từ khoá đã do DataTable đảm nhận (quét mọi cột, bỏ dấu) — ở đây chỉ còn lọc theo
+// tab trạng thái phía trên bảng.
+const rows = computed(() =>
+  COUPONS.filter((c) => statusFilter.value === 'all' || c.status === statusFilter.value),
+);
 
 async function submit() {
   error.value = '';

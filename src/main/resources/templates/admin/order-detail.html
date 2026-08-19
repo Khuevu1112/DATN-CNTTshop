@@ -16,9 +16,9 @@
             <div class="card-header bg-white fw-bold">Khách hàng & Giao hàng</div>
             <div class="card-body">
                 <p><strong>Email:</strong> <span th:text="${order.nguoiDung.email}"></span></p>
-                <p><strong>Người nhận:</strong> <span th:text="${order.diaChiGiao != null ? order.diaChiGiao.tenNguoiNhan : 'Mua tại showroom'}"></span></p>
-                <p><strong>SĐT:</strong> <span th:text="${order.diaChiGiao != null ? order.diaChiGiao.soDienThoai : (order.nguoiDung != null ? order.nguoiDung.soDienThoai : '-')}"></span></p>
-                <p><strong>Địa chỉ:</strong> <span th:text="${order.diaChiGiao != null ? order.diaChiGiao.diaChiDayDu : 'Khách nhận trực tiếp tại showroom'}"></span></p>
+                <p><strong>Người nhận:</strong> <span th:text="${order.tenNguoiNhanHienThi != null ? order.tenNguoiNhanHienThi : 'Mua tại showroom'}"></span></p>
+                <p><strong>SĐT:</strong> <span th:text="${order.soDienThoaiNhanHienThi != null ? order.soDienThoaiNhanHienThi : '-'}"></span></p>
+                <p><strong>Địa chỉ:</strong> <span th:text="${order.diaChiNhanHangHienThi != null ? order.diaChiNhanHangHienThi : 'Khách nhận trực tiếp tại showroom'}"></span></p>
                 <p><strong>Ngày đặt:</strong>
                     <span th:text="${#temporals.format(order.createdAt,'dd/MM/yyyy HH:mm')}"></span></p>
             </div>
@@ -27,16 +27,18 @@
         <div class="card border-0 shadow-sm">
             <div class="card-header bg-white fw-bold">Cập nhật trạng thái</div>
             <div class="card-body">
-<div th:if="${order.trangThai == 'delivered' or order.trangThai == 'cancelled'}"
+<!-- Chỉ hai trạng thái ĐÓNG SỔ mới khoá form. "delivered" KHÔNG còn bị khoá: khách vẫn có
+     thể trả hàng trong 7 ngày sau khi nhận, khi đó đơn phải đi tiếp sang "Hoàn hàng". -->
+<div th:if="${order.trangThai == 'refunded' or order.trangThai == 'cancelled'}"
      class="alert alert-secondary mb-0">
     <i class="bi bi-lock-fill me-2"></i>
     Đơn hàng đã ở trạng thái cuối
-    (<span th:text="${order.trangThai == 'delivered'} ? 'Hoàn tất' : 'Đã hủy'"></span>),
+    (<span th:text="${order.trangThai == 'refunded'} ? 'Đã hoàn tiền' : 'Đã hủy'"></span>),
     không thể cập nhật trạng thái khác.
 </div>
 
 <form id="updateStatusForm" onsubmit="return submitStatusUpdate(event)"
-      th:unless="${order.trangThai == 'delivered' or order.trangThai == 'cancelled'}">
+      th:unless="${order.trangThai == 'refunded' or order.trangThai == 'cancelled'}">
     <input type="hidden" id="orderIdInput" th:value="${order.id}">
     <select name="trangThai" id="trangThaiSelect" class="form-select mb-2">
         <option th:each="tt : ${trangThaiList}"
@@ -48,7 +50,8 @@
                           (${tt == 'shipped'} ? 'Đang giao' :
                           (${tt == 'delivered'} ? 'Hoàn tất' :
                           (${tt == 'cancelled'} ? 'Đã hủy' :
-                          (${tt == 'refunded'} ? 'Hoàn tiền' : ${tt}))))))">
+                          (${tt == 'returned'} ? 'Hoàn hàng (chờ hoàn tiền)' :
+                          (${tt == 'refunded'} ? 'Hoàn tiền' : ${tt})))))))">
         </option>
     </select>
     <input type="text" id="ghiChuInput" class="form-control mb-2"
@@ -59,7 +62,8 @@
 <script>
 var statusLabels = {
     pending: 'Chờ xác nhận', confirmed: 'Đã xác nhận', processing: 'Đang xử lý',
-    shipped: 'Đang giao', delivered: 'Hoàn tất', cancelled: 'Đã hủy', refunded: 'Hoàn tiền'
+    shipped: 'Đang giao', delivered: 'Hoàn tất', cancelled: 'Đã hủy',
+    returned: 'Hoàn hàng (chờ hoàn tiền)', refunded: 'Hoàn tiền'
 };
 
 function submitStatusUpdate(e) {
@@ -156,7 +160,8 @@ function submitStatusUpdate(e) {
                 (${log.trangThai == 'shipped'} ? 'Đang giao' :
                 (${log.trangThai == 'delivered'} ? 'Hoàn tất' :
                 (${log.trangThai == 'cancelled'} ? 'Đã hủy' :
-                (${log.trangThai == 'refunded'} ? 'Hoàn tiền' : ${log.trangThai}))))))">
+                (${log.trangThai == 'returned'} ? 'Hoàn hàng' :
+                (${log.trangThai == 'refunded'} ? 'Hoàn tiền' : ${log.trangThai})))))))">
                         </span>
                         <span class="text-muted ms-2" th:text="${log.ghiChu}"></span>
                         <br>

@@ -12,6 +12,8 @@
         <span th:case="'shipped'"    class="badge bg-primary fs-6">Đang giao</span>
         <span th:case="'delivered'"  class="badge bg-success fs-6">Hoàn tất</span>
         <span th:case="'cancelled'"  class="badge bg-secondary fs-6">Đã hủy</span>
+        <!-- Hoàn hàng = hàng đã về kho shop, TIỀN CHƯA TRẢ; Hoàn tiền = tiền đã chuyển lại. -->
+        <span th:case="'returned'"   class="badge bg-warning text-dark fs-6">Hoàn hàng (chờ hoàn tiền)</span>
         <span th:case="'refunded'"   class="badge bg-dark fs-6">Đã hoàn tiền</span>
     </span>
 </div>
@@ -26,9 +28,9 @@
                 <i class="bi bi-geo-alt me-2 text-danger"></i>Thông tin giao hàng
             </div>
             <div class="card-body">
-                <p><strong>Người nhận:</strong> <span th:text="${order.diaChiGiao != null ? order.diaChiGiao.tenNguoiNhan : 'Mua tại showroom'}"></span></p>
-                <p><strong>SĐT:</strong> <span th:text="${order.diaChiGiao != null ? order.diaChiGiao.soDienThoai : (order.nguoiDung != null ? order.nguoiDung.soDienThoai : '-')}"></span></p>
-                <p><strong>Địa chỉ:</strong> <span th:text="${order.diaChiGiao != null ? order.diaChiGiao.diaChiDayDu : 'Khách nhận trực tiếp tại showroom'}"></span></p>
+                <p><strong>Người nhận:</strong> <span th:text="${order.tenNguoiNhanHienThi != null ? order.tenNguoiNhanHienThi : 'Mua tại showroom'}"></span></p>
+                <p><strong>SĐT:</strong> <span th:text="${order.soDienThoaiNhanHienThi != null ? order.soDienThoaiNhanHienThi : '-'}"></span></p>
+                <p><strong>Địa chỉ:</strong> <span th:text="${order.diaChiNhanHangHienThi != null ? order.diaChiNhanHangHienThi : 'Khách nhận trực tiếp tại showroom'}"></span></p>
                 <p><strong>Ngày đặt:</strong>
                     <span th:text="${#temporals.format(order.createdAt,'dd/MM/yyyy HH:mm')}"></span></p>
             </div>

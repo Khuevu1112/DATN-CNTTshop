@@ -58,50 +58,84 @@ public class CartService {
         return layDanhSachItem(email).size();
     }
 
+    /** Số lượng tối thiểu mỗi dòng giỏ hàng. Không có chốt này thì client gọi thẳng API với
+     * quantity = 0 (dòng rác, tính tiền 0đ) hoặc số ÂM (thành tiền âm, kéo tổng đơn xuống —
+     * tức là được trả tiền để lấy hàng). */
+    public static final int SO_LUONG_TOI_THIEU = 1;
+
+    /** Trần mỗi dòng. Shop bán lẻ; đơn số lượng lớn đi qua kênh báo giá doanh nghiệp, không đặt
+     * thẳng trên web. Cũng chặn luôn kiểu nghịch nhập 999999 làm vỡ hiển thị/tính tiền. */
+    public static final int SO_LUONG_TOI_DA = 20;
+
+    /** Kiểm số lượng khách gửi lên trước khi đụng tới kho. Trả về số đã chuẩn hoá. */
+    private int kiemTraSoLuong(Integer soLuong) {
+        int sl = soLuong == null ? SO_LUONG_TOI_THIEU : soLuong;
+        if (sl < SO_LUONG_TOI_THIEU) {
+            throw new RuntimeException("Số lượng phải từ " + SO_LUONG_TOI_THIEU + " trở lên");
+        }
+        if (sl > SO_LUONG_TOI_DA) {
+            throw new RuntimeException("Mỗi sản phẩm chỉ đặt tối đa " + SO_LUONG_TOI_DA
+                    + " cái/đơn. Cần số lượng lớn hơn, vui lòng liên hệ 0835 344 974 để được báo giá.");
+        }
+        return sl;
+    }
+
+    /** Kiểm tồn kho, phân biệt rõ "hết sạch" với "còn nhưng không đủ" — hai tình huống khách
+     * phải xử lý khác nhau (bỏ khỏi giỏ vs giảm số lượng). */
+    private void kiemTraTonKho(ProductVariant variant, int soLuongCan) {
+        Integer ton = variant.getStock();
+        if (ton == null) return; // biến thể không quản lý tồn
+        String ten = variant.getProduct() != null ? variant.getProduct().getName() : "Sản phẩm";
+        if (ton <= 0) {
+            throw new RuntimeException("\"" + ten + "\" đang tạm hết hàng.");
+        }
+        if (ton < soLuongCan) {
+            throw new RuntimeException("\"" + ten + "\" chỉ còn " + ton + " cái, không đủ số lượng bạn chọn.");
+        }
+    }
+
     @Transactional
     public void themVaoGio(String email, Integer variantId, Integer soLuong) {
+        int sl = kiemTraSoLuong(soLuong);
         Cart cart = layHoacTaoCart(email);
 
         ProductVariant variant = variantRepo.findById(variantId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy biến thể sản phẩm"));
 
-        if (variant.getStock() != null && variant.getStock() < soLuong) {
-            throw new RuntimeException("Số lượng trong kho không đủ");
-        }
+        kiemTraTonKho(variant, sl);
 
         CartItem item = cartItemRepo.findByCartAndVariant(cart, variant).orElse(null);
 
         if (item != null) {
-            int tongMoi = item.getSoLuong() + soLuong;
-            if (variant.getStock() != null && variant.getStock() < tongMoi) {
-                throw new RuntimeException("Số lượng trong kho không đủ");
-            }
+            // Cộng dồn phải kiểm lại CẢ hai chốt trên tổng mới, không chỉ trên phần thêm vào.
+            int tongMoi = kiemTraSoLuong(item.getSoLuong() + sl);
+            kiemTraTonKho(variant, tongMoi);
             item.setSoLuong(tongMoi);
         } else {
             item = new CartItem();
             item.setCart(cart);
             item.setVariant(variant);
-            item.setSoLuong(soLuong);
+            item.setSoLuong(sl);
         }
 
         cartItemRepo.save(item);
     }
 
+    /**
+     * Đặt lại số lượng của 1 dòng giỏ hàng.
+     *
+     * KHÔNG còn coi "số lượng <= 0" là lệnh xoá dòng như trước: xoá là hành động riêng
+     * (xoaItem / DELETE /api/cart/items/{id}), gộp vào đây thì một lỗi client gửi nhầm số 0 sẽ
+     * âm thầm xoá hàng khách đã chọn mà không ai biết. Nay báo lỗi rõ ràng.
+     */
     @Transactional
     public void capNhatSoLuong(String email, Integer itemId, Integer soLuongMoi) {
+        int sl = kiemTraSoLuong(soLuongMoi);
         CartItem item = layItemCuaUser(itemId, email);
 
-        if (soLuongMoi <= 0) {
-            cartItemRepo.delete(item);
-            return;
-        }
+        kiemTraTonKho(item.getVariant(), sl);
 
-        ProductVariant variant = item.getVariant();
-        if (variant.getStock() != null && variant.getStock() < soLuongMoi) {
-            throw new RuntimeException("Số lượng trong kho không đủ");
-        }
-
-        item.setSoLuong(soLuongMoi);
+        item.setSoLuong(sl);
         cartItemRepo.save(item);
     }
 

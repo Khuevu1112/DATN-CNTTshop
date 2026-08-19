@@ -75,27 +75,27 @@
         </div>
         <div v-if="loadingList" class="spin"></div>
         <div v-else style="background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden">
-          <table style="width: 100%; border-collapse: collapse; font-size: 13px">
-            <thead>
-              <tr style="background: var(--card2)">
-                <th style="text-align:left;padding:10px 16px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase">Mã BH</th>
-                <th style="text-align:left;padding:10px 16px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase">Sản phẩm</th>
-                <th style="text-align:left;padding:10px 12px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase">Khách hàng</th>
-                <th style="text-align:left;padding:10px 12px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase">Hiệu lực</th>
-                <th style="text-align:left;padding:10px 16px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase">Trạng thái</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="w in warranties" :key="w.id" @click="openWarrantyDetail(w.id)" style="border-top: 1px solid var(--line); cursor: pointer">
-                <td style="padding: 11px 16px; color: var(--acc); font-family: monospace; font-size: 12px">{{ w.maBaoHanh }}</td>
-                <td style="padding: 11px 16px; color: var(--text)">{{ w.productName }}</td>
-                <td style="padding: 11px 12px; color: var(--muted2); font-size: 12px">{{ w.customerName }}</td>
-                <td style="padding: 11px 12px; color: var(--muted2); font-size: 12px">{{ fmtDate(w.startDate) }} → {{ fmtDate(w.endDate) }}</td>
-                <td style="padding: 11px 16px"><span class="badge" :style="warrantyStatusStyle(w.status)">{{ warrantyStatusLabel(w.status) }}</span></td>
-              </tr>
-            </tbody>
-          </table>
-          <div v-if="!warranties.length" style="padding: 30px; text-align: center; color: var(--muted); font-size: 13px">Chưa có phiếu bảo hành nào.</div>
+          <DataTable
+            :columns="warrantyCols"
+            :rows="warranties"
+            :tim-kiem="ui.search"
+            click-duoc
+            trong="Chưa có phiếu bảo hành nào."
+            @row-click="(w) => openWarrantyDetail(w.id)"
+          >
+            <template #o-maBaoHanh="{ row: w }">
+              <span style="color: var(--acc); font-family: monospace; font-size: 12px">{{ w.maBaoHanh }}</span>
+            </template>
+            <template #o-customerName="{ row: w }">
+              <span style="color: var(--muted2); font-size: 12px">{{ w.customerName }}</span>
+            </template>
+            <template #o-hieuLuc="{ row: w }">
+              <span style="color: var(--muted2); font-size: 12px">{{ fmtDate(w.startDate) }} → {{ fmtDate(w.endDate) }}</span>
+            </template>
+            <template #o-status="{ row: w }">
+              <span class="badge" :style="warrantyStatusStyle(w.status)">{{ warrantyStatusLabel(w.status) }}</span>
+            </template>
+          </DataTable>
         </div>
       </div>
     </template>
@@ -155,25 +155,24 @@
       <div v-else>
         <div v-if="loadingList" class="spin"></div>
         <div v-else style="background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden">
-          <table style="width: 100%; border-collapse: collapse; font-size: 13px">
-            <thead>
-              <tr style="background: var(--card2)">
-                <th style="text-align:left;padding:10px 16px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase">Sản phẩm</th>
-                <th style="text-align:left;padding:10px 12px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase">Khách hàng</th>
-                <th style="text-align:left;padding:10px 12px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase">Mô tả</th>
-                <th style="text-align:left;padding:10px 16px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase">Trạng thái</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="r in requests" :key="r.id" @click="openRequestDetail(r.id)" style="border-top: 1px solid var(--line); cursor: pointer">
-                <td style="padding: 11px 16px; color: var(--text)">{{ r.productName }}</td>
-                <td style="padding: 11px 12px; color: var(--muted2); font-size: 12px">{{ r.customerName }}</td>
-                <td style="padding: 11px 12px; color: var(--muted2); font-size: 12px; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ r.issueDescription }}</td>
-                <td style="padding: 11px 16px"><span class="badge" :style="reqStatusStyle(r.requestStatus)">{{ reqStatusLabel(r.requestStatus) }}</span></td>
-              </tr>
-            </tbody>
-          </table>
-          <div v-if="!requests.length" style="padding: 30px; text-align: center; color: var(--muted); font-size: 13px">Chưa có yêu cầu bảo hành nào.</div>
+          <DataTable
+            :columns="reqCols"
+            :rows="requests"
+            :tim-kiem="ui.search"
+            click-duoc
+            trong="Chưa có yêu cầu bảo hành nào."
+            @row-click="(r) => openRequestDetail(r.id)"
+          >
+            <template #o-customerName="{ row: r }">
+              <span style="color: var(--muted2); font-size: 12px">{{ r.customerName }}</span>
+            </template>
+            <template #o-issueDescription="{ row: r }">
+              <span style="color: var(--muted2); font-size: 12px; display: block; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ r.issueDescription }}</span>
+            </template>
+            <template #o-requestStatus="{ row: r }">
+              <span class="badge" :style="reqStatusStyle(r.requestStatus)">{{ reqStatusLabel(r.requestStatus) }}</span>
+            </template>
+          </DataTable>
         </div>
       </div>
     </template>
@@ -186,6 +185,24 @@ import {
   getAdminWarranties, getAdminWarrantyDetail, updateWarrantyStatus,
   getAdminWarrantyRequests, getAdminWarrantyRequestDetail, updateWarrantyRequestStatus,
 } from '../api/admin';
+import { ui } from '../uiState';
+import DataTable from '../components/DataTable.vue';
+
+// Cột cho DataTable — phễu lọc/sắp xếp kiểu Excel trên từng cột (xem components/DataTable.vue).
+const warrantyCols = [
+  { key: 'maBaoHanh', label: 'Mã BH' },
+  { key: 'productName', label: 'Sản phẩm' },
+  { key: 'customerName', label: 'Khách hàng' },
+  { key: 'hieuLuc', label: 'Hiệu lực', kieu: 'ngay', value: (w) => w.endDate,
+    text: (w) => fmtDate(w.startDate) + ' → ' + fmtDate(w.endDate) },
+  { key: 'status', label: 'Trạng thái', text: (w) => warrantyStatusLabel(w.status) },
+];
+const reqCols = [
+  { key: 'productName', label: 'Sản phẩm' },
+  { key: 'customerName', label: 'Khách hàng' },
+  { key: 'issueDescription', label: 'Mô tả' },
+  { key: 'requestStatus', label: 'Trạng thái', text: (r) => reqStatusLabel(r.requestStatus) },
+];
 
 const mainTabs = [
   { key: 'warranties', label: 'Phiếu bảo hành' },

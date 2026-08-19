@@ -414,26 +414,50 @@ async function submit() {
               Miễn phí · 8:00 – 22:00 mỗi ngày
             </div>
           </div>
-          <button
-            @click="copyPhone"
-            :style="{
-              border: copied ? '1px solid var(--green)' : '1px solid rgba(var(--line-rgb),0.2)',
-              color: copied ? 'var(--green)' : 'var(--muted2)',
-            }"
-            style="
-              flex: none;
-              background: transparent;
-              border-radius: 8px;
-              padding: 6px 12px;
-              font-size: 12px;
-              cursor: pointer;
-              font-family: 'Plus Jakarta Sans', sans-serif;
-              transition: all 0.2s;
-              white-space: nowrap;
-            "
-          >
-            {{ copied ? '✓ Đã sao chép' : 'Sao chép' }}
-          </button>
+          <div style="flex: none; display: flex; gap: 8px; align-items: center">
+            <!-- Gọi THẬT: trước đây thẻ hotline chỉ cho sao chép số, khách trên điện thoại phải
+                 tự dán sang app Gọi. tel: mở luôn trình quay số (máy tính thì mở app gọi mặc
+                 định, không có thì không xảy ra gì — nút Sao chép vẫn giữ làm phương án lùi). -->
+            <a
+              :href="'tel:' + PHONE.replace(/\s/g, '')"
+              :style="{ background: accent }"
+              style="
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                height: 32px;
+                padding: 0 14px;
+                border-radius: 8px;
+                color: var(--acc-ink);
+                font-weight: 700;
+                font-size: 12px;
+                text-decoration: none;
+                font-family: 'Plus Jakarta Sans', sans-serif;
+                white-space: nowrap;
+              "
+            >
+              📞 Gọi ngay
+            </a>
+            <button
+              @click="copyPhone"
+              :style="{
+                border: copied ? '1px solid var(--green)' : '1px solid rgba(var(--line-rgb),0.2)',
+                color: copied ? 'var(--green)' : 'var(--muted2)',
+              }"
+              style="
+                background: transparent;
+                border-radius: 8px;
+                padding: 6px 12px;
+                font-size: 12px;
+                cursor: pointer;
+                font-family: 'Plus Jakarta Sans', sans-serif;
+                transition: all 0.2s;
+                white-space: nowrap;
+              "
+            >
+              {{ copied ? '✓ Đã sao chép' : 'Sao chép' }}
+            </button>
+          </div>
         </div>
 
         <!-- Messenger -->

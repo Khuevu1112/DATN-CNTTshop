@@ -159,6 +159,10 @@ export const fetchServiceCenters = (params = {}) => {
   return get('/support/trung-tam' + (qs ? '?' + qs : ''));
 };
 
+/** Phạm vi phục vụ TẬN NƠI: { tinhPhucVu: [{provinceId,tenTinh,soTrungTam}], hoTro, tenTinhCuaToi }.
+ * hoTro === null nghĩa là chưa xác định được (chưa đăng nhập hoặc chưa có địa chỉ). */
+export const fetchPhamViTanNoi = () => get('/support/pham-vi-tan-noi');
+
 export const fetchWarrantyPolicies = () => get('/support/chinh-sach-bao-hanh');
 export const lookupWarrantyBySerial = (serial) =>
   get('/support/tra-cuu-bao-hanh?serial=' + encodeURIComponent(serial));

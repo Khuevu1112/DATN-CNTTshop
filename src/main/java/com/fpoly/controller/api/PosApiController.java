@@ -13,7 +13,13 @@ import com.fpoly.dto.PosDtos.PosTaoDonRequest;
 import com.fpoly.dto.PosDtos.PosUuDaiDto;
 import com.fpoly.model.enums.PermissionType;
 import com.fpoly.security.RequirePermission;
+import com.fpoly.dto.PosDtos.PosBaoHanhDto;
+import com.fpoly.dto.PosDtos.PosTaoYeuCauBaoHanhRequest;
+import com.fpoly.dto.PosDtos.PosTraCuuDto;
+import com.fpoly.dto.SupportDtos.TrungTamDto;
 import com.fpoly.service.PosService;
+import com.fpoly.service.PosTraCuuService;
+import com.fpoly.service.SupportService;
 
 /** Bán hàng tại quầy showroom — app riêng chạy cổng 5175.
  *
@@ -24,6 +30,8 @@ import com.fpoly.service.PosService;
 public class PosApiController {
 
     @Autowired private PosService posService;
+    @Autowired private PosTraCuuService posTraCuuService;
+    @Autowired private SupportService supportService;
 
     @GetMapping("/products")
     @RequirePermission(feature = "pos", action = PermissionType.VIEW)
@@ -58,5 +66,31 @@ public class PosApiController {
     @RequirePermission(feature = "pos", action = PermissionType.VIEW)
     public PosHoaDonDto trangThaiDon(@PathVariable Integer id) {
         return posService.trangThaiDon(id);
+    }
+
+    // ==================== Tra cứu & bảo hành tại quầy ====================
+    // POS không chỉ để thu tiền: khách tới quầy hay hỏi "đơn tôi tới đâu rồi", "máy này còn bảo
+    // hành không", "máy gửi sửa xong chưa". Trước đây nhân viên quầy phải mở Admin Console bằng
+    // tài khoản khác mới trả lời được.
+
+    /** Tra theo số điện thoại / mã đơn hàng / serial — trả về TẤT CẢ trong một lượt gọi. */
+    @GetMapping("/tra-cuu")
+    @RequirePermission(feature = "pos", action = PermissionType.VIEW)
+    public PosTraCuuDto traCuu(@RequestParam String q) {
+        return posTraCuuService.traCuu(q);
+    }
+
+    /** Nhân viên lập yêu cầu bảo hành hộ khách ngay tại quầy. */
+    @PostMapping("/warranty-requests")
+    @RequirePermission(feature = "pos", action = PermissionType.PERFORM)
+    public PosBaoHanhDto taoYeuCauBaoHanh(@RequestBody PosTaoYeuCauBaoHanhRequest req) {
+        return posTraCuuService.taoYeuCauBaoHanh(req);
+    }
+
+    /** Danh sách trung tâm bảo hành để chọn khi khách mang máy tới cửa hàng. */
+    @GetMapping("/service-centers")
+    @RequirePermission(feature = "pos", action = PermissionType.VIEW)
+    public List<TrungTamDto> trungTam() {
+        return supportService.timTrungTam(null, null, null, null, null, null);
     }
 }

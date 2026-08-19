@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -58,26 +59,61 @@ public class CatalogApiService {
                 .toList();
     }
 
+    /**
+     * Danh sách sản phẩm, lọc theo danh mục và/hoặc từ khoá.
+     *
+     * Từ khoá KHÔNG còn dùng LIKE '%cả cụm%' trên riêng cột tên như trước. Cách cũ trượt gần
+     * như mọi truy vấn thật:
+     *   - "asus gaming" không khớp "Laptop Gaming ASUS TUF..." vì hai từ không đứng liền nhau;
+     *   - "man hinh" không khớp "Màn hình ..." vì đối chiếu nguyên dấu;
+     *   - "bh laptop" / "mh 27 inch" không khớp gì vì viết tắt không được giãn.
+     * Nay lọc trong bộ nhớ theo TỪ (bỏ dấu + giãn viết tắt, xem SearchTextUtils) trên tên +
+     * hãng + danh mục + SKU biến thể, đòi khớp đủ mọi từ nhưng không cần đúng thứ tự. Catalog
+     * của shop chỉ vài trăm dòng nên lọc trong bộ nhớ rẻ hơn nhiều so với việc dựng chỉ mục
+     * full-text chỉ để phục vụ một ô tìm kiếm.
+     */
     public List<ProductSummaryDto> getProducts(String categorySlug, String keyword, String sort) {
-        boolean hasKeyword = keyword != null && !keyword.isBlank();
+        List<String> tuKhoa = (keyword == null || keyword.isBlank())
+                ? List.of() : SearchTextUtils.tachTu(keyword);
         List<Product> products;
 
         if (categorySlug != null && !categorySlug.isBlank()) {
             Category category = categoryRepo.findBySlug(categorySlug)
                     .orElseThrow(() -> new RuntimeException("Không tìm thấy danh mục"));
-            products = hasKeyword
-                    ? productRepo.findByCategoryAndNameContainingIgnoreCaseAndIsActiveTrue(category, keyword)
-                    : productRepo.findByCategoryAndIsActiveTrue(category);
+            products = productRepo.findByCategoryAndIsActiveTrue(category);
         } else {
-            products = hasKeyword
-                    ? productRepo.findByNameContainingIgnoreCaseAndIsActiveTrue(keyword)
-                    : productRepo.findByIsActiveTrue();
+            products = productRepo.findByIsActiveTrue();
+        }
+
+        if (!tuKhoa.isEmpty()) {
+            products = products.stream()
+                    .filter(p -> SearchTextUtils.khopMoiTu(chuoiTimKiem(p), tuKhoa))
+                    .collect(Collectors.toCollection(ArrayList::new));
         }
 
         Map<Integer, double[]> ratingMap = loadRatingMap();
         Map<Integer, Integer> salesMap = loadSalesMap();
         sortProducts(products, sort, salesMap);
+        // Không có yêu cầu sắp xếp cụ thể + đang tìm kiếm -> đưa sản phẩm khớp ngay trong TÊN
+        // lên trước (khớp nhờ danh mục/SKU là liên quan yếu hơn), rồi mới tới thứ tự mặc định.
+        if (!tuKhoa.isEmpty() && (sort == null || sort.isBlank())) {
+            products.sort(Comparator.comparingInt(
+                    (Product p) -> -SearchTextUtils.demTuKhop(p.getName(), tuKhoa)));
+        }
         return products.stream().map(p -> toSummary(p, ratingMap, salesMap)).toList();
+    }
+
+    /** Toàn bộ phần chữ của 1 sản phẩm có thể dùng để tìm: tên + hãng + danh mục + SKU biến thể. */
+    private String chuoiTimKiem(Product p) {
+        StringBuilder sb = new StringBuilder(p.getName() == null ? "" : p.getName());
+        if (p.getBrand() != null) sb.append(' ').append(p.getBrand().getName());
+        if (p.getCategory() != null) sb.append(' ').append(p.getCategory().getName());
+        if (p.getVariants() != null) {
+            for (var v : p.getVariants()) {
+                if (v.getSku() != null) sb.append(' ').append(v.getSku());
+            }
+        }
+        return sb.toString();
     }
 
     /** Top sản phẩm bán chạy nhất (theo tổng số lượng đã bán, đơn không huỷ). */
@@ -236,8 +272,24 @@ public class CatalogApiService {
                 v != null ? v.getOriginalPrice() : null,
                 chips, rating, reviewCount,
                 salesMap.getOrDefault(p.getId(), 0),
-                v != null ? v.getStock() : 0,
+                tonKhoTatCaBienThe(p),
                 specs, fullPromotions(p), p.getWarrantyMonths());
+    }
+
+    /**
+     * Tồn kho của sản phẩm trên thẻ/danh sách = TỔNG mọi biến thể, không phải tồn của riêng
+     * biến thể mặc định như trước. Chỉ lấy biến thể mặc định thì một sản phẩm còn đầy hàng ở
+     * các phiên bản khác vẫn bị đánh dấu hết hàng (và ngược lại) — sai cả nhãn "Tạm hết hàng"
+     * lẫn bộ lọc "Chỉ hàng còn". Tồn của TỪNG biến thể vẫn trả riêng trong VariantDto để trang
+     * chi tiết khoá đúng phiên bản khách đang chọn.
+     */
+    private int tonKhoTatCaBienThe(Product p) {
+        if (p.getVariants() == null) return 0;
+        int tong = 0;
+        for (ProductVariant v : p.getVariants()) {
+            if (v.getStock() != null) tong += v.getStock();
+        }
+        return tong;
     }
 
     private String pickImageUrl(Product p) {

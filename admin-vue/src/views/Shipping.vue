@@ -114,47 +114,38 @@
           Danh sách đơn vị vận chuyển ({{ carriers.length }})
         </div>
         <div v-if="carriersLoading" class="spin"></div>
-        <table v-else style="width: 100%; border-collapse: collapse; font-size: 13px">
-          <thead>
-            <tr style="background: var(--card2)">
-              <th v-for="h in heads" :key="h.t" :style="{ textAlign: h.a || 'left', padding: '10px 14px', fontSize: '11px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.4px' }">
-                {{ h.t }}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="c in carriers" :key="c.id" style="border-top: 1px solid var(--line)">
-              <td style="padding: 10px 14px">
-                <div class="mono" style="color: var(--acc); font-weight: 700; font-size: 12px">{{ c.code }}</div>
-                <div style="color: var(--text); margin-top: 2px">{{ c.name }}</div>
-              </td>
-              <td style="padding: 10px 10px">
-                <input v-model.number="c.feeLienTinh" type="number" class="fld2" style="width: 100px" />
-              </td>
-              <td style="padding: 10px 10px">
-                <input v-model="c.timeCungMien" class="fld2" style="width: 90px" />
-              </td>
-              <td style="padding: 10px 10px">
-                <input v-model="c.timeKhacMien" class="fld2" style="width: 90px" />
-              </td>
-              <td style="padding: 10px 10px; text-align: center">
-                <input type="checkbox" v-model="c.isActive" style="cursor: pointer" />
-              </td>
-              <td style="padding: 10px 14px; text-align: right; white-space: nowrap">
-                <button
-                  @click="saveCarrierRow(c)" :disabled="savingCarrierId === c.id"
-                  style="height: 30px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--line2); background: var(--card2); color: var(--acc); cursor: pointer; font-size: 11.5px; margin-right: 6px"
-                >{{ savingCarrierId === c.id ? '...' : 'Lưu' }}</button>
-                <button
-                  @click="removeCarrier(c)"
-                  style="width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--line2); background: var(--card); color: var(--sale); cursor: pointer"
-                >
-                  <i class="bi bi-trash3" style="font-size: 12px"></i>
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <DataTable v-else :columns="cols" :rows="carriers" :tim-kiem="ui.search" trong="Chưa có đơn vị vận chuyển nào.">
+          <template #o-name="{ row: c }">
+            <div class="mono" style="color: var(--acc); font-weight: 700; font-size: 12px">{{ c.code }}</div>
+            <div style="color: var(--text); margin-top: 2px">{{ c.name }}</div>
+          </template>
+          <template #o-feeLienTinh="{ row: c }">
+            <input v-model.number="c.feeLienTinh" type="number" class="fld2" style="width: 100px" />
+          </template>
+          <template #o-timeCungMien="{ row: c }">
+            <input v-model="c.timeCungMien" class="fld2" style="width: 90px" />
+          </template>
+          <template #o-timeKhacMien="{ row: c }">
+            <input v-model="c.timeKhacMien" class="fld2" style="width: 90px" />
+          </template>
+          <template #o-isActive="{ row: c }">
+            <input type="checkbox" v-model="c.isActive" style="cursor: pointer" />
+          </template>
+          <template #o-thaoTac="{ row: c }">
+            <span style="white-space: nowrap">
+              <button
+                @click="saveCarrierRow(c)" :disabled="savingCarrierId === c.id"
+                style="height: 30px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--line2); background: var(--card2); color: var(--acc); cursor: pointer; font-size: 11.5px; margin-right: 6px"
+              >{{ savingCarrierId === c.id ? '...' : 'Lưu' }}</button>
+              <button
+                @click="removeCarrier(c)"
+                style="width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--line2); background: var(--card); color: var(--sale); cursor: pointer"
+              >
+                <i class="bi bi-trash3" style="font-size: 12px"></i>
+              </button>
+            </span>
+          </template>
+        </DataTable>
       </div>
     </div>
   </div>
@@ -165,6 +156,8 @@ import { ref, onMounted } from 'vue';
 import {
   getHpTiers, updateHpTier, getCarriers, createCarrier, updateCarrier, deleteCarrier,
 } from '../api/admin';
+import { ui } from '../uiState';
+import DataTable from '../components/DataTable.vue';
 
 // Chép lại hằng số bên ShippingService (GIA_VONG_1/2/3, MOC_VONG_1/2_KM) để admin thấy phí nội
 // thành thực sự được tính thế nào — phần này CHỈ HIỂN THỊ, không phải nguồn sự thật. Đổi đơn giá
@@ -192,13 +185,14 @@ const savingCarrierId = ref(null);
 const saving = ref(false);
 const error = ref('');
 
-const heads = [
-  { t: 'Đơn vị' },
-  { t: 'Phí liên tỉnh' },
-  { t: 'TG cùng miền' },
-  { t: 'TG khác miền' },
-  { t: 'Bật', a: 'center' },
-  { t: '' },
+// Cột cho DataTable — phễu lọc/sắp xếp kiểu Excel trên từng cột (xem components/DataTable.vue).
+const cols = [
+  { key: 'name', label: 'Đơn vị', text: (c) => c.code + ' · ' + c.name },
+  { key: 'feeLienTinh', label: 'Phí liên tỉnh', kieu: 'so' },
+  { key: 'timeCungMien', label: 'TG cùng miền' },
+  { key: 'timeKhacMien', label: 'TG khác miền' },
+  { key: 'isActive', label: 'Bật', align: 'center', text: (c) => (c.isActive ? 'Đang bật' : 'Đang tắt') },
+  { key: 'thaoTac', label: '', align: 'right', loc: false },
 ];
 
 const form = ref({ code: '', name: '', feeLienTinh: 20000, timeCungMien: '', timeKhacMien: '' });

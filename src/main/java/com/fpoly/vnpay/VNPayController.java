@@ -142,19 +142,10 @@ public class VNPayController {
             return redirectToResult(payment, "success");
         }
 
-        // Thanh toán đơn hàng online: chốt đơn như cũ.
-        order.setTrangThai("confirmed");
-
-        OrderStatusLog log = new OrderStatusLog();
-        log.setOrder(order);
-        log.setTrangThai("confirmed");
-        log.setGhiChu("Thanh toán VNPay thành công");
-        statusLogRepo.save(log);
-
-        // Chỉ tới giờ mới thật sự trừ kho + xoá giỏ hàng + gửi thông báo/mail "đã thanh toán" +
-        // cộng Xu CT (xem OrderService để hiểu vì sao phải hoãn tới lúc này) — dùng chung hàm với
-        // StripeController.
-        orderService.xacNhanThanhToanGatewayThanhCong(order);
+        // Thanh toán đơn hàng online: chốt đơn + xoá giỏ + thông báo/mail + cộng Xu CT. Dùng
+        // chung hàm với StripeController; hàm này cũng xử lý trường hợp tiền về SAU khi đơn đã
+        // tự huỷ vì hết 5 phút giữ hàng — xem OrderService.chotDonSauThanhToanGateway.
+        orderService.chotDonSauThanhToanGateway(order, "Thanh toán VNPay thành công");
 
         return redirectToResult(payment, "success");
     }

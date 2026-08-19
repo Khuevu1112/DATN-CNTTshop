@@ -9,7 +9,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.LinkedHashSet;
 import java.util.Optional;
+import java.util.Set;
 import java.text.Normalizer;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +22,8 @@ import com.fpoly.dto.SupportDtos.ChinhSachBaoHanhDto;
 import com.fpoly.dto.SupportDtos.FaqDanhMucDto;
 import com.fpoly.dto.SupportDtos.FaqItemDto;
 import com.fpoly.dto.SupportDtos.GiaSuaChuaDto;
+import com.fpoly.dto.SupportDtos.PhamViTanNoiDto;
+import com.fpoly.dto.SupportDtos.TinhPhucVuDto;
 import com.fpoly.dto.SupportDtos.TongQuanHoTroDto;
 import com.fpoly.dto.SupportDtos.TraCuuBaoHanhDto;
 import com.fpoly.dto.SupportDtos.TrungTamDto;
@@ -56,6 +60,47 @@ public class SupportService {
 
     /** Bán kính Trái Đất (km) cho công thức Haversine. */
     private static final double BAN_KINH_TRAI_DAT_KM = 6371.0;
+
+    // ============================================================
+    //  0. Phạm vi phục vụ TẬN NƠI
+    // ============================================================
+
+    /**
+     * Tỉnh/Thành mà kỹ thuật viên có thể tới tận nơi = tỉnh đang có ít nhất 1 trung tâm/chi
+     * nhánh đang hiển thị. Không có chi nhánh tại chỗ thì không có người đi, nên đây vừa là
+     * định nghĩa gọn nhất vừa luôn tự đúng khi admin thêm/bớt chi nhánh — không phải duy trì
+     * thêm một bảng "vùng phục vụ" song song và sẽ lệch nhau.
+     */
+    public Set<Integer> tinhPhucVuTanNoi() {
+        Set<Integer> ra = new LinkedHashSet<>();
+        for (ServiceCenter c : centerRepo.findPublic()) {
+            if (c.getProvince() != null) ra.add(c.getProvince().getId());
+        }
+        return ra;
+    }
+
+    /**
+     * Phạm vi tận nơi để FE hiển thị. provinceIdCuaKhach = tỉnh trong địa chỉ mặc định của
+     * khách, null nếu chưa đăng nhập hoặc chưa có địa chỉ — khi đó hoTro trả null ("chưa xác
+     * định"), FE chỉ liệt kê các tỉnh phục vụ chứ không dám khẳng định có hay không.
+     */
+    public PhamViTanNoiDto phamViTanNoi(Integer provinceIdCuaKhach) {
+        Map<Integer, TinhPhucVuDto> theoTinh = new LinkedHashMap<>();
+        for (ServiceCenter c : centerRepo.findPublic()) {
+            if (c.getProvince() == null) continue;
+            Integer id = c.getProvince().getId();
+            TinhPhucVuDto cu = theoTinh.get(id);
+            theoTinh.put(id, new TinhPhucVuDto(id, c.getProvince().getName(),
+                    cu == null ? 1 : cu.soTrungTam() + 1));
+        }
+        List<TinhPhucVuDto> ds = new ArrayList<>(theoTinh.values());
+
+        Boolean hoTro = provinceIdCuaKhach == null ? null : theoTinh.containsKey(provinceIdCuaKhach);
+        String tenTinh = provinceIdCuaKhach == null ? null
+                : ds.stream().filter(t -> t.provinceId().equals(provinceIdCuaKhach))
+                    .map(TinhPhucVuDto::tenTinh).findFirst().orElse(null);
+        return new PhamViTanNoiDto(ds, hoTro, tenTinh);
+    }
 
     // ============================================================
     //  1. Trung tâm bảo hành
@@ -269,14 +314,19 @@ public class SupportService {
     //  4. FAQ
     // ============================================================
 
-    /** FAQ nhóm theo danh mục. tuKhoa rỗng = trả về toàn bộ; có từ khoá thì lọc BỎ DẤU trên cả
-     * câu hỏi, câu trả lời và trường từ khoá phụ, rồi loại danh mục không còn câu nào. */
+    /** FAQ nhóm theo danh mục. tuKhoa rỗng = trả về toàn bộ; có từ khoá thì lọc trên câu hỏi,
+     * câu trả lời và trường từ khoá phụ, rồi loại danh mục không còn câu nào.
+     *
+     * So khớp THEO TỪ (bỏ dấu + giãn viết tắt, xem SearchTextUtils) chứ không phải LIKE nguyên
+     * cụm: trước đây gõ "bao hanh laptop" trả về rỗng dù có hẳn câu "Laptop được bảo hành bao
+     * lâu?", chỉ vì trong câu đó hai từ không đứng liền nhau. Nay đòi đủ mọi từ, không cần
+     * đúng thứ tự, và "bh lap" cũng ra cùng kết quả. */
     public List<FaqDanhMucDto> faq(String tuKhoa) {
-        String khoa = boDau(tuKhoa);
+        List<String> tu = (tuKhoa == null || tuKhoa.isBlank()) ? List.of() : SearchTextUtils.tachTu(tuKhoa);
         Map<Integer, List<FaqItemDto>> theoDanhMuc = new LinkedHashMap<>();
 
         for (FaqItem i : faqItemRepo.findPublic()) {
-            if (!khoa.isBlank() && !khopTuKhoa(i, khoa)) continue;
+            if (!tu.isEmpty() && !khopTuKhoa(i, tu)) continue;
             theoDanhMuc.computeIfAbsent(i.getCategory().getId(), k -> new ArrayList<>()).add(toFaqItemDto(i));
         }
 
@@ -289,10 +339,10 @@ public class SupportService {
         return ketQua;
     }
 
-    private boolean khopTuKhoa(FaqItem i, String khoa) {
-        String noiDung = boDau(i.getCauHoi() + " " + i.getTraLoi() + " "
-                + (i.getTuKhoa() != null ? i.getTuKhoa() : "") + " " + i.getCategory().getTen());
-        return noiDung.contains(khoa);
+    private boolean khopTuKhoa(FaqItem i, List<String> tu) {
+        String noiDung = i.getCauHoi() + " " + i.getTraLoi() + " "
+                + (i.getTuKhoa() != null ? i.getTuKhoa() : "") + " " + i.getCategory().getTen();
+        return SearchTextUtils.khopMoiTu(noiDung, tu);
     }
 
     @Transactional

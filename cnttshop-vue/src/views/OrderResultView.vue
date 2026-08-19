@@ -26,7 +26,12 @@ const banner = computed(() => {
   // tải xong mới hiện để tránh nhấp nháy sai rồi đúng.
   if (!order.value) return null;
   if (order.value.payment && order.value.payment.status !== 'paid' && order.value.payment.methodCode !== 'cod') {
-    return { kind: 'pending', icon: '⏳', text: 'Đặt hàng thành công — vui lòng hoàn tất thanh toán trong 24 giờ', color: 'var(--amber)' };
+    // Đơn qua cổng redirect chỉ được giữ hàng 5 phút (hanGiuHang), chuyển khoản thì 24h —
+    // nói đúng mốc của chính đơn này thay vì luôn ghi 24 giờ như trước.
+    const text = order.value.hanGiuHang
+      ? 'Đặt hàng thành công — shop đang giữ hàng, vui lòng thanh toán trước khi hết giờ bên dưới'
+      : 'Đặt hàng thành công — vui lòng hoàn tất thanh toán trong 24 giờ';
+    return { kind: 'pending', icon: '⏳', text, color: 'var(--amber)' };
   }
   return { kind: 'success', text: 'Đặt hàng thành công!', color: 'var(--green)' };
 });

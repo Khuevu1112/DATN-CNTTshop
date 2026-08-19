@@ -17,6 +17,7 @@ const routes = [
     path: '/thanh-toan',
     name: 'checkout',
     component: () => import('../views/CheckoutView.vue'),
+    meta: { canDangNhap: true },
   },
   { path: '/dang-nhap', name: 'login', component: () => import('../views/LoginView.vue') },
   { path: '/lien-he', name: 'contact', component: () => import('../views/ContactView.vue') },
@@ -29,16 +30,19 @@ const routes = [
     path: '/tai-khoan',
     name: 'account',
     component: () => import('../views/AccountView.vue'),
+    meta: { canDangNhap: true },
   },
   {
     path: '/tai-khoan/don-hang',
     name: 'orders',
     component: () => import('../views/AccountView.vue'),
+    meta: { canDangNhap: true },
   },
   {
     path: '/tai-khoan/don-hang/:id/danh-gia',
     name: 'order-review',
     component: () => import('../views/AccountView.vue'),
+    meta: { canDangNhap: true },
   },
   {
     // "Quản lý bảo hành cá nhân" — trang riêng, KHÔNG còn là tab của AccountView. Việc đánh giá
@@ -46,6 +50,7 @@ const routes = [
     path: '/tai-khoan/bao-hanh',
     name: 'warranty',
     component: () => import('../views/WarrantyManageView.vue'),
+    meta: { canDangNhap: true },
   },
   // ===== Trung tâm hỗ trợ =====
   // Tất cả công khai trừ /ho-tro/lich-hen (trang tự xử lý khi chưa đăng nhập bằng cách cho tra
@@ -104,6 +109,7 @@ const routes = [
     path: '/ket-qua-thanh-toan',
     name: 'order-result',
     component: () => import('../views/OrderResultView.vue'),
+    meta: { canDangNhap: true },
   },
   { path: '/:pathMatch(.*)*', redirect: '/' },
 ];
@@ -114,6 +120,24 @@ const router = createRouter({
   scrollBehavior() {
     return { top: 0 };
   },
+});
+
+// ===== Chặn khách vãng lai vào các trang chỉ dành cho tài khoản =====
+// Trước đây không có chốt chặn nào: khách chưa đăng nhập gõ thẳng /thanh-toan (hoặc F5 sau khi
+// phiên hết hạn) vẫn dựng nguyên trang "Xác nhận đặt hàng" rồi mọi request 401 im lặng, để lại
+// một trang trống rỗng với danh sách địa chỉ/phương thức thanh toán rỗng và nút Đặt hàng bấm
+// không lên. Đổi thành: đưa thẳng sang trang đăng nhập, nhớ điểm đến để quay lại sau khi đăng
+// nhập xong (xem store.loginPrev / actions.login).
+//
+// Đọc token trực tiếp từ localStorage chứ không import store.js — store.js import router nên
+// import ngược lại sẽ tạo vòng lặp module.
+router.beforeEach((to) => {
+  if (!to.meta?.canDangNhap) return true;
+  if (localStorage.getItem('token')) return true;
+  window.dispatchEvent(new CustomEvent('auth:can-dang-nhap', {
+    detail: { name: to.name, params: { ...to.params }, query: { ...to.query } },
+  }));
+  return { name: 'login' };
 });
 
 export default router;

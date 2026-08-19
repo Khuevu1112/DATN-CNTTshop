@@ -27,8 +27,11 @@ public class AdminOrderController {
     @Autowired
     private OrderRepository orderRepository;
 
+    // "returned" (Hoàn hàng — hàng đã về kho, tiền chưa trả) tách khỏi "refunded" (đã chuyển
+    // tiền lại). Xem OrderService.MO_TA_TRANG_THAI.
     private static final List<String> TRANG_THAI_LIST = List.of(
-            "pending", "confirmed", "processing", "shipped", "delivered", "cancelled", "refunded"
+            "pending", "confirmed", "processing", "shipped", "delivered",
+            "cancelled", "returned", "refunded"
     );
 
     private static final DateTimeFormatter NGAY_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");

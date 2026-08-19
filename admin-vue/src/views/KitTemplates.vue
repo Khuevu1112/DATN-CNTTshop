@@ -30,52 +30,48 @@
 
       <div v-if="loading" style="padding: 46px 20px; text-align: center; color: var(--muted); font-size: 13.5px">Đang tải...</div>
 
-      <table v-else-if="rows.length" style="width: 100%; border-collapse: collapse; font-size: 13px">
-        <thead>
-          <tr style="background: var(--card2)">
-            <th style="text-align: left; padding: 10px 16px; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .4px">Mẫu cấu hình</th>
-            <th style="text-align: left; padding: 10px 12px; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .4px">Linh kiện</th>
-            <th style="text-align: right; padding: 10px 12px; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .4px">Tổng giá đề xuất</th>
-            <th style="text-align: right; padding: 10px 16px; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .4px">Thao tác</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="t in rows" :key="t.id" class="kt-row" @click="openDetail(t.id)"
-            style="border-top: 1px solid var(--line); cursor: pointer">
-            <td style="padding: 12px 16px">
-              <div style="display: flex; align-items: center; gap: 12px">
-                <div style="width: 42px; height: 42px; border-radius: 10px; flex: none; display: flex; align-items: center; justify-content: center; font-size: 18px; background: color-mix(in srgb, var(--acc) 13%, transparent); color: var(--acc)">
-                  <i class="bi bi-pc-display"></i>
-                </div>
-                <div style="min-width: 0">
-                  <div style="font-size: 13.5px; font-weight: 600; color: var(--text)">{{ t.name }}</div>
-                  <div style="display: flex; align-items: center; gap: 5px; margin-top: 5px">
-                    <i v-for="(c, i) in t.chips" :key="i" class="bi" :class="c"
-                      style="font-size: 12px; color: var(--muted2); width: 18px; height: 18px; line-height: 18px; text-align: center; border-radius: 5px; background: var(--card2)"></i>
-                    <span v-if="t.moreCount" class="mono" style="font-size: 10.5px; color: var(--muted)">+{{ t.moreCount }}</span>
-                  </div>
-                </div>
+      <DataTable
+        v-else-if="rows.length"
+        :columns="cols"
+        :rows="rows"
+        :tim-kiem="ui.search"
+        click-duoc
+        @row-click="(t) => openDetail(t.id)"
+      >
+        <template #o-name="{ row: t }">
+          <div style="display: flex; align-items: center; gap: 12px">
+            <div style="width: 42px; height: 42px; border-radius: 10px; flex: none; display: flex; align-items: center; justify-content: center; font-size: 18px; background: color-mix(in srgb, var(--acc) 13%, transparent); color: var(--acc)">
+              <i class="bi bi-pc-display"></i>
+            </div>
+            <div style="min-width: 0">
+              <div style="font-size: 13.5px; font-weight: 600; color: var(--text)">{{ t.name }}</div>
+              <div style="display: flex; align-items: center; gap: 5px; margin-top: 5px">
+                <i v-for="(c, i) in t.chips" :key="i" class="bi" :class="c"
+                  style="font-size: 12px; color: var(--muted2); width: 18px; height: 18px; line-height: 18px; text-align: center; border-radius: 5px; background: var(--card2)"></i>
+                <span v-if="t.moreCount" class="mono" style="font-size: 10.5px; color: var(--muted)">+{{ t.moreCount }}</span>
               </div>
-            </td>
-            <td style="padding: 12px">
-              <span class="mono" style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--muted2); padding: 3px 10px; border-radius: 20px; background: var(--card2)">
-                <i class="bi bi-puzzle" style="font-size: 12px"></i>{{ t.itemCount }} linh kiện
-              </span>
-            </td>
-            <td style="padding: 12px; text-align: right">
-              <span class="mono" style="font-size: 14px; font-weight: 700; color: var(--acc)">{{ money(t.totalSuggestedPrice) }}</span>
-            </td>
-            <td style="padding: 12px 16px; text-align: right; white-space: nowrap">
-              <button @click.stop="openEdit(t.id)" title="Sửa" class="kt-iconbtn"
-                style="width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--line2); background: var(--card); color: var(--muted2); cursor: pointer; margin-left: 6px"><i class="bi bi-pencil"></i></button>
-              <button @click.stop="duplicate(t.id)" title="Nhân bản" class="kt-iconbtn"
-                style="width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--line2); background: var(--card); color: var(--muted2); cursor: pointer; margin-left: 6px"><i class="bi bi-copy"></i></button>
-              <button @click.stop="confirmId = t.id" title="Xóa"
-                style="width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--line2); background: var(--card); color: var(--sale); cursor: pointer; margin-left: 6px"><i class="bi bi-trash3"></i></button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+            </div>
+          </div>
+        </template>
+        <template #o-itemCount="{ row: t }">
+          <span class="mono" style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--muted2); padding: 3px 10px; border-radius: 20px; background: var(--card2)">
+            <i class="bi bi-puzzle" style="font-size: 12px"></i>{{ t.itemCount }} linh kiện
+          </span>
+        </template>
+        <template #o-totalSuggestedPrice="{ row: t }">
+          <span class="mono" style="font-size: 14px; font-weight: 700; color: var(--acc)">{{ money(t.totalSuggestedPrice) }}</span>
+        </template>
+        <template #o-thaoTac="{ row: t }">
+          <span style="white-space: nowrap">
+            <button @click.stop="openEdit(t.id)" title="Sửa" class="kt-iconbtn"
+              style="width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--line2); background: var(--card); color: var(--muted2); cursor: pointer; margin-left: 6px"><i class="bi bi-pencil"></i></button>
+            <button @click.stop="duplicate(t.id)" title="Nhân bản" class="kt-iconbtn"
+              style="width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--line2); background: var(--card); color: var(--muted2); cursor: pointer; margin-left: 6px"><i class="bi bi-copy"></i></button>
+            <button @click.stop="confirmId = t.id" title="Xóa"
+              style="width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--line2); background: var(--card); color: var(--sale); cursor: pointer; margin-left: 6px"><i class="bi bi-trash3"></i></button>
+          </span>
+        </template>
+      </DataTable>
 
       <div v-else style="padding: 46px 20px; text-align: center; color: var(--muted)">
         <i class="bi bi-inbox" style="font-size: 30px; opacity: .5"></i>
@@ -232,6 +228,7 @@
 import { ref, reactive, computed, onMounted } from 'vue';
 import { money, short } from '../data/adminData';
 import { ui } from '../uiState';
+import DataTable from '../components/DataTable.vue';
 import { TYPES, typeInfo } from '../data/kitComponentTypes';
 import {
   getKitTemplates, getKitTemplateDetail, createKitTemplate,
@@ -266,16 +263,23 @@ async function load() {
   }
 }
 
-const rows = computed(() => {
-  const q = ui.search.trim().toLowerCase();
-  return templates.value
-    .filter((t) => !q || t.name.toLowerCase().includes(q) || (t.description || '').toLowerCase().includes(q))
-    .map((t) => ({
-      ...t,
-      chips: (t.componentTypes || []).slice(0, 7).map((k) => typeInfo(k).icon),
-      moreCount: (t.componentTypes || []).length > 7 ? (t.componentTypes.length - 7) : 0,
-    }));
-});
+// Tìm theo từ khoá đã do DataTable đảm nhận (quét mọi cột, bỏ dấu).
+const rows = computed(() =>
+  templates.value.map((t) => ({
+    ...t,
+    chips: (t.componentTypes || []).slice(0, 7).map((k) => typeInfo(k).icon),
+    moreCount: (t.componentTypes || []).length > 7 ? t.componentTypes.length - 7 : 0,
+  })),
+);
+
+// Cột cho DataTable — phễu lọc/sắp xếp kiểu Excel trên từng cột (xem components/DataTable.vue).
+const cols = [
+  { key: 'name', label: 'Mẫu cấu hình' },
+  { key: 'itemCount', label: 'Linh kiện', kieu: 'so', text: (t) => t.itemCount + ' linh kiện' },
+  { key: 'totalSuggestedPrice', label: 'Tổng giá đề xuất', align: 'right', kieu: 'so',
+    text: (t) => money(t.totalSuggestedPrice) },
+  { key: 'thaoTac', label: 'Thao tác', align: 'right', loc: false },
+];
 
 const stats = computed(() => {
   const totals = templates.value.map((t) => Number(t.totalSuggestedPrice) || 0);

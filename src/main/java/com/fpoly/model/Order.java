@@ -77,6 +77,19 @@ public class Order {
     @Column(name = "shipping_distance_km")
     private BigDecimal khoangCachGiaoKm;
 
+    // Địa chỉ nhận hàng CHỤP LẠI dạng text lúc đặt đơn. Nguồn hiển thị chính thức của đơn —
+    // KHÔNG đọc qua FK diaChiGiao nữa, vì khách được phép sửa/xoá địa chỉ trong sổ sau khi đặt
+    // (xem AddressService.xoa: xoá địa chỉ chỉ gỡ address_id về NULL, đơn giữ nguyên 3 cột này).
+    // NULL với đơn bán tại quầy và với đơn cũ tạo trước 81_order_address_snapshot.sql.
+    @Column(name = "receiver_name")
+    private String tenNguoiNhan;
+
+    @Column(name = "receiver_phone")
+    private String soDienThoaiNhan;
+
+    @Column(name = "shipping_address")
+    private String diaChiNhanHang;
+
     // Mã vận đơn bên ngoài — admin điền tay khi bàn giao đơn cho hãng vận chuyển (bàn giao xong
     // mới có mã, không có lúc đặt hàng). Dùng để tra tracking GHN (order_code) hoặc tạo tracking
     // AfterShip cho Shopee Express (tracking_number). NULL nếu đơn giao bằng xe của shop (nội
@@ -99,6 +112,13 @@ public class Order {
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
+
+    // Hạn GIỮ HÀNG của đơn thanh toán qua cổng redirect (Stripe/VNPay). Hàng đã bị trừ kho ngay
+    // lúc tạo đơn để không bán trùng món cuối cùng cho 2 khách; quá mốc này mà chưa trả tiền thì
+    // đơn tự huỷ và hàng trả lại kho (xem OrderService.giaiPhongDonHetHanGiuHang).
+    // NULL với COD/chuyển khoản/POS (không đếm ngược) và với đơn đã thanh toán xong.
+    @Column(name = "hold_until")
+    private LocalDateTime hanGiuHang;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
     private List<OrderItem> chiTiet;
@@ -128,6 +148,51 @@ public class Order {
 
     public UserAddress getDiaChiGiao() { return diaChiGiao; }
     public void setDiaChiGiao(UserAddress diaChiGiao) { this.diaChiGiao = diaChiGiao; }
+
+    public String getTenNguoiNhan() { return tenNguoiNhan; }
+    public void setTenNguoiNhan(String tenNguoiNhan) { this.tenNguoiNhan = tenNguoiNhan; }
+
+    public String getSoDienThoaiNhan() { return soDienThoaiNhan; }
+    public void setSoDienThoaiNhan(String soDienThoaiNhan) { this.soDienThoaiNhan = soDienThoaiNhan; }
+
+    public String getDiaChiNhanHang() { return diaChiNhanHang; }
+    public void setDiaChiNhanHang(String diaChiNhanHang) { this.diaChiNhanHang = diaChiNhanHang; }
+
+    public LocalDateTime getHanGiuHang() { return hanGiuHang; }
+    public void setHanGiuHang(LocalDateTime hanGiuHang) { this.hanGiuHang = hanGiuHang; }
+
+    /** Còn đang trong thời gian giữ hàng chờ thanh toán -> FE hiện đồng hồ đếm ngược. */
+    public boolean dangGiuHang() {
+        return hanGiuHang != null && hanGiuHang.isAfter(LocalDateTime.now());
+    }
+
+    /** Chụp lại địa chỉ nhận hàng vào đơn. Gọi 1 lần lúc tạo đơn, trước khi save. */
+    public void chupLaiDiaChi(UserAddress a) {
+        if (a == null) return;
+        diaChiGiao = a;
+        tenNguoiNhan = a.getTenNguoiNhan();
+        soDienThoaiNhan = a.getSoDienThoai();
+        diaChiNhanHang = a.getDiaChiDayDu();
+        viDoGiao = a.getLatitude();
+        kinhDoGiao = a.getLongitude();
+    }
+
+    /** Tên người nhận để hiển thị — ưu tiên bản chụp, lùi về FK cho đơn cũ chưa backfill. */
+    public String getTenNguoiNhanHienThi() {
+        if (tenNguoiNhan != null && !tenNguoiNhan.isBlank()) return tenNguoiNhan;
+        return diaChiGiao != null ? diaChiGiao.getTenNguoiNhan() : null;
+    }
+
+    public String getSoDienThoaiNhanHienThi() {
+        if (soDienThoaiNhan != null && !soDienThoaiNhan.isBlank()) return soDienThoaiNhan;
+        if (diaChiGiao != null) return diaChiGiao.getSoDienThoai();
+        return nguoiDung != null ? nguoiDung.getSoDienThoai() : null;
+    }
+
+    public String getDiaChiNhanHangHienThi() {
+        if (diaChiNhanHang != null && !diaChiNhanHang.isBlank()) return diaChiNhanHang;
+        return diaChiGiao != null ? diaChiGiao.getDiaChiDayDu() : null;
+    }
 
     public Integer getCouponId() { return couponId; }
     public void setCouponId(Integer couponId) { this.couponId = couponId; }

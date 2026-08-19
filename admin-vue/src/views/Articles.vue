@@ -14,50 +14,38 @@
     <div v-if="loading" class="spin"></div>
 
     <div v-else class="tbl-wrap">
-      <table class="tbl">
-        <thead>
-          <tr>
-            <th style="width: 64px"></th>
-            <th style="min-width: 260px">Tiêu đề</th>
-            <th style="width: 130px">Danh mục</th>
-            <th style="width: 110px">Trạng thái</th>
-            <th style="width: 90px; text-align: center">Lượt xem</th>
-            <th style="width: 120px">Xuất bản</th>
-            <th style="width: 110px"></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="a in danhSachLoc" :key="a.id">
-            <td>
-              <div class="thumb" :style="a.thumbnail ? { backgroundImage: `url(${resolveImageUrl(a.thumbnail)})` } : {}"></div>
-            </td>
-            <td>
-              <div style="font-weight: 600; color: var(--text)">{{ a.tieuDe }}</div>
-              <div style="font-size: 11.5px; color: var(--muted); margin-top: 3px">/{{ a.slug }}</div>
-            </td>
-            <td><span class="mini-tag">{{ a.tenDanhMuc }}</span></td>
-            <td>
-              <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 5px">
-                <span class="badge" :style="a.trangThai === 'published' ? okStyle : draftStyle">
-                  {{ a.trangThai === 'published' ? 'Đã xuất bản' : 'Nháp' }}
-                </span>
-                <span v-if="a.noiBat" class="badge" :style="accStyle">Nổi bật</span>
-              </div>
-            </td>
-            <td class="mono" style="text-align: center; color: var(--muted2)">{{ a.luotXem }}</td>
-            <td style="color: var(--muted2); font-size: 12px">{{ a.publishedAt ? fmtDate(a.publishedAt) : '—' }}</td>
-            <td>
-              <div style="display: flex; gap: 6px; justify-content: flex-end">
-                <button v-if="coQuyen('edit')" class="ico-btn" @click="moForm(a)"><i class="bi bi-pencil"></i></button>
-                <button v-if="coQuyen('delete')" class="ico-btn danger" @click="xoa(a)"><i class="bi bi-trash"></i></button>
-              </div>
-            </td>
-          </tr>
-          <tr v-if="!danhSachLoc.length">
-            <td colspan="7" class="empty">Chưa có bài viết nào.</td>
-          </tr>
-        </tbody>
-      </table>
+      <DataTable :columns="cols" :rows="danhSachLoc" :tim-kiem="ui.search" trong="Chưa có bài viết nào.">
+        <template #o-anh="{ row: a }">
+          <div class="thumb" :style="a.thumbnail ? { backgroundImage: `url(${resolveImageUrl(a.thumbnail)})` } : {}"></div>
+        </template>
+        <template #o-tieuDe="{ row: a }">
+          <div style="font-weight: 600; color: var(--text)">{{ a.tieuDe }}</div>
+          <div style="font-size: 11.5px; color: var(--muted); margin-top: 3px">/{{ a.slug }}</div>
+        </template>
+        <template #o-tenDanhMuc="{ row: a }">
+          <span class="mini-tag">{{ a.tenDanhMuc }}</span>
+        </template>
+        <template #o-trangThai="{ row: a }">
+          <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 5px">
+            <span class="badge" :style="a.trangThai === 'published' ? okStyle : draftStyle">
+              {{ a.trangThai === 'published' ? 'Đã xuất bản' : 'Nháp' }}
+            </span>
+            <span v-if="a.noiBat" class="badge" :style="accStyle">Nổi bật</span>
+          </div>
+        </template>
+        <template #o-luotXem="{ row: a }">
+          <span class="mono" style="color: var(--muted2)">{{ a.luotXem }}</span>
+        </template>
+        <template #o-publishedAt="{ row: a }">
+          <span style="color: var(--muted2); font-size: 12px">{{ a.publishedAt ? fmtDate(a.publishedAt) : '—' }}</span>
+        </template>
+        <template #o-thaoTac="{ row: a }">
+          <div style="display: flex; gap: 6px; justify-content: flex-end">
+            <button v-if="coQuyen('edit')" class="ico-btn" @click="moForm(a)"><i class="bi bi-pencil"></i></button>
+            <button v-if="coQuyen('delete')" class="ico-btn danger" @click="xoa(a)"><i class="bi bi-trash"></i></button>
+          </div>
+        </template>
+      </DataTable>
     </div>
 
     <!-- Form -->
@@ -129,6 +117,8 @@ import { ref, computed, onMounted } from 'vue'
 import { usePermissionsStore } from '../stores/permissions'
 import { getArticles, getArticleCategories, createArticle, updateArticle, deleteArticle, uploadProductImage } from '../api/admin'
 import { resolveImageUrl } from '../api/http'
+import { ui } from '../uiState'
+import DataTable from '../components/DataTable.vue'
 
 const permissions = usePermissionsStore()
 const coQuyen = (p) => permissions.hasPerm('articles', p)
@@ -147,6 +137,19 @@ const draftStyle = { background: 'color-mix(in srgb, var(--muted2) 14%, transpar
 const accStyle = { background: 'color-mix(in srgb, var(--acc) 14%, transparent)', color: 'var(--acc)' }
 
 const danhSachLoc = computed(() => (loc.value ? list.value.filter((a) => a.trangThai === loc.value) : list.value))
+
+// Cột cho DataTable — phễu lọc/sắp xếp kiểu Excel trên từng cột (xem components/DataTable.vue).
+const cols = [
+  { key: 'anh', label: '', width: '64px', loc: false },
+  { key: 'tieuDe', label: 'Tiêu đề', width: '260px' },
+  { key: 'tenDanhMuc', label: 'Danh mục', width: '130px' },
+  { key: 'trangThai', label: 'Trạng thái', width: '110px',
+    text: (a) => (a.trangThai === 'published' ? 'Đã xuất bản' : 'Nháp') + (a.noiBat ? ' · Nổi bật' : '') },
+  { key: 'luotXem', label: 'Lượt xem', width: '90px', align: 'center', kieu: 'so' },
+  { key: 'publishedAt', label: 'Xuất bản', width: '120px', kieu: 'ngay',
+    text: (a) => (a.publishedAt ? fmtDate(a.publishedAt) : '—') },
+  { key: 'thaoTac', label: '', width: '110px', align: 'right', loc: false },
+]
 const dem = (tt) => list.value.filter((a) => a.trangThai === tt).length
 const fmtDate = (iso) => { const d = new Date(iso); return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}` }
 

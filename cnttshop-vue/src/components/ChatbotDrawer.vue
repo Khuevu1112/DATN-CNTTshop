@@ -93,10 +93,24 @@ const BACK_OPTION = { label: '⬅ Về menu chính', run: () => { step.value = '
 const step = ref('menu');
 const draft = reactive({ categoryKey: null, categoryLabel: '' });
 
+// Số hotline dùng chung cho mọi lối "gặp người thật" trong chatbot.
+const HOTLINE = '0835344974';
+
+/** Gặp nhân viên tư vấn. Trước đây chỉ in ra số hotline rồi để khách tự xoay xở — giờ mỗi kênh
+ * là một hành động bấm được: quay số thẳng (tel:), mở Zalo, hoặc về trang liên hệ để gửi yêu
+ * cầu gọi lại nếu đang ngoài giờ trực. */
 function contactHuman() {
-  answerFaqText('Hotline: 0835 344 974 (8:00–22:00) · Email: cskh@cnttshop.vn.', [
-    { label: '📞 Mở trang liên hệ', run: () => { actions.closeChat(); actions.goContact(); } },
-  ]);
+  answerFaqText(
+    `Giờ trực 8:00–22:00 mỗi ngày. Bạn chọn cách liên hệ nhé:
+· Hotline 0835 344 974
+· Zalo 0835 344 974
+· Email cskh@cnttshop.vn`,
+    [
+      { label: '📞 Gọi ngay 0835 344 974', run: () => { window.location.href = 'tel:' + HOTLINE; } },
+      { label: '💬 Nhắn Zalo tư vấn', run: () => { window.open('https://zalo.me/' + HOTLINE, '_blank', 'noopener'); } },
+      { label: '✉️ Gửi yêu cầu gọi lại', run: () => { actions.closeChat(); actions.goContact(); } },
+    ],
+  );
 }
 function mainMenuOptions() {
   return [
@@ -232,19 +246,70 @@ const STOPWORDS = new Set([
   'lại', 'lai', 'thế', 'the', 'như', 'nhu', 'mấy', 'may', 'bao', 'lâu', 'lau', 'nhiêu', 'nhieu',
   'ra', 'vào', 'vao', 'lên', 'len', 'xuống', 'xuong', 'khác', 'khac',
 ]);
-function tokenize(text) {
-  return String(text)
-    .toLowerCase()
-    .replace(/[?!.,;:]/g, ' ')
+/** Bỏ dấu tiếng Việt + hạ chữ thường. Phần rất lớn khách gõ chat KHÔNG bỏ dấu ("bao hanh bao
+ * lau", "khuyen mai gi khong") — trước đây mỗi biểu thức nhận dạng ý định phải tự liệt kê cả
+ * hai biến thể ("khuyến mãi|khuyen mai") nên chỗ nào quên là chỗ đó câm. Chuẩn hoá một lần ở
+ * cửa vào rồi so khớp trên bản không dấu thì cả hai cách gõ đều trúng. */
+const DAU_THANH_RE = new RegExp('[\u0300-\u036f]', 'g');
+function boDau(s) {
+  return String(s).toLowerCase().normalize('NFD').replace(DAU_THANH_RE, '').replace(/đ/g, 'd');
+}
+
+// ===== Từ điển VIẾT TẮT / TIẾNG LÓNG CHAT -> cụm đầy đủ =====
+// Khách gõ chat gần như luôn viết tắt ("bh con bao lau a", "sp nay con hang ko", "cho e hoi km").
+// Bộ định tuyến chỉ nhận ra cụm đầy đủ nên phải giãn ra TRƯỚC khi so khớp. Chỉ thay NGUYÊN từ
+// (token), không thay chuỗi con — "km" trong "10km" hay "sp" trong "spec" giữ nguyên.
+// Khoá viết dạng KHÔNG DẤU vì bảng này chỉ được tra sau khi đã boDau().
+// Chỉ đưa vào đây những tắt CHẮC NGHĨA trong ngữ cảnh shop máy tính; các tắt đa nghĩa
+// ("hd" = hoá đơn hay hướng dẫn?, "card" = card màn hình hay card wifi?) cố tình bỏ ra ngoài
+// vì đoán sai còn hại hơn không đoán.
+const VIET_TAT = {
+  // Nghiệp vụ shop
+  bh: 'bao hanh', km: 'khuyen mai', kmai: 'khuyen mai', sp: 'san pham',
+  dh: 'don hang', dhang: 'don hang', tk: 'tai khoan', mk: 'mat khau',
+  tt: 'thanh toan', ttoan: 'thanh toan', ck: 'chuyen khoan',
+  gh: 'giao hang', vc: 'van chuyen', doitra: 'doi tra', tragop: 'tra gop',
+  hv: 'hoi vien', ttbh: 'trung tam bao hanh', cskh: 'cham soc khach hang',
+  sdt: 'so dien thoai', dchi: 'dia chi', kh: 'khach hang',
+  // Hàng hoá
+  lap: 'laptop', lt: 'laptop', mtinh: 'may tinh', mh: 'man hinh', mhinh: 'man hinh',
+  bp: 'ban phim', pk: 'phu kien', lk: 'linh kien', vga: 'card man hinh',
+  main: 'mainboard', ocung: 'o cung', tannhiet: 'tan nhiet',
+  // Tiếng lóng chat
+  ko: 'khong', k: 'khong', hok: 'khong', khong: 'khong', khg: 'khong',
+  dc: 'duoc', j: 'gi', z: 'vay', dz: 'vay', r: 'roi',
+  bn: 'bao nhieu', bnhieu: 'bao nhieu', nhiu: 'nhieu', ntn: 'nhu the nao',
+  bit: 'biet', bik: 'biet', ad: 'admin',
+};
+
+/** Giãn viết tắt theo TỪ trên chuỗi đã bỏ dấu. Đây là dạng dùng cho MỌI phép nhận dạng ý định
+ * và so khớp FAQ/sản phẩm; câu gốc của khách vẫn giữ nguyên để hiển thị trong bong bóng chat. */
+function chuanHoaCauHoi(text) {
+  return boDau(text)
+    .replace(/[?!.,;:()"']/g, ' ')
     .split(/\s+/)
-    .filter((w) => w.length >= 2 && !STOPWORDS.has(w));
+    .map((w) => VIET_TAT[w] || w)
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// STOPWORDS ở trên liệt kê cả bản có dấu lẫn không dấu cho dễ đọc; quy về một bản không dấu vì
+// tokenize luôn chạy trên chuỗi đã chuẩn hoá.
+const STOPWORDS_KD = new Set([...STOPWORDS].map(boDau));
+
+function tokenize(text) {
+  return chuanHoaCauHoi(text)
+    .split(/\s+/)
+    .filter((w) => w.length >= 2 && !STOPWORDS_KD.has(w));
 }
 function findProductCandidates(query, limit = 5) {
   const toks = tokenize(query);
   if (!toks.length) return [];
   const scored = products
     .map((p) => {
-      const nameLower = p.name.toLowerCase();
+      // So khớp trên tên đã bỏ dấu để "man hinh gaming" cũng trúng "Màn hình Gaming ...".
+      const nameLower = boDau(p.name);
       let score = 0;
       for (const t of toks) if (nameLower.includes(t)) score++;
       return { p, score };
@@ -435,7 +500,9 @@ function answerFaqText(text, extraOptions) {
 /** Khớp câu hỏi tự do với FAQ thật — chấm theo số từ khoá (tuKhoa, phân cách dấu phẩy) hoặc từ
  * trong câu hỏi gốc xuất hiện trong câu khách gõ. */
 function matchFaqRealtime(text) {
-  const t = text.toLowerCase();
+  // Cả câu khách gõ lẫn từ khoá admin gắn đều quy về dạng không dấu + đã giãn viết tắt, nên
+  // "bh dt bao lau" khớp được câu "Bảo hành điện thoại bao lâu?" dù không trùng ký tự nào.
+  const t = chuanHoaCauHoi(text);
   const queryToks = new Set(tokenize(text));
   let best = null;
   let bestScore = 0;
@@ -443,7 +510,7 @@ function matchFaqRealtime(text) {
     // Khớp theo TỪ KHOÁ admin đã gắn sẵn (tuKhoa) — đáng tin cậy nhất vì đó là cụm từ đặc
     // trưng được chọn lọc riêng cho câu hỏi này, không phải suy luận. Nhân 100 để luôn thắng
     // điểm suy luận ở nhánh dưới dù chỉ khớp 1 cụm.
-    const tuKhoaList = (item.tuKhoa || '').split(',').map((k) => k.trim().toLowerCase()).filter(Boolean);
+    const tuKhoaList = (item.tuKhoa || '').split(',').map((k) => chuanHoaCauHoi(k)).filter(Boolean);
     const tuKhoaScore = tuKhoaList.filter((k) => k.length >= 3 && t.includes(k)).length;
     if (tuKhoaScore > 0) {
       if (tuKhoaScore * 100 > bestScore) { bestScore = tuKhoaScore * 100; best = item; }
@@ -677,8 +744,10 @@ const RAIL_SECTIONS = [
     ],
   },
 ];
-async function showFaqCategoryByCode(ma, tenMacDinh) {
-  pushUser(tenMacDinh);
+/** hienCauHoi=false khi gọi từ bộ định tuyến câu tự do — câu của khách đã được đẩy lên khung
+ * chat rồi, đẩy thêm nhãn danh mục nữa sẽ thành 2 bong bóng "của khách" liên tiếp. */
+async function showFaqCategoryByCode(ma, tenMacDinh, hienCauHoi = true) {
+  if (hienCauHoi) pushUser(tenMacDinh);
   await ensureFaqLoaded();
   const cat = faqCategories.value.find((c) => c.ma === ma) || { ten: tenMacDinh, items: [] };
   if (!cat.items?.length) {
@@ -693,23 +762,32 @@ async function showFaqCategoryByCode(ma, tenMacDinh) {
 }
 
 // ===== Bộ định tuyến câu hỏi tự do =====
-const PRICE_QUESTION_RE = /giá|bao nhiêu|nhiêu tiền|giá tiền|giá bán/i;
-const SO_SANH_RE = /so sánh|so sanh|so với|so voi|đối đầu|doi dau|\bvs\b|cái nào (tốt|manh|mạnh) hơn|cai nao (tot|manh) hon/i;
-const TAI_CHINH_RE = /đáng tiền|dang tien|đáng đồng tiền|dang dong tien|tài chính|tai chinh|giá trị|gia tri|đáng mua hơn|dang mua hon|hời hơn|hoi hon|nên mua cái nào|nen mua cai nao|lời hơn|loi hon/i;
-const KHUYEN_MAI_RE = /khuyến mãi|khuyen mai|flash sale|giảm giá|giam gia|ưu đãi|uu dai|\bsale\b/i;
-const TIN_TUC_RE = /tin tức|tin tuc|bài viết|bai viet|đọc thêm|doc them|review\b/i;
-const TRUNG_TAM_RE = /trung tâm bảo hành|trung tam bao hanh|cửa hàng ở đâu|cua hang o dau|địa chỉ cửa hàng|dia chi cua hang/i;
-const SUA_CHUA_RE = /giá sửa|gia sua|sửa chữa|sua chua|thay pin|thay màn hình|thay man hinh/i;
-const HOI_VIEN_RE = /hội viên|hoi vien|cntt care|gói.*care/i;
-const TRA_GOP_RE = /trả góp|tra gop|installment|trả chậm|tra cham|kỳ hạn.*(lãi|góp)|ky han.*(lai|gop)/i;
+// MỌI biểu thức dưới đây so khớp trên chuỗi ĐÃ CHUẨN HOÁ (bỏ dấu + giãn viết tắt, xem
+// chuanHoaCauHoi) chứ không phải câu gốc — nên chỉ cần viết một biến thể không dấu, và những
+// câu kiểu "cho e hoi km hnay" / "bh sp nay bao lau" cũng vào đúng nhánh.
+const PRICE_QUESTION_RE = /\bgia\b|bao nhieu|nhieu tien|gia tien|gia ban|dat khong|re khong/;
+const SO_SANH_RE = /so sanh|so voi|doi dau|\bvs\b|cai nao (tot|manh|ngon) hon|nen chon cai nao|khac nhau (gi|the nao)/;
+const TAI_CHINH_RE = /dang tien|dang dong tien|tai chinh|gia tri|dang mua hon|hoi hon|nen mua cai nao|loi hon|hieu nang tren gia/;
+const KHUYEN_MAI_RE = /khuyen mai|flash sale|giam gia|uu dai|\bsale\b|\bdeal\b|ma giam|voucher/;
+const TIN_TUC_RE = /tin tuc|bai viet|doc them|review\b|danh gia chi tiet/;
+const TRUNG_TAM_RE = /trung tam bao hanh|cua hang o dau|dia chi cua hang|showroom|chi nhanh|shop o dau/;
+const SUA_CHUA_RE = /gia sua|sua chua|thay pin|thay man hinh|ve sinh may|bao gia sua/;
+const HOI_VIEN_RE = /hoi vien|cntt care|goi.*care|thanh vien tra phi/;
+const TRA_GOP_RE = /tra gop|installment|tra cham|ky han.*(lai|gop)/;
+// Ba chủ đề dưới trước đây không có nhánh nào: câu hỏi rất hay gặp mà nếu FAQ không khớp thì
+// bot chỉ trả lời "chưa chắc hiểu ý bạn".
+const BAO_HANH_RE = /bao hanh|het han bao hanh|con bao hanh|chinh sach bao hanh/;
+const DOI_TRA_RE = /doi tra|tra hang|hoan tien|doi san pham|1 doi 1|huy don/;
+const VAN_CHUYEN_RE = /giao hang|van chuyen|phi ship|\bship\b|bao lau (thi )?nhan|freeship|mien phi giao/;
 
 const STRIP_PATTERNS = [
-  /giá\s+của/gi, /giá\s+bán/gi, /giá\s+tiền/gi, /bao nhiêu tiền/gi, /là bao nhiêu/gi,
-  /bao nhiêu/gi, /giá/gi, /nhiêu tiền/gi, /^tiền\b/gi, /cho mình hỏi/gi, /cho mình xin hỏi/gi,
-  /mình muốn hỏi/gi, /mình muốn biết/gi, /cho tôi hỏi/gi, /tôi muốn hỏi/gi, /xin hỏi/gi,
-  /mình hỏi/gi, /shop ơi/gi, /\bcủa\b/gi, /\blà\b/gi, /\bvậy ạ\b/gi, /\bvậy\b/gi, /\bnhé\b/gi,
-  /\bạ\b/gi, /\bcho\b/gi, /\bxem\b/gi, /\bcon\b/gi, /\?/g,
+  /gia\s+cua/g, /gia\s+ban/g, /gia\s+tien/g, /bao nhieu tien/g, /la bao nhieu/g,
+  /bao nhieu/g, /\bgia\b/g, /nhieu tien/g, /^tien\b/g, /cho minh hoi/g, /cho minh xin hoi/g,
+  /minh muon hoi/g, /minh muon biet/g, /cho toi hoi/g, /toi muon hoi/g, /xin hoi/g,
+  /minh hoi/g, /shop oi/g, /\bcua\b/g, /\bla\b/g, /\bvay a\b/g, /\bvay\b/g, /\bnhe\b/g,
+  /\ba\b/g, /\bcho\b/g, /\bxem\b/g, /\bcon\b/g, /\bem\b/g, /\banh\b/g, /\bchi\b/g, /\?/g,
 ];
+/** Bóc phần tên sản phẩm ra khỏi câu hỏi giá. Nhận vào chuỗi ĐÃ chuẩn hoá. */
 function extractProductKeyword(text) {
   let t = text;
   STRIP_PATTERNS.forEach((p) => { t = t.replace(p, ' '); });
@@ -728,22 +806,35 @@ function sendFreeText() {
   if (step.value === 'awaiting_finance_names') return handleFinanceInput(text);
   if (step.value === 'awaiting_news_keyword') return searchNews(text);
 
-  // Đoán ý định từ câu tự do, theo thứ tự ưu tiên.
-  if (SO_SANH_RE.test(text)) { step.value = 'awaiting_compare_names'; return handleCompareInput(text); }
-  if (TAI_CHINH_RE.test(text)) { step.value = 'awaiting_finance_names'; return handleFinanceInput(text); }
-  if (KHUYEN_MAI_RE.test(text)) return showPromotions();
-  if (TIN_TUC_RE.test(text)) return searchNews(extractProductKeyword(text).replace(TIN_TUC_RE, '').trim());
-  if (TRUNG_TAM_RE.test(text)) return showCenters();
-  if (SUA_CHUA_RE.test(text)) return startRepairPrice();
-  if (HOI_VIEN_RE.test(text)) return showMembership();
-  if (TRA_GOP_RE.test(text)) return showInstallmentInfo();
-  if (PRICE_QUESTION_RE.test(text)) {
-    const keyword = extractProductKeyword(text);
+  // Chuẩn hoá 1 lần rồi mọi phép nhận dạng bên dưới đều chạy trên bản này (bỏ dấu + đã giãn
+  // viết tắt) — câu gốc chỉ dùng để hiển thị lại cho khách.
+  const cau = chuanHoaCauHoi(text);
+
+  // Đoán ý định từ câu tự do, theo thứ tự ưu tiên. So sánh/tài chính vẫn nhận câu GỐC vì hai
+  // luồng đó phải tách tên sản phẩm đúng như khách gõ để tra cứu.
+  if (SO_SANH_RE.test(cau)) { step.value = 'awaiting_compare_names'; return handleCompareInput(text); }
+  if (TAI_CHINH_RE.test(cau)) { step.value = 'awaiting_finance_names'; return handleFinanceInput(text); }
+  if (KHUYEN_MAI_RE.test(cau)) return showPromotions();
+  if (TIN_TUC_RE.test(cau)) return searchNews(extractProductKeyword(cau).replace(TIN_TUC_RE, '').trim());
+  if (TRUNG_TAM_RE.test(cau)) return showCenters();
+  if (SUA_CHUA_RE.test(cau)) return startRepairPrice();
+  if (HOI_VIEN_RE.test(cau)) return showMembership();
+  if (TRA_GOP_RE.test(cau)) return showInstallmentInfo();
+  if (PRICE_QUESTION_RE.test(cau)) {
+    const keyword = extractProductKeyword(cau);
     if (keyword.length >= 2) return searchProductPrice(keyword);
   }
 
+  // FAQ đứng TRƯỚC ba nhánh chủ đề bên dưới: nếu admin đã soạn sẵn câu trả lời đúng ý thì trả
+  // lời thẳng, chỉ khi không có mới lùi về mục FAQ chung của chủ đề.
   const faqItem = matchFaqRealtime(text);
   if (faqItem) return answerFaqItem(faqItem);
+
+  // Ba chủ đề hỏi nhiều nhất mà trước đây rơi thẳng vào câu "chưa chắc hiểu ý bạn" khi FAQ
+  // không khớp — ít nhất phải mở đúng mục hỏi đáp tương ứng cho khách.
+  if (BAO_HANH_RE.test(cau)) return showFaqCategoryByCode('bao_hanh', 'Bảo hành & Dịch vụ', false);
+  if (DOI_TRA_RE.test(cau)) return showFaqCategoryByCode('doi_tra', 'Đổi trả & Huỷ đơn', false);
+  if (VAN_CHUYEN_RE.test(cau)) return showFaqCategoryByCode('giao_hang', 'Giao hàng & Lắp đặt', false);
 
   const cand = findProductCandidates(text, 5);
   if (cand.length) {
@@ -754,8 +845,16 @@ function sendFreeText() {
     return;
   }
 
-  pushBot({ type: 'text', text: 'Mình chưa chắc hiểu ý bạn 🤔 Bạn thử hỏi giá 1 sản phẩm cụ thể, hoặc chọn 1 chủ đề bên trái nhé.' });
-  pushBot(quickReplies(mainMenuOptions()));
+  // Bí thật sự -> nói rõ mình hiểu được những gì, kèm lối gặp người thật, thay vì chỉ đẩy
+  // khách quay về menu.
+  pushBot({
+    type: 'text',
+    text: 'Mình chưa chắc hiểu ý bạn 🤔 Bạn thử hỏi cụ thể hơn nhé, ví dụ: "giá RTX 4060", "bh sp nay bao lau", "phi ship ve Hai Phong" — hoặc chọn 1 chủ đề bên trái.',
+  });
+  pushBot(quickReplies([
+    { label: '📞 Gặp nhân viên tư vấn', run: contactHuman },
+    ...mainMenuOptions(),
+  ]));
   step.value = 'menu';
 }
 </script>
@@ -942,6 +1041,8 @@ function sendFreeText() {
   border-radius: 13px;
   font-size: 13.3px;
   line-height: 1.55;
+  /* Giữ xuống dòng trong các câu trả lời nhiều ý (vd danh sách kênh liên hệ ở contactHuman) */
+  white-space: pre-wrap;
 }
 .bot-msg.bot { align-self: flex-start; background: var(--bot-card2); color: var(--bot-text); border-bottom-left-radius: 3px; }
 .bot-msg.user { align-self: flex-end; background: var(--acc, #c6ff4a); color: var(--acc-ink, #04121f); border-bottom-right-radius: 3px; font-weight: 600; }

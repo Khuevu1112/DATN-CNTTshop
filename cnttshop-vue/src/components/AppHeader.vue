@@ -5,9 +5,13 @@ import {
   catMeta,
   products,
   matchesQuery,
+  matchesSearch,
+  diemTimKiem,
+  fmt,
   CATEGORY_SEGMENTS,
   COMPONENT_GROUPS_DEF,
   COMPONENT_SLUGS,
+  HIDDEN_SLUGS,
 } from '../data/products.js';
 import { resolveImageUrl } from '../api.js';
 import { state, actions, accent, cartCount } from '../store.js';
@@ -316,8 +320,87 @@ function onMenuLinkClick(it) {
 
 const modeIcon = computed(() => (state.mode === 'light' ? '🌙' : '☀️'));
 
+// ===== Gợi ý tìm kiếm =====
+// Chạy hoàn toàn trên catalog đã nạp sẵn trong bộ nhớ (data/products.js) nên không tốn request
+// nào và hiện ngay theo từng phím gõ — khác với gợi ý FAQ ở trang Hỗ trợ vốn phải gọi API và
+// cần debounce. Ba khối: danh mục khớp, phân khúc khớp, rồi sản phẩm khớp (tối đa 6).
+const goiYMo = ref(false);
+const goiYIdx = ref(-1); // -1 = chưa chọn dòng nào, Enter sẽ tìm cả câu
+
+const goiYDanhMuc = computed(() => {
+  const q = state.q.trim();
+  if (q.length < 2) return [];
+  return Object.entries(catMeta)
+    .filter(([slug]) => !HIDDEN_SLUGS.includes(slug))
+    .filter(([slug, m]) => matchesSearch({ name: m.vn, brand: '', cat: slug, specs: [] }, q))
+    .slice(0, 3)
+    .map(([slug, m]) => ({ loai: 'cat', slug, nhan: m.vn }));
+});
+
+const goiYPhanKhuc = computed(() => {
+  const q = state.q.trim();
+  if (q.length < 2) return [];
+  const ra = [];
+  for (const seg of CATEGORY_SEGMENTS) {
+    for (const it of seg.items) {
+      if (!matchesSearch({ name: it.label, brand: '', cat: seg.slug, specs: [] }, q)) continue;
+      ra.push({ loai: 'seg', slug: seg.slug, keyword: it.keyword, nhan: it.label });
+      if (ra.length >= 3) return ra;
+    }
+  }
+  return ra;
+});
+
+const goiYSanPham = computed(() => {
+  const q = state.q.trim();
+  if (q.length < 2) return [];
+  return products
+    .filter((p) => matchesSearch(p, q))
+    .map((p) => ({ p, diem: diemTimKiem(p, q) }))
+    .sort((a, b) => a.diem - b.diem || b.p.soldCount - a.p.soldCount)
+    .slice(0, 6)
+    .map(({ p }) => ({ loai: 'sp', p }));
+});
+
+/** Danh sách phẳng theo đúng thứ tự hiển thị — để phím ↑/↓ đi qua được mọi dòng. */
+const goiYTatCa = computed(() => [
+  ...goiYDanhMuc.value, ...goiYPhanKhuc.value, ...goiYSanPham.value,
+]);
+const hienGoiY = computed(() => goiYMo.value && goiYTatCa.value.length > 0);
+
+function chonGoiY(g) {
+  goiYMo.value = false;
+  goiYIdx.value = -1;
+  if (g.loai === 'sp') return actions.goDetail(g.p.id);
+  if (g.loai === 'seg') return actions.goCat(g.slug, g.keyword);
+  return actions.goCat(g.slug);
+}
+
 function onSearchKey(e) {
-  if (e.key === 'Enter') actions.onSearchEnter();
+  if (e.key === 'Escape') { goiYMo.value = false; goiYIdx.value = -1; return; }
+  const ds = goiYTatCa.value;
+  if (e.key === 'ArrowDown' && ds.length) {
+    e.preventDefault();
+    goiYMo.value = true;
+    goiYIdx.value = (goiYIdx.value + 1) % ds.length;
+    return;
+  }
+  if (e.key === 'ArrowUp' && ds.length) {
+    e.preventDefault();
+    goiYIdx.value = goiYIdx.value <= 0 ? ds.length - 1 : goiYIdx.value - 1;
+    return;
+  }
+  if (e.key !== 'Enter') return;
+  // Đang trỏ vào 1 gợi ý -> mở thẳng gợi ý đó; không thì tìm cả câu như bình thường.
+  if (goiYIdx.value >= 0 && ds[goiYIdx.value]) return chonGoiY(ds[goiYIdx.value]);
+  goiYMo.value = false;
+  actions.onSearchEnter();
+}
+
+function onSearchInput(v) {
+  actions.setQ(v);
+  goiYIdx.value = -1;
+  goiYMo.value = v.trim().length >= 2;
 }
 </script>
 
@@ -342,17 +425,77 @@ function onSearchKey(e) {
         </div>
       </div>
 
-      <div
-        style="flex: 1; max-width: 520px; display: flex; align-items: center; gap: 9px; background: var(--card); border: 1px solid rgba(var(--line-rgb), 0.18); border-radius: 11px; padding: 0 14px; height: 42px"
-      >
-        <span style="color: var(--muted); font-size: 15px">⌕</span>
-        <input
-          :value="state.q"
-          @input="actions.setQ($event.target.value)"
-          @keydown="onSearchKey"
-          placeholder="Tìm laptop, PC, RTX 4070, CPU..."
-          style="flex: 1; background: transparent; border: none; color: var(--text); font-size: 13.5px; font-family: 'Plus Jakarta Sans', sans-serif"
-        />
+      <div style="flex: 1; max-width: 520px; position: relative">
+        <div
+          style="display: flex; align-items: center; gap: 9px; background: var(--card); border: 1px solid rgba(var(--line-rgb), 0.18); border-radius: 11px; padding: 0 14px; height: 42px"
+        >
+          <span style="color: var(--muted); font-size: 15px">⌕</span>
+          <input
+            :value="state.q"
+            @input="onSearchInput($event.target.value)"
+            @keydown="onSearchKey"
+            @focus="goiYMo = state.q.trim().length >= 2"
+            placeholder="Tìm laptop, PC, RTX 4070, CPU..."
+            style="flex: 1; background: transparent; border: none; color: var(--text); font-size: 13.5px; font-family: 'Plus Jakarta Sans', sans-serif"
+          />
+          <button
+            v-if="state.q"
+            @click="onSearchInput('')"
+            title="Xoá từ khoá"
+            style="background: none; border: none; color: var(--muted); font-size: 14px; cursor: pointer; padding: 0; line-height: 1"
+          >
+            ✕
+          </button>
+        </div>
+
+        <!-- ===== Gợi ý tìm kiếm ===== -->
+        <div v-if="hienGoiY" @click="goiYMo = false" style="position: fixed; inset: 0; z-index: 59"></div>
+        <Transition name="dropdown-fade">
+          <div
+            v-if="hienGoiY"
+            style="position: absolute; top: 48px; left: 0; right: 0; max-height: 460px; overflow-y: auto; background: var(--card2); border: 1px solid rgba(var(--line-rgb),0.2); border-radius: 13px; box-shadow: 0 24px 50px rgba(0,0,0,0.5); z-index: 60; padding: 6px"
+          >
+            <div v-if="goiYDanhMuc.length || goiYPhanKhuc.length" style="font-size: 10.5px; letter-spacing: 1.4px; color: var(--muted); font-weight: 600; padding: 8px 10px 5px">
+              DANH MỤC
+            </div>
+            <button
+              v-for="(g, i) in [...goiYDanhMuc, ...goiYPhanKhuc]"
+              :key="'c' + i"
+              @click="chonGoiY(g)"
+              class="gy-row"
+              :class="{ on: goiYIdx === i }"
+            >
+              <span style="font-size: 14px; width: 18px; text-align: center">⌕</span>
+              <span style="flex: 1; text-align: left">{{ g.nhan }}</span>
+            </button>
+
+            <div v-if="goiYSanPham.length" style="font-size: 10.5px; letter-spacing: 1.4px; color: var(--muted); font-weight: 600; padding: 10px 10px 5px">
+              SẢN PHẨM
+            </div>
+            <button
+              v-for="(g, i) in goiYSanPham"
+              :key="'p' + g.p.id"
+              @click="chonGoiY(g)"
+              class="gy-row"
+              :class="{ on: goiYIdx === goiYDanhMuc.length + goiYPhanKhuc.length + i }"
+            >
+              <img
+                v-if="g.p.image"
+                :src="resolveImageUrl(g.p.image)"
+                alt=""
+                style="width: 34px; height: 34px; object-fit: contain; border-radius: 6px; background: rgba(var(--line-rgb),0.08); flex: none"
+              />
+              <span v-else style="width: 34px; height: 34px; flex: none"></span>
+              <span style="flex: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ g.p.name }}</span>
+              <span :style="{ color: accent }" style="font-weight: 700; font-size: 12.5px; flex: none">{{ fmt(g.p.price) }}</span>
+            </button>
+
+            <button @click="goiYMo = false; actions.onSearchEnter()" class="gy-row" style="color: var(--muted2); font-size: 12.5px; border-top: 1px solid rgba(var(--line-rgb),0.12); margin-top: 4px; border-radius: 0 0 9px 9px">
+              <span style="width: 18px; text-align: center">→</span>
+              <span style="flex: 1; text-align: left">Xem tất cả kết quả cho “{{ state.q.trim() }}”</span>
+            </button>
+          </div>
+        </Transition>
       </div>
       <div style="flex: 1"></div>
 
@@ -591,6 +734,25 @@ function onSearchKey(e) {
 </template>
 
 <style scoped>
+/* Dòng gợi ý tìm kiếm — .on là dòng đang được chọn bằng phím ↑/↓ */
+.gy-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  background: transparent;
+  border: none;
+  border-radius: 9px;
+  color: var(--text);
+  font-size: 13px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  cursor: pointer;
+  text-align: left;
+}
+.gy-row:hover,
+.gy-row.on { background: rgba(var(--line-rgb), 0.12); }
+
 .nav-link:hover { color: var(--text) !important; }
 .hbtn:hover { border-color: color-mix(in srgb, var(--acc) 45%, transparent) !important; }
 .support-btn:hover { color: var(--text) !important; border-color: color-mix(in srgb, var(--acc) 45%, transparent) !important; }

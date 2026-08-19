@@ -31,6 +31,9 @@ public class AddressService {
     @Autowired
     private WardRepository wardRepo;
 
+    @Autowired
+    private com.fpoly.repository.OrderRepository orderRepo;
+
     public List<UserAddress> layDanhSachTheoEmail(String email) {
         NguoiDung user = nguoiDungRepo.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng"));
@@ -184,11 +187,30 @@ public class AddressService {
         return ward;
     }
 
+    /**
+     * Xoá địa chỉ khỏi sổ địa chỉ.
+     *
+     * ORDER.address_id là FK trỏ vào đây, nên xoá thẳng sẽ vỡ ràng buộc khoá ngoại với bất kỳ
+     * địa chỉ nào đã từng dùng để đặt đơn — khách chỉ nhận được "Xoá địa chỉ thất bại" và không
+     * bao giờ xoá được. Xử lý: chụp lại text địa chỉ vào các đơn cũ (nếu đơn tạo trước
+     * 81_order_address_snapshot.sql nên còn trống) rồi gỡ FK về NULL. Đơn vẫn hiển thị đúng
+     * địa chỉ đã giao vì từ nay mọi nơi đọc qua Order.getDiaChiNhanHangHienThi().
+     */
     @Transactional
     public void xoa(Integer id, String email) {
         UserAddress address = layTheoId(id, email);
         boolean wasDefault = Boolean.TRUE.equals(address.getIsDefault());
         NguoiDung user = address.getNguoiDung();
+
+        for (com.fpoly.model.Order o : orderRepo.findByDiaChiGiao(address)) {
+            if (o.getDiaChiNhanHang() == null || o.getDiaChiNhanHang().isBlank()) {
+                o.chupLaiDiaChi(address);
+            }
+            o.setDiaChiGiao(null);
+            // saveAndFlush chứ không phải save: lệnh UPDATE gỡ FK phải xuống CSDL TRƯỚC lệnh
+            // DELETE bên dưới, nếu không vẫn vỡ ràng buộc khoá ngoại.
+            orderRepo.saveAndFlush(o);
+        }
 
         addressRepo.delete(address);
 

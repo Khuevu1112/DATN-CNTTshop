@@ -73,16 +73,22 @@ public class OrderApiController {
     }
 
     private OrderDetailDto toDetail(Order o) {
-        // Đơn bán tại quầy không có địa chỉ giao (address_id NULL) -> trả null, client tự ẩn
+        // Đọc từ bản CHỤP trên đơn, không từ FK — khách có thể đã sửa/xoá địa chỉ trong sổ sau
+        // khi đặt (xem AddressService.xoa). FK chỉ còn dùng để lấy provinceId/wardId khi địa
+        // chỉ vẫn tồn tại. Đơn bán tại quầy không có địa chỉ giao -> trả null, client tự ẩn
         // khối "Địa chỉ nhận hàng" thay vì vỡ.
         UserAddress diaChiGiao = o.getDiaChiGiao();
-        AddressDto addr = diaChiGiao == null ? null : new AddressDto(
-                diaChiGiao.getId(), diaChiGiao.getTenNguoiNhan(), diaChiGiao.getSoDienThoai(),
-                diaChiGiao.getDiaChiCuThe(),
-                diaChiGiao.getProvince() != null ? diaChiGiao.getProvince().getId() : null, diaChiGiao.getTinhThanh(),
-                diaChiGiao.getWard() != null ? diaChiGiao.getWard().getId() : null, diaChiGiao.getPhuongXa(),
-                diaChiGiao.getDiaChiDayDu(), diaChiGiao.getIsDefault(),
-                diaChiGiao.getLatitude(), diaChiGiao.getLongitude());
+        String diaChiDayDu = o.getDiaChiNhanHangHienThi();
+        AddressDto addr = diaChiDayDu == null ? null : new AddressDto(
+                diaChiGiao != null ? diaChiGiao.getId() : null,
+                o.getTenNguoiNhanHienThi(), o.getSoDienThoaiNhanHienThi(),
+                diaChiGiao != null ? diaChiGiao.getDiaChiCuThe() : diaChiDayDu,
+                diaChiGiao != null && diaChiGiao.getProvince() != null ? diaChiGiao.getProvince().getId() : null,
+                diaChiGiao != null ? diaChiGiao.getTinhThanh() : null,
+                diaChiGiao != null && diaChiGiao.getWard() != null ? diaChiGiao.getWard().getId() : null,
+                diaChiGiao != null ? diaChiGiao.getPhuongXa() : null,
+                diaChiDayDu, diaChiGiao != null ? diaChiGiao.getIsDefault() : Boolean.FALSE,
+                o.getViDoGiao(), o.getKinhDoGiao());
 
         List<OrderItemDto> items = (o.getChiTiet() == null ? List.<OrderItem>of() : o.getChiTiet()).stream()
                 .map(this::toItemDto).toList();
@@ -97,7 +103,10 @@ public class OrderApiController {
 
         return new OrderDetailDto(o.getId(), o.getMaDonHang(), o.getTrangThai(), o.getTienHang(),
                 o.getTienGiamGia(), o.getPhiVanChuyen(), o.getNhanTuyChonGiaoHang(), o.getThoiGianGiaoDuKien(),
-                o.getTongTien(), o.getCreatedAt(), addr, items, history, paymentDto);
+                o.getTongTien(), o.getCreatedAt(), addr, items, history, paymentDto,
+                // Chỉ gửi khi hạn còn hiệu lực — hạn đã qua thì đơn sắp bị tác vụ quét huỷ, hiện
+                // đồng hồ âm chỉ làm khách hoang mang.
+                o.dangGiuHang() ? o.getHanGiuHang() : null);
     }
 
     private OrderItemDto toItemDto(OrderItem oi) {

@@ -30,10 +30,12 @@ public class ClientProductController {
 
         List<Product> products;
 
+        // Cùng cách lọc với REST API (xem CatalogApiService.getProducts): theo TỪ, bỏ dấu, giãn
+        // viết tắt — LIKE nguyên cụm trên cột tên trượt hầu hết câu tìm thật.
+        products = new java.util.ArrayList<>(productRepo.findByIsActiveTrue());
         if (keyword != null && !keyword.isBlank()) {
-            products = productRepo.findByNameContainingIgnoreCaseAndIsActiveTrue(keyword);
-        } else {
-            products = productRepo.findByIsActiveTrue();
+            java.util.List<String> tu = com.fpoly.service.SearchTextUtils.tachTu(keyword);
+            products.removeIf(p -> !com.fpoly.service.SearchTextUtils.khopMoiTu(chuoiTimKiem(p), tu));
         }
 
         sortProducts(products, sort);
@@ -59,13 +61,10 @@ public class ClientProductController {
 
         List<Product> products;
 
+        products = new java.util.ArrayList<>(productRepo.findByCategoryAndIsActiveTrue(category));
         if (keyword != null && !keyword.isBlank()) {
-            products = productRepo.findByCategoryAndNameContainingIgnoreCaseAndIsActiveTrue(
-                    category,
-                    keyword
-            );
-        } else {
-            products = productRepo.findByCategoryAndIsActiveTrue(category);
+            java.util.List<String> tu = com.fpoly.service.SearchTextUtils.tachTu(keyword);
+            products.removeIf(p -> !com.fpoly.service.SearchTextUtils.khopMoiTu(chuoiTimKiem(p), tu));
         }
 
         sortProducts(products, sort);
@@ -92,6 +91,14 @@ public class ClientProductController {
         model.addAttribute("content", "product/detail");
 
         return "layout/Base";
+    }
+
+    /** Phần chữ có thể tìm của 1 sản phẩm: tên + hãng + danh mục. */
+    private String chuoiTimKiem(Product p) {
+        StringBuilder sb = new StringBuilder(p.getName() == null ? "" : p.getName());
+        if (p.getBrand() != null) sb.append(' ').append(p.getBrand().getName());
+        if (p.getCategory() != null) sb.append(' ').append(p.getCategory().getName());
+        return sb.toString();
     }
 
     private void sortProducts(List<Product> products, String sort) {

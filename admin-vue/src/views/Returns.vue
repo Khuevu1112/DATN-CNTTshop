@@ -98,8 +98,18 @@
       Chưa có yêu cầu đổi trả nào{{ loc ? ' ở trạng thái này' : '' }}.
     </div>
 
-    <div v-else style="display: flex; flex-direction: column; gap: 12px">
-      <div v-for="r in danhSach" :key="r.id" style="background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px">
+    <!-- Chế độ THẺ của DataTable: mỗi yêu cầu vẫn là một thẻ đầy đủ (có ảnh/video minh chứng và
+         nút xử lý), nhưng vẫn lọc/sắp xếp được y hệt các bảng khác qua dãy chip phía trên. -->
+    <DataTable
+      v-else
+      che-do="the"
+      :columns="cols"
+      :rows="danhSach"
+      trong="Chưa có yêu cầu đổi trả nào."
+    >
+      <template #the="{ rows }">
+    <div style="display: flex; flex-direction: column; gap: 12px">
+      <div v-for="r in rows" :key="r.id" style="background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px">
         <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 12px">
           <div>
             <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
@@ -147,6 +157,8 @@
         <div v-else style="font-size: 12px; color: var(--muted)">Yêu cầu đã kết thúc.</div>
       </div>
     </div>
+      </template>
+    </DataTable>
   </div>
 </template>
 
@@ -154,6 +166,19 @@
 import { ref, onMounted } from 'vue'
 import { getReturns, updateReturnStatus, lookupOrderForReturn, createReturn } from '../api/admin'
 import { resolveImageUrl } from '../api/http'
+import DataTable from '../components/DataTable.vue'
+
+// Trường lọc cho chế độ thẻ — cùng phễu Excel như các bảng khác (xem components/DataTable.vue).
+const cols = [
+  { key: 'maYeuCau', label: 'Mã yêu cầu' },
+  { key: 'hoTen', label: 'Khách hàng', text: (r) => r.hoTen || r.email || '—' },
+  { key: 'maDon', label: 'Mã đơn', text: (r) => r.maDon || '—' },
+  { key: 'tenSanPham', label: 'Sản phẩm', text: (r) => r.tenSanPham || '—' },
+  { key: 'kenhMua', label: 'Kênh mua', text: (r) => (r.kenhMua === 'online' ? 'Online' : 'Tại cửa hàng') },
+  { key: 'lyDo', label: 'Lý do', text: (r) => r.lyDo || '—' },
+  { key: 'trangThai', label: 'Trạng thái', text: (r) => r.nhanTrangThai || r.trangThai },
+  { key: 'createdAt', label: 'Ngày gửi', kieu: 'ngay' },
+]
 
 const danhSach = ref([])
 const tatCa = ref([])

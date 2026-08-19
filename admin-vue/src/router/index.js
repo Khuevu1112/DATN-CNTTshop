@@ -48,6 +48,16 @@ const routes = [
         meta: { title: 'Sản phẩm', sub: 'Danh mục, kho & giá sản phẩm', feature: 'products_view' },
       },
       {
+        path: 'goods-receipts',
+        name: 'goods-receipts',
+        component: () => import('../views/GoodsReceipts.vue'),
+        meta: {
+          title: 'Nhập kho',
+          sub: 'Phiếu nhập kho theo nhà cung cấp, xuất chứng từ cho kế toán',
+          feature: 'products_view',
+        },
+      },
+      {
         path: 'kit-templates',
         name: 'kit-templates',
         component: () => import('../views/KitTemplates.vue'),

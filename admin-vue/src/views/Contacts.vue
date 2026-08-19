@@ -99,28 +99,29 @@
         <div v-else-if="!rows.length" style="padding: 40px; text-align: center; color: var(--muted); font-size: 13px">
           Chưa có liên hệ nào.
         </div>
-        <table v-else style="width: 100%; border-collapse: collapse; font-size: 13px">
-          <thead>
-            <tr style="background: var(--card2)">
-              <th v-for="h in heads" :key="h.t" :style="{ textAlign: h.a || 'left', padding: '10px 16px', fontSize: '11px', fontWeight: 600, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '.4px' }">
-                {{ h.t }}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="c in rows" :key="c.id" @click="openDetail(c)" style="border-top: 1px solid var(--line); cursor: pointer">
-              <td style="padding: 12px 16px">
-                <div style="font-size: 12.5px; color: var(--text); font-weight: 600">{{ c.fullName }}</div>
-                <div style="font-size: 11px; color: var(--muted)">{{ c.email }}</div>
-              </td>
-              <td style="padding: 12px 12px; color: var(--muted2); font-size: 12px; max-width: 260px">{{ c.subject || '—' }}</td>
-              <td style="padding: 12px 12px; color: var(--muted2); font-size: 12px">{{ fmtDateTime(c.createdAt) }}</td>
-              <td style="padding: 12px 16px">
-                <span class="badge" :style="statusStyle(c.status)">{{ statusLabel(c.status) }}</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <DataTable
+          v-else
+          :columns="cols"
+          :rows="rows"
+          :tim-kiem="ui.search"
+          click-duoc
+          trong="Chưa có liên hệ nào."
+          @row-click="openDetail"
+        >
+          <template #o-fullName="{ row: c }">
+            <div style="font-size: 12.5px; color: var(--text); font-weight: 600">{{ c.fullName }}</div>
+            <div style="font-size: 11px; color: var(--muted)">{{ c.email }}</div>
+          </template>
+          <template #o-subject="{ row: c }">
+            <span style="color: var(--muted2); font-size: 12px">{{ c.subject || '—' }}</span>
+          </template>
+          <template #o-createdAt="{ row: c }">
+            <span style="color: var(--muted2); font-size: 12px">{{ fmtDateTime(c.createdAt) }}</span>
+          </template>
+          <template #o-status="{ row: c }">
+            <span class="badge" :style="statusStyle(c.status)">{{ statusLabel(c.status) }}</span>
+          </template>
+        </DataTable>
       </div>
     </div>
   </div>
@@ -129,6 +130,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import { ui } from '../uiState';
+import DataTable from '../components/DataTable.vue';
 import { getAdminContacts, getAdminContactDetail, updateContactStatus, replyContact } from '../api/admin';
 
 const loading = ref(true);
@@ -140,7 +142,13 @@ const replyDraft = ref('');
 const savingStatus = ref(false);
 const sendingReply = ref(false);
 
-const heads = [{ t: 'Khách hàng' }, { t: 'Chủ đề' }, { t: 'Thời gian' }, { t: 'Trạng thái' }];
+// Cột cho DataTable — phễu lọc/sắp xếp kiểu Excel trên từng cột (xem components/DataTable.vue).
+const cols = [
+  { key: 'fullName', label: 'Khách hàng', text: (c) => c.fullName + ' · ' + c.email },
+  { key: 'subject', label: 'Chủ đề', text: (c) => c.subject || '—' },
+  { key: 'createdAt', label: 'Thời gian', kieu: 'ngay', text: (c) => fmtDateTime(c.createdAt) },
+  { key: 'status', label: 'Trạng thái', text: (c) => statusLabel(c.status) },
+];
 const stKeys = ['all', 'new', 'processing', 'resolved'];
 const stLabels = { all: 'Tất cả', new: 'Mới', processing: 'Đang xử lý', resolved: 'Đã xử lý' };
 
@@ -149,12 +157,10 @@ const tabs = computed(() => stKeys.map((k) => ({
   count: k === 'all' ? list.value.length : list.value.filter((c) => c.status === k).length,
 })));
 
-const rows = computed(() => {
-  const q = ui.search.trim().toLowerCase();
-  return list.value.filter((c) =>
-    (filter.value === 'all' || c.status === filter.value) &&
-    (!q || c.fullName.toLowerCase().includes(q) || c.email.toLowerCase().includes(q)));
-});
+// Tìm theo từ khoá đã do DataTable đảm nhận — ở đây chỉ còn lọc theo tab trạng thái phía trên.
+const rows = computed(() =>
+  list.value.filter((c) => filter.value === 'all' || c.status === filter.value),
+);
 
 const stats = computed(() => [
   { label: 'Tổng liên hệ', value: list.value.length + '', icon: 'bi-envelope-paper', color: 'var(--acc)' },
