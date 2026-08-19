@@ -59,10 +59,22 @@ public class MailService {
 
         String mauTrangThai = "#0d6efd";
         String textTrangThai = "Đã tiếp nhận";
+        String ghiChuThem = "";
         switch (trangThai) {
             case "processing" -> { textTrangThai = "Đang xử lý"; mauTrangThai = "#fd7e14"; }
-            case "resolved"   -> { textTrangThai = "Đã hoàn thành"; mauTrangThai = "#198754"; }
+            case "resolved"   -> {
+                textTrangThai = "Đã hoàn thành";
+                mauTrangThai = "#198754";
+                ghiChuThem = "<p style=\"background:#e9f7ef;color:#198754;padding:12px 14px;border-radius:8px;margin-top:14px\">"
+                        + "Sản phẩm của bạn đã bảo hành xong. Bạn có thể đến nhận máy <b>bất cứ lúc nào</b> trong giờ mở cửa cửa hàng, không cần hẹn trước.</p>";
+            }
             case "rejected"   -> { textTrangThai = "Từ chối"; mauTrangThai = "#dc3545"; }
+            case "no_show"    -> {
+                textTrangThai = "Đã quá lịch hẹn";
+                mauTrangThai = "#dc3545";
+                ghiChuThem = "<p style=\"background:#fdecea;color:#dc3545;padding:12px 14px;border-radius:8px;margin-top:14px\">"
+                        + "Hệ thống ghi nhận bạn chưa đến theo lịch hẹn bảo hành. Vui lòng liên hệ shop để đặt lại lịch hẹn mới.</p>";
+            }
             default -> { }
         }
 
@@ -88,12 +100,54 @@ public class MailService {
                         </td></tr>
                         <tr><td style="padding:8px"><b>Mô tả lỗi</b></td><td>%s</td></tr>
                       </table>
+                      %s
                       <hr>
                       <p style="font-size:13px;color:#777">Email được gửi tự động từ hệ thống <b>CNTTShop</b>.</p>
                     </div>
                   </div>
                 </div>
-                """.formatted(tenKhach, sanPham, mauTrangThai, textTrangThai, request.getIssueDescription());
+                """.formatted(tenKhach, sanPham, mauTrangThai, textTrangThai, request.getIssueDescription(), ghiChuThem);
+
+        helper.setText(html, true);
+        mailSender.send(message);
+    }
+
+    /** Gửi trước 1 ngày cho khách có lịch hẹn bảo hành vào ngày mai — nhắc để giảm tỉ lệ khách
+     * quên không đến (xem WarrantyService.quetLichHenBaoHanh, chạy 7h sáng mỗi ngày). */
+    public void sendWarrantyAppointmentReminderEmail(WarrantyRequest request) throws MessagingException {
+        String email = request.getWarranty().getNguoiDung().getEmail();
+        String tenKhach = request.getWarranty().getNguoiDung().getHoTen();
+        String sanPham = request.getWarranty().getOrderItem().getTenSanPham();
+        String ngayHen = request.getNgayHen() != null
+                ? request.getNgayHen().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+                : "";
+        String diaDiem = "tan_noi".equals(request.getHinhThuc())
+                ? "Kỹ thuật viên sẽ đến tận nơi theo địa chỉ bạn đã đăng ký."
+                : "Mang máy tới cửa hàng: " + (request.getCenter() != null ? request.getCenter().getTen() : "cửa hàng đã chọn") + ".";
+
+        MimeMessage message = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+        helper.setTo(email);
+        helper.setSubject("Nhắc lịch hẹn bảo hành ngày mai - CNTTShop");
+
+        String html = """
+                <div style="font-family:Arial;background:#f5f5f5;padding:30px;">
+                  <div style="max-width:600px;margin:auto;background:white;border-radius:10px;overflow:hidden;box-shadow:0 0 15px rgba(0,0,0,.08);">
+                    <div style="background:#fd7e14;color:white;padding:20px;text-align:center;">
+                      <h2 style="margin:0">CNTTShop</h2>
+                      <p style="margin:6px 0 0">Nhắc lịch hẹn bảo hành</p>
+                    </div>
+                    <div style="padding:28px;">
+                      <h3>Xin chào %s,</h3>
+                      <p>Bạn có lịch hẹn bảo hành vào <b>ngày mai (%s)</b> cho sản phẩm <b>%s</b>.</p>
+                      <p>%s</p>
+                      <p style="font-size:13px;color:#777">Nếu không thể đến đúng hẹn, vui lòng liên hệ shop sớm để đặt lại lịch khác.</p>
+                      <hr>
+                      <p style="font-size:13px;color:#777">Email được gửi tự động từ hệ thống <b>CNTTShop</b>.</p>
+                    </div>
+                  </div>
+                </div>
+                """.formatted(tenKhach, ngayHen, sanPham, diaDiem);
 
         helper.setText(html, true);
         mailSender.send(message);

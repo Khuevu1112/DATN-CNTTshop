@@ -36,6 +36,16 @@ const routes = [
         },
       },
       {
+        path: 'cashflow',
+        name: 'cashflow',
+        component: () => import('../views/CashFlow.vue'),
+        meta: {
+          title: 'Dòng tiền',
+          sub: 'Tiền vào (doanh thu) và tiền ra (chi phí nhập hàng) theo thời gian',
+          feature: 'analytics',
+        },
+      },
+      {
         path: 'orders',
         name: 'orders',
         component: () => import('../views/Orders.vue'),

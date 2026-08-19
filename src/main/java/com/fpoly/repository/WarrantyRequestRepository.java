@@ -1,5 +1,6 @@
 package com.fpoly.repository;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,4 +13,9 @@ public interface WarrantyRequestRepository extends JpaRepository<WarrantyRequest
     List<WarrantyRequest> findByWarrantyOrderByCreatedAtDesc(Warranty warranty);
 
     List<WarrantyRequest> findAllByOrderByCreatedAtDesc();
+
+    /** Dùng cho job quét lịch hẹn hằng ngày (WarrantyService.quetLichHenBaoHanh). */
+    List<WarrantyRequest> findByNgayHenAndRequestStatusIn(LocalDate ngayHen, List<String> statuses);
+
+    List<WarrantyRequest> findByNgayHenBeforeAndRequestStatusIn(LocalDate ngayHen, List<String> statuses);
 }

@@ -12,6 +12,17 @@ export const markNotificationRead = (id) => http.post(`/admin/notifications/${id
 export const markAllNotificationsRead = () => http.post('/admin/notifications/read-all')
 
 export const getAdminProducts = () => http.get('/admin/products').then(r => r.data)
+export const importProductsExcel = (file) => {
+  const form = new FormData()
+  form.append('file', file)
+  return http.post('/admin/products/import', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }).then(r => r.data)
+}
+// responseType 'blob' vì đây là file binary tải về, không phải JSON — vẫn cần đi qua http (có gắn
+// JWT admin) do endpoint yêu cầu quyền products_manage, thẻ <a href> tải trực tiếp sẽ không kèm token.
+export const downloadProductImportTemplate = () =>
+  http.get('/admin/products/import/template', { responseType: 'blob' }).then(r => r.data)
 export const getAdminOrders = () => http.get('/admin/orders').then(r => r.data)
 export const getAdminOrderDetail = (id) => http.get(`/admin/orders/${id}`).then(r => r.data)
 export const getAdminCustomers = () => http.get('/admin/customers').then(r => r.data)
@@ -109,6 +120,12 @@ export const deleteCarrier = (id) => http.delete(`/admin/shipping/carriers/${id}
 export const createCategory = (name) => http.post('/admin/categories', { name }).then(r => r.data)
 
 export const getAnalytics = () => http.get('/admin/analytics').then(r => r.data)
+export const getCashFlow = (from, to, groupBy) =>
+  http.get('/admin/cashflow', { params: { from, to, groupBy } }).then(r => r.data)
+export const getCashFlowDetail = (from, to) =>
+  http.get('/admin/cashflow/detail', { params: { from, to } }).then(r => r.data)
+export const exportCashFlow = (from, to, groupBy) =>
+  http.get('/admin/cashflow/export', { params: { from, to, groupBy }, responseType: 'blob' }).then(r => r.data)
 
 export const getAdminWarranties = (status) => http.get('/admin/warranties', { params: status ? { status } : {} }).then(r => r.data)
 export const getAdminWarrantyDetail = (id) => http.get(`/admin/warranties/${id}`).then(r => r.data)
@@ -116,6 +133,7 @@ export const updateWarrantyStatus = (id, status) => http.put(`/admin/warranties/
 export const getAdminWarrantyRequests = () => http.get('/admin/warranty-requests').then(r => r.data)
 export const getAdminWarrantyRequestDetail = (id) => http.get(`/admin/warranty-requests/${id}`).then(r => r.data)
 export const updateWarrantyRequestStatus = (id, status, note) => http.put(`/admin/warranty-requests/${id}/status`, { status, note }).then(r => r.data)
+export const updateWarrantyRequestSchedule = (id, ngayHen) => http.put(`/admin/warranty-requests/${id}/schedule`, { ngayHen }).then(r => r.data)
 
 export const getKitTemplates = () => http.get('/admin/kit-templates').then(r => r.data)
 export const getKitTemplateDetail = (id) => http.get(`/admin/kit-templates/${id}`).then(r => r.data)

@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.text.Normalizer;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -11,6 +12,9 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +38,8 @@ import com.fpoly.dto.ContactDtos.ContactReplyRequest;
 import com.fpoly.dto.ContactDtos.ContactStatusRequest;
 import com.fpoly.dto.ContactDtos.ContactSummaryDto;
 import com.fpoly.dto.OrderDtos.AddressDto;
+import com.fpoly.dto.ProductImportDtos.ImportResultDto;
+import com.fpoly.dto.WarrantyDtos.UpdateRequestAppointmentBody;
 import com.fpoly.dto.WarrantyDtos.UpdateRequestStatusBody;
 import com.fpoly.dto.WarrantyDtos.UpdateWarrantyStatusBody;
 import com.fpoly.dto.WarrantyDtos.WarrantyDetailDto;
@@ -65,6 +71,8 @@ import com.fpoly.service.CouponService;
 import com.fpoly.service.MailService;
 import com.fpoly.service.NotificationService;
 import com.fpoly.service.OrderService;
+import com.fpoly.service.CashFlowService;
+import com.fpoly.service.ProductImportService;
 import com.fpoly.service.WarrantyService;
 
 import jakarta.persistence.EntityManager;
@@ -104,6 +112,12 @@ public class AdminApiController {
 
     @Autowired
     private WarrantyService warrantyService;
+
+    @Autowired
+    private ProductImportService productImportService;
+
+    @Autowired
+    private CashFlowService cashFlowService;
 
     @Autowired
     private NguoiDungRepository nguoiDungRepo;
@@ -298,6 +312,24 @@ public class AdminApiController {
     @RequirePermission(feature = "products_manage", action = PermissionType.ADD)
     public Map<String, Object> uploadImage(@RequestParam("file") MultipartFile file) {
         return Map.of("url", adminProductService.storeImage(file));
+    }
+
+    /** Nhập sản phẩm hàng loạt từ file Excel (.xlsx/.xls) — xem ProductImportService để biết quy ước. */
+    @PostMapping("/products/import")
+    @RequirePermission(feature = "products_manage", action = PermissionType.ADD)
+    public ImportResultDto importProducts(@RequestParam("file") MultipartFile file) {
+        return productImportService.importExcel(file);
+    }
+
+    /** Tải file Excel mẫu (kèm danh sách danh mục hợp lệ) để admin điền đúng cột. */
+    @GetMapping("/products/import/template")
+    @RequirePermission(feature = "products_manage", action = PermissionType.VIEW)
+    public ResponseEntity<byte[]> importTemplate() {
+        byte[] data = productImportService.buildTemplate();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=mau-nhap-san-pham.xlsx")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(data);
     }
 
     @GetMapping("/contacts")
@@ -936,6 +968,50 @@ public class AdminApiController {
         return result;
     }
 
+    /**
+     * Phân tích dòng tiền theo khoảng ngày admin chọn — logic chi tiết xem CashFlowService.
+     * Tiền vào  = doanh thu đơn hàng ĐÃ GIAO THÀNH CÔNG (status='delivered'), tách theo kênh.
+     * Tiền ra   = chi phí nhập hàng từ phiếu nhập kho (STOCK_MOVEMENT, reason='nhap_hang').
+     */
+    @GetMapping("/cashflow")
+    @RequirePermission(feature = "analytics", action = PermissionType.VIEW)
+    public Map<String, Object> cashFlow(
+            @RequestParam String from,
+            @RequestParam String to,
+            @RequestParam(defaultValue = "day") String groupBy) {
+        return cashFlowService.getReport(parseDate(from), parseDate(to), groupBy);
+    }
+
+    /** Chi tiết đơn hàng / phiếu nhập kho của 1 khoảng ngày — dùng khi admin bấm vào 1 dòng
+     * trong bảng dòng tiền. from/to lấy trực tiếp từ periodFrom/periodTo mà /cashflow trả về. */
+    @GetMapping("/cashflow/detail")
+    @RequirePermission(feature = "analytics", action = PermissionType.VIEW)
+    public Map<String, Object> cashFlowDetail(@RequestParam String from, @RequestParam String to) {
+        return cashFlowService.getDetail(parseDate(from), parseDate(to));
+    }
+
+    /** Xuất báo cáo dòng tiền ra file Excel. */
+    @GetMapping("/cashflow/export")
+    @RequirePermission(feature = "analytics", action = PermissionType.VIEW)
+    public ResponseEntity<byte[]> cashFlowExport(
+            @RequestParam String from,
+            @RequestParam String to,
+            @RequestParam(defaultValue = "day") String groupBy) {
+        byte[] data = cashFlowService.exportExcel(parseDate(from), parseDate(to), groupBy);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=dong-tien.xlsx")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(data);
+    }
+
+    private LocalDate parseDate(String raw) {
+        try {
+            return LocalDate.parse(raw);
+        } catch (Exception e) {
+            throw new RuntimeException("Ngày không hợp lệ (định dạng cần yyyy-MM-dd)");
+        }
+    }
+
     /** Doanh thu bán tại quầy theo từng tháng, khớp đúng 9 mốc tháng của totalSeries. */
     private List<BigDecimal> posRevenueSeries(LocalDate windowStart) {
         List<BigDecimal> series = new ArrayList<>();
@@ -1198,6 +1274,15 @@ public class AdminApiController {
     @RequirePermission(feature = "warranty", action = PermissionType.PERFORM)
     public WarrantyRequestDto updateWarrantyRequestStatus(@PathVariable Integer id, @RequestBody UpdateRequestStatusBody body) {
         warrantyService.updateRequestStatus(id, body.status(), body.note());
+        return toWarrantyRequestDto(warrantyService.getRequest(id));
+    }
+
+    /** Admin chỉ được đổi lại NGÀY HẸN của yêu cầu (vd: khách gọi điện xin dời lịch). Hình thức
+     * bảo hành / cửa hàng là lựa chọn của khách khi gửi yêu cầu, admin không có quyền tự đổi. */
+    @PutMapping("/warranty-requests/{id}/schedule")
+    @RequirePermission(feature = "warranty", action = PermissionType.PERFORM)
+    public WarrantyRequestDto updateWarrantyRequestSchedule(@PathVariable Integer id, @RequestBody UpdateRequestAppointmentBody body) {
+        warrantyService.updateRequestAppointmentDate(id, body.ngayHen());
         return toWarrantyRequestDto(warrantyService.getRequest(id));
     }
 
