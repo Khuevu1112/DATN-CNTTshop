@@ -58,4 +58,9 @@ public class WarrantyDtos {
     public record CreateRequestBody(String issue, LocalDate ngayHen, String hinhThuc, Integer centerId) {}
     public record UpdateWarrantyStatusBody(String status) {}
     public record UpdateRequestStatusBody(String status, String note) {}
+
+    /** Admin chỉ được đổi lại NGÀY HẸN khi khách gọi điện xin đổi lịch. Hình thức (mang ra cửa
+     * hàng/sửa tận nơi) và cửa hàng nào là lựa chọn của khách khi gửi yêu cầu — admin không có
+     * quyền tự đổi thay khách. */
+    public record UpdateRequestAppointmentBody(LocalDate ngayHen) {}
 }

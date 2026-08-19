@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,7 +45,10 @@ public class WarrantyService {
     private com.fpoly.repository.ServiceCenterRepository serviceCenterRepo;
 
     private static final List<String> VALID_REQUEST_STATUS =
-            List.of("pending", "accepted", "processing", "resolved", "rejected");
+            List.of("pending", "accepted", "processing", "resolved", "rejected", "no_show");
+
+    /** Các trạng thái coi là "còn đang chờ xử lý" — dùng để lọc trong job quét lịch hẹn hằng ngày. */
+    private static final List<String> TRANG_THAI_DANG_CHO = List.of("pending", "accepted");
 
     /** Phụ phí cố định khi chọn bảo hành tận nơi thay vì mang tới cửa hàng. */
     private static final java.math.BigDecimal PHU_PHI_TAN_NOI = new java.math.BigDecimal("150000");
@@ -150,6 +154,18 @@ public class WarrantyService {
         requestRepo.save(request);
     }
 
+    /** Admin chỉ được đổi lại NGÀY HẸN (vd: khách gọi điện xin dời lịch). Hình thức bảo hành
+     * (mang ra cửa hàng / sửa tận nơi) và chọn cửa hàng nào là quyết định của KHÁCH khi gửi yêu
+     * cầu — admin không có quyền tự đổi thay khách, chỉ được tiếp nhận & xử lý theo đúng lựa
+     * chọn ban đầu của khách. Không ghi lịch sử trạng thái vì đây chỉ chỉnh 1 trường ngày, không
+     * phải chuyển bước xử lý. */
+    @Transactional
+    public void updateRequestAppointmentDate(Integer requestId, LocalDate ngayHen) {
+        WarrantyRequest request = getRequest(requestId);
+        request.setNgayHen(ngayHen);
+        requestRepo.save(request);
+    }
+
     public List<WarrantyRequest> getRequests(Integer warrantyId) {
         Warranty warranty = getById(warrantyId);
         return requestRepo.findByWarrantyOrderByCreatedAtDesc(warranty);
@@ -212,7 +228,69 @@ public class WarrantyService {
             case "processing" -> "Đang xử lý";
             case "resolved" -> "Đã xử lý xong";
             case "rejected" -> "Từ chối";
+            case "no_show" -> "Khách không đến hẹn";
             default -> status;
         };
+    }
+
+    /**
+     * Quét định kỳ mỗi ngày lúc 7h sáng, xử lý 3 việc liên quan tới lịch hẹn bảo hành:
+     *  1. Yêu cầu hẹn NGÀY MAI, còn đang chờ xử lý -> gửi mail nhắc khách.
+     *  2. Yêu cầu hẹn HÔM NAY, còn đang chờ xử lý -> báo cho admin để chuẩn bị tiếp khách.
+     *  3. Yêu cầu hẹn ĐÃ QUA (trước hôm nay) mà vẫn còn đang chờ xử lý -> tự động đánh dấu
+     *     "khách không đến" (no_show), ghi lịch sử, báo admin và gửi mail cho khách.
+     */
+    @Scheduled(cron = "0 0 7 * * *")
+    @Transactional
+    public void quetLichHenBaoHanh() {
+        LocalDate homNay = LocalDate.now();
+        LocalDate ngayMai = homNay.plusDays(1);
+
+        // 1) Nhắc khách trước 1 ngày
+        for (WarrantyRequest r : requestRepo.findByNgayHenAndRequestStatusIn(ngayMai, TRANG_THAI_DANG_CHO)) {
+            try {
+                mailService.sendWarrantyAppointmentReminderEmail(r);
+            } catch (Exception e) {
+                // Không chặn job nếu 1 mail gửi lỗi
+            }
+        }
+
+        // 2) Báo admin: hôm nay có khách hẹn tới
+        for (WarrantyRequest r : requestRepo.findByNgayHenAndRequestStatusIn(homNay, TRANG_THAI_DANG_CHO)) {
+            notificationService.tao(
+                    "warranty_today",
+                    "Hôm nay có lịch hẹn bảo hành",
+                    r.getWarranty().getNguoiDung().getHoTen() + " hẹn bảo hành \""
+                            + r.getWarranty().getOrderItem().getTenSanPham() + "\" hôm nay.",
+                    "/warranty"
+            );
+        }
+
+        // 3) Quá hẹn mà khách chưa tới -> tự động đánh dấu "khách không đến"
+        for (WarrantyRequest r : requestRepo.findByNgayHenBeforeAndRequestStatusIn(homNay, TRANG_THAI_DANG_CHO)) {
+            r.setRequestStatus("no_show");
+            requestRepo.save(r);
+
+            WarrantyHistory history = new WarrantyHistory();
+            history.setRequest(r);
+            history.setStatus("no_show");
+            history.setNote("Tự động đánh dấu: quá ngày hẹn (" + r.getNgayHen() + ") mà khách chưa tới.");
+            history.setCreatedAt(LocalDateTime.now());
+            historyRepo.save(history);
+
+            notificationService.tao(
+                    "warranty_no_show",
+                    "Khách không đến hẹn bảo hành",
+                    r.getWarranty().getNguoiDung().getHoTen() + " không đến hẹn ngày " + r.getNgayHen()
+                            + " cho sản phẩm \"" + r.getWarranty().getOrderItem().getTenSanPham() + "\".",
+                    "/warranty"
+            );
+
+            try {
+                mailService.sendWarrantyStatusEmail(r);
+            } catch (Exception e) {
+                // Không chặn job nếu 1 mail gửi lỗi
+            }
+        }
     }
 }

@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.text.Normalizer;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -11,6 +12,9 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +38,8 @@ import com.fpoly.dto.ContactDtos.ContactReplyRequest;
 import com.fpoly.dto.ContactDtos.ContactStatusRequest;
 import com.fpoly.dto.ContactDtos.ContactSummaryDto;
 import com.fpoly.dto.OrderDtos.AddressDto;
+import com.fpoly.dto.ProductImportDtos.ImportResultDto;
+import com.fpoly.dto.WarrantyDtos.UpdateRequestAppointmentBody;
 import com.fpoly.dto.WarrantyDtos.UpdateRequestStatusBody;
 import com.fpoly.dto.WarrantyDtos.UpdateWarrantyStatusBody;
 import com.fpoly.dto.WarrantyDtos.WarrantyDetailDto;
@@ -65,6 +71,7 @@ import com.fpoly.service.CouponService;
 import com.fpoly.service.MailService;
 import com.fpoly.service.NotificationService;
 import com.fpoly.service.OrderService;
+import com.fpoly.service.ProductImportService;
 import com.fpoly.service.WarrantyService;
 
 import jakarta.persistence.EntityManager;
@@ -104,6 +111,9 @@ public class AdminApiController {
 
     @Autowired
     private WarrantyService warrantyService;
+
+    @Autowired
+    private ProductImportService productImportService;
 
     @Autowired
     private NguoiDungRepository nguoiDungRepo;
@@ -298,6 +308,24 @@ public class AdminApiController {
     @RequirePermission(feature = "products_manage", action = PermissionType.ADD)
     public Map<String, Object> uploadImage(@RequestParam("file") MultipartFile file) {
         return Map.of("url", adminProductService.storeImage(file));
+    }
+
+    /** Nhập sản phẩm hàng loạt từ file Excel (.xlsx/.xls) — xem ProductImportService để biết quy ước. */
+    @PostMapping("/products/import")
+    @RequirePermission(feature = "products_manage", action = PermissionType.ADD)
+    public ImportResultDto importProducts(@RequestParam("file") MultipartFile file) {
+        return productImportService.importExcel(file);
+    }
+
+    /** Tải file Excel mẫu (kèm danh sách danh mục hợp lệ) để admin điền đúng cột. */
+    @GetMapping("/products/import/template")
+    @RequirePermission(feature = "products_manage", action = PermissionType.VIEW)
+    public ResponseEntity<byte[]> importTemplate() {
+        byte[] data = productImportService.buildTemplate();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=mau-nhap-san-pham.xlsx")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(data);
     }
 
     @GetMapping("/contacts")
@@ -930,6 +958,115 @@ public class AdminApiController {
         return result;
     }
 
+    /**
+     * Phân tích dòng tiền theo khoảng ngày admin chọn.
+     * Tiền vào  = doanh thu đơn hàng ĐÃ GIAO THÀNH CÔNG (status='delivered').
+     * Tiền ra   = chi phí nhập hàng từ phiếu nhập kho (STOCK_MOVEMENT, reason='nhap_hang').
+     * Chưa gồm hoàn tiền đổi trả (hệ thống hiện chưa lưu số tiền hoàn cụ thể) và tín dụng
+     * đổi-đồ-cũ (không phải tiền mặt, đã nằm gộp trong discount_amount của đơn hàng sau).
+     */
+    @GetMapping("/cashflow")
+    @RequirePermission(feature = "analytics", action = PermissionType.VIEW)
+    public Map<String, Object> cashFlow(
+            @RequestParam String from,
+            @RequestParam String to,
+            @RequestParam(defaultValue = "day") String groupBy) {
+
+        LocalDate fromDate;
+        LocalDate toDate;
+        try {
+            fromDate = LocalDate.parse(from);
+            toDate = LocalDate.parse(to);
+        } catch (Exception e) {
+            throw new RuntimeException("Ngày không hợp lệ (định dạng cần yyyy-MM-dd)");
+        }
+        if (toDate.isBefore(fromDate)) {
+            throw new RuntimeException("Ngày kết thúc phải sau ngày bắt đầu");
+        }
+        if (!List.of("day", "month", "year").contains(groupBy)) {
+            groupBy = "day";
+        }
+
+        LocalDateTime fromDt = fromDate.atStartOfDay();
+        LocalDateTime toDt = toDate.plusDays(1).atStartOfDay(); // cận trên loại trừ
+
+        String periodExpr = switch (groupBy) {
+            case "month" -> "DATEFROMPARTS(YEAR(created_at), MONTH(created_at), 1)";
+            case "year" -> "DATEFROMPARTS(YEAR(created_at), 1, 1)";
+            default -> "CAST(created_at AS DATE)";
+        };
+
+        List<Object[]> inRows = em.createNativeQuery(
+                "SELECT " + periodExpr + ", ISNULL(SUM(total_amount),0) FROM [ORDER] " +
+                "WHERE status = 'delivered' AND created_at >= :from AND created_at < :to " +
+                "GROUP BY " + periodExpr
+        ).setParameter("from", fromDt).setParameter("to", toDt).getResultList();
+
+        List<Object[]> outRows = em.createNativeQuery(
+                "SELECT " + periodExpr + ", ISNULL(SUM(change_qty * unit_cost),0) FROM STOCK_MOVEMENT " +
+                "WHERE reason = 'nhap_hang' AND created_at >= :from AND created_at < :to " +
+                "GROUP BY " + periodExpr
+        ).setParameter("from", fromDt).setParameter("to", toDt).getResultList();
+
+        Map<LocalDate, BigDecimal> inMap = new HashMap<>();
+        for (Object[] r : inRows) inMap.put(toLocalDate(r[0]), (BigDecimal) r[1]);
+        Map<LocalDate, BigDecimal> outMap = new HashMap<>();
+        for (Object[] r : outRows) outMap.put(toLocalDate(r[0]), (BigDecimal) r[1]);
+
+        // Sinh đủ mốc thời gian trong khoảng đã chọn, kể cả mốc không có dữ liệu (hiển thị = 0)
+        List<LocalDate> periods = new ArrayList<>();
+        if ("month".equals(groupBy)) {
+            LocalDate cursor = fromDate.withDayOfMonth(1);
+            LocalDate end = toDate.withDayOfMonth(1);
+            while (!cursor.isAfter(end)) { periods.add(cursor); cursor = cursor.plusMonths(1); }
+        } else if ("year".equals(groupBy)) {
+            LocalDate cursor = fromDate.withDayOfYear(1);
+            LocalDate end = toDate.withDayOfYear(1);
+            while (!cursor.isAfter(end)) { periods.add(cursor); cursor = cursor.plusYears(1); }
+        } else {
+            LocalDate cursor = fromDate;
+            while (!cursor.isAfter(toDate)) { periods.add(cursor); cursor = cursor.plusDays(1); }
+        }
+
+        DateTimeFormatter fmt = switch (groupBy) {
+            case "month" -> DateTimeFormatter.ofPattern("MM/yyyy");
+            case "year" -> DateTimeFormatter.ofPattern("yyyy");
+            default -> DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        };
+
+        List<Map<String, Object>> points = new ArrayList<>();
+        BigDecimal totalIn = BigDecimal.ZERO, totalOut = BigDecimal.ZERO;
+        for (LocalDate p : periods) {
+            BigDecimal cashIn = inMap.getOrDefault(p, BigDecimal.ZERO);
+            BigDecimal cashOut = outMap.getOrDefault(p, BigDecimal.ZERO);
+            totalIn = totalIn.add(cashIn);
+            totalOut = totalOut.add(cashOut);
+            Map<String, Object> pt = new LinkedHashMap<>();
+            pt.put("label", p.format(fmt));
+            pt.put("cashIn", cashIn);
+            pt.put("cashOut", cashOut);
+            pt.put("net", cashIn.subtract(cashOut));
+            points.add(pt);
+        }
+
+        Map<String, Object> result2 = new LinkedHashMap<>();
+        result2.put("totalCashIn", totalIn);
+        result2.put("totalCashOut", totalOut);
+        result2.put("netCashFlow", totalIn.subtract(totalOut));
+        result2.put("points", points);
+        return result2;
+    }
+
+    /** Chuyển kết quả cột DATE/DATETIME của native query (JDBC trả về kiểu khác nhau tuỳ driver)
+     * về LocalDate thống nhất để làm khoá map. */
+    private LocalDate toLocalDate(Object o) {
+        if (o instanceof java.sql.Date d) return d.toLocalDate();
+        if (o instanceof java.sql.Timestamp t) return t.toLocalDateTime().toLocalDate();
+        if (o instanceof LocalDate ld) return ld;
+        if (o instanceof LocalDateTime ldt) return ldt.toLocalDate();
+        throw new IllegalStateException("Kiểu ngày không nhận diện được: " + (o == null ? "null" : o.getClass()));
+    }
+
     /** Doanh thu bán tại quầy theo từng tháng, khớp đúng 9 mốc tháng của totalSeries. */
     private List<BigDecimal> posRevenueSeries(LocalDate windowStart) {
         List<BigDecimal> series = new ArrayList<>();
@@ -1129,6 +1266,15 @@ public class AdminApiController {
     @RequirePermission(feature = "warranty", action = PermissionType.PERFORM)
     public WarrantyRequestDto updateWarrantyRequestStatus(@PathVariable Integer id, @RequestBody UpdateRequestStatusBody body) {
         warrantyService.updateRequestStatus(id, body.status(), body.note());
+        return toWarrantyRequestDto(warrantyService.getRequest(id));
+    }
+
+    /** Admin chỉ được đổi lại NGÀY HẸN của yêu cầu (vd: khách gọi điện xin dời lịch). Hình thức
+     * bảo hành / cửa hàng là lựa chọn của khách khi gửi yêu cầu, admin không có quyền tự đổi. */
+    @PutMapping("/warranty-requests/{id}/schedule")
+    @RequirePermission(feature = "warranty", action = PermissionType.PERFORM)
+    public WarrantyRequestDto updateWarrantyRequestSchedule(@PathVariable Integer id, @RequestBody UpdateRequestAppointmentBody body) {
+        warrantyService.updateRequestAppointmentDate(id, body.ngayHen());
         return toWarrantyRequestDto(warrantyService.getRequest(id));
     }
 

@@ -23,11 +23,11 @@ const wStatusLabels = { active: 'Còn hạn', expired: 'Hết hạn', void: 'Vô
 const wStatusColors = { active: 'var(--green)', expired: 'var(--muted)', void: 'var(--sale)' };
 const wReqLabels = {
   pending: 'Chờ tiếp nhận', accepted: 'Đã tiếp nhận', processing: 'Đang xử lý',
-  resolved: 'Đã xử lý', rejected: 'Từ chối',
+  resolved: 'Đã xử lý', rejected: 'Từ chối', no_show: 'Đã quá lịch hẹn',
 };
 const wReqColors = {
   pending: 'var(--muted2)', accepted: accent, processing: accent,
-  resolved: 'var(--green)', rejected: 'var(--sale)',
+  resolved: 'var(--green)', rejected: 'var(--sale)', no_show: 'var(--sale)',
 };
 
 // ===== Chi tiết một phiếu (mở khi bấm vào sản phẩm) =====
@@ -46,6 +46,26 @@ async function moChiTiet(w) {
 }
 function dongChiTiet() {
   detail.value = null;
+}
+
+// ===== Sao chép mã bảo hành =====
+const copiedMa = ref('');
+async function saoChepMa(ma) {
+  try {
+    await navigator.clipboard.writeText(ma);
+  } catch (e) {
+    const ta = document.createElement('textarea');
+    ta.value = ma;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  }
+  copiedMa.value = ma;
+  actions.showToast('Đã sao chép mã bảo hành');
+  setTimeout(() => { if (copiedMa.value === ma) copiedMa.value = ''; }, 1500);
 }
 
 const conHan = (w) => w.status === 'active';
@@ -369,7 +389,13 @@ onMounted(tai);
             <div class="bh-kv-grid">
               <div class="bh-kv">
                 <span>Mã bảo hành</span>
-                <b :style="{ color: accent }">{{ detail.maBaoHanh }}</b>
+                <b :style="{ color: accent }" style="display: flex; align-items: center; gap: 8px">
+                  {{ detail.maBaoHanh }}
+                  <button class="bh-copy" @click="saoChepMa(detail.maBaoHanh)" title="Sao chép mã bảo hành">
+                    <span v-if="copiedMa === detail.maBaoHanh">✓</span>
+                    <span v-else>⧉</span>
+                  </button>
+                </b>
               </div>
               <div class="bh-kv"><span>Trạng thái</span>
                 <b :style="{ color: wStatusColors[detail.status] || 'var(--muted)' }">
@@ -564,6 +590,24 @@ onMounted(tai);
   font-size: 13.5px;
   color: var(--text);
   font-weight: 700;
+}
+.bh-copy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid rgba(var(--line-rgb), 0.2);
+  background: transparent;
+  color: var(--muted2);
+  cursor: pointer;
+  font-size: 12px;
+  line-height: 1;
+}
+.bh-copy:hover {
+  border-color: var(--acc, #c6ff4a);
+  color: var(--acc, #c6ff4a);
 }
 
 @media (max-width: 900px) {

@@ -1,6 +1,7 @@
 package com.fpoly.repository;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,6 +13,9 @@ import com.fpoly.model.ProductVariant;
 public interface ProductVariantRepository extends JpaRepository<ProductVariant, Integer> {
 
     List<ProductVariant> findByProductId(Integer productId);
+
+    /** Dùng cho "Nhập sản phẩm từ Excel": SKU trùng -> cập nhật thay vì tạo bản ghi mới. */
+    Optional<ProductVariant> findBySku(String sku);
 
     @Query("SELECT v FROM ProductVariant v JOIN FETCH v.product p " +
            "WHERE (LOWER(p.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(v.sku) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +

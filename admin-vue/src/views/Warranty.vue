@@ -29,6 +29,9 @@
               <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
                 <div style="font-size: 16px; font-weight: 700; color: var(--text)">{{ detail.productName }}</div>
                 <span v-if="detail.maBaoHanh" class="badge" style="background: color-mix(in srgb, var(--acc) 16%, transparent); color: var(--acc); font-family: monospace">{{ detail.maBaoHanh }}</span>
+                <button v-if="detail.maBaoHanh" class="btn-copy" @click="saoChepMa(detail.maBaoHanh)" title="Sao chép mã bảo hành">
+                  <i :class="copiedMa === detail.maBaoHanh ? 'bi bi-check2' : 'bi bi-clipboard'"></i>
+                </button>
               </div>
               <div style="font-size: 12px; color: var(--muted); margin-top: 3px">Đơn {{ detail.orderCode }} · {{ detail.customerName }} ({{ detail.customerEmail }})</div>
             </div>
@@ -111,6 +114,9 @@
             <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 6px">
               <div style="font-size: 15px; font-weight: 700; color: var(--text)">{{ requestDetail.productName }}</div>
               <span v-if="requestDetail.maBaoHanh" class="badge" style="background: color-mix(in srgb, var(--acc) 16%, transparent); color: var(--acc); font-family: monospace">{{ requestDetail.maBaoHanh }}</span>
+              <button v-if="requestDetail.maBaoHanh" class="btn-copy" @click="saoChepMa(requestDetail.maBaoHanh)" title="Sao chép mã bảo hành">
+                <i :class="copiedMa === requestDetail.maBaoHanh ? 'bi bi-check2' : 'bi bi-clipboard'"></i>
+              </button>
             </div>
             <div style="font-size: 12px; color: var(--muted); margin-bottom: 14px">{{ requestDetail.customerName }} ({{ requestDetail.customerEmail }}) · {{ fmtDateTime(requestDetail.createdAt) }}</div>
             <div style="background: var(--card2); border-radius: 10px; padding: 14px; font-size: 13px; color: var(--text); margin-bottom: 16px; white-space: pre-wrap">
@@ -143,10 +149,22 @@
               <option value="processing">Đang xử lý</option>
               <option value="resolved">Đã hoàn thành</option>
               <option value="rejected">Từ chối</option>
+              <option value="no_show">Khách không đến</option>
             </select>
             <textarea class="fld" v-model="reqNoteDraft" rows="3" style="padding: 10px 14px; margin-bottom: 10px" placeholder="Ghi chú xử lý..."></textarea>
             <button class="btn-acc" style="height: 42px" :disabled="saving" @click="saveRequestStatus">
               {{ saving ? 'Đang lưu...' : 'Lưu & gửi email khách' }}
+            </button>
+
+            <div style="border-top: 1px solid var(--line); margin: 18px 0 14px"></div>
+            <div style="font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px">Đổi lịch hẹn</div>
+            <div style="font-size: 11px; color: var(--muted); margin-bottom: 10px">
+              Hình thức bảo hành &amp; cửa hàng là lựa chọn của khách, admin chỉ đổi được ngày hẹn khi khách gọi điện xin dời lịch.
+            </div>
+            <label style="display: block; font-size: 11.5px; color: var(--muted); margin-bottom: 5px">Ngày hẹn</label>
+            <input type="date" class="fld" v-model="schedNgayHen" style="margin-bottom: 10px" />
+            <button class="btn-acc" style="height: 42px; background: var(--card2); color: var(--text); border: 1px solid var(--line2)" :disabled="savingSched" @click="saveRequestSchedule">
+              {{ savingSched ? 'Đang lưu...' : 'Lưu ngày hẹn' }}
             </button>
           </div>
         </div>
@@ -169,7 +187,12 @@
                 <td style="padding: 11px 16px; color: var(--text)">{{ r.productName }}</td>
                 <td style="padding: 11px 12px; color: var(--muted2); font-size: 12px">{{ r.customerName }}</td>
                 <td style="padding: 11px 12px; color: var(--muted2); font-size: 12px; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap">{{ r.issueDescription }}</td>
-                <td style="padding: 11px 16px"><span class="badge" :style="reqStatusStyle(r.requestStatus)">{{ reqStatusLabel(r.requestStatus) }}</span></td>
+                <td style="padding: 11px 16px">
+                  <span class="badge" :style="reqStatusStyle(r.requestStatus)">{{ reqStatusLabel(r.requestStatus) }}</span>
+                  <span v-if="laQuaHen(r)" class="badge" style="background: color-mix(in srgb, var(--sale) 16%, transparent); color: var(--sale); margin-left: 6px">
+                    <i class="bi bi-exclamation-triangle-fill" style="margin-right: 4px"></i>Quá hẹn
+                  </span>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -185,6 +208,7 @@ import { ref, onMounted } from 'vue';
 import {
   getAdminWarranties, getAdminWarrantyDetail, updateWarrantyStatus,
   getAdminWarrantyRequests, getAdminWarrantyRequestDetail, updateWarrantyRequestStatus,
+  updateWarrantyRequestSchedule,
 } from '../api/admin';
 
 const mainTabs = [
@@ -210,12 +234,42 @@ const reqNoteDraft = ref('');
 const loadingList = ref(true);
 const saving = ref(false);
 
-const reqLabels = { pending: 'Chờ tiếp nhận', accepted: 'Đã tiếp nhận', processing: 'Đang xử lý', resolved: 'Đã hoàn thành', rejected: 'Từ chối' };
-const reqColors = { pending: 'var(--amber)', accepted: 'var(--acc)', processing: '#a855f7', resolved: 'var(--green)', rejected: 'var(--sale)' };
+// ===== Đổi ngày hẹn (chỉ ngày hẹn — hình thức/cửa hàng là lựa chọn của khách) =====
+const schedNgayHen = ref('');
+const savingSched = ref(false);
+
+// ===== Sao chép mã bảo hành =====
+const copiedMa = ref('');
+async function saoChepMa(ma) {
+  try {
+    await navigator.clipboard.writeText(ma);
+  } catch (e) {
+    // Fallback cho trình duyệt/context không hỗ trợ Clipboard API (vd: http không secure)
+    const ta = document.createElement('textarea');
+    ta.value = ma;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  }
+  copiedMa.value = ma;
+  setTimeout(() => { if (copiedMa.value === ma) copiedMa.value = ''; }, 1500);
+}
+
+const reqLabels = { pending: 'Chờ tiếp nhận', accepted: 'Đã tiếp nhận', processing: 'Đang xử lý', resolved: 'Đã hoàn thành', rejected: 'Từ chối', no_show: 'Khách không đến' };
+const reqColors = { pending: 'var(--amber)', accepted: 'var(--acc)', processing: '#a855f7', resolved: 'var(--green)', rejected: 'var(--sale)', no_show: 'var(--sale)' };
 function reqStatusLabel(s) { return reqLabels[s] || s; }
 function reqStatusStyle(s) {
   const c = reqColors[s] || 'var(--muted)';
   return { background: 'color-mix(in srgb,' + c + ' 16%, transparent)', color: c, fontSize: '11px', fontWeight: '600', padding: '3px 9px', borderRadius: '20px' };
+}
+/** Cảnh báo tức thời trên danh sách khi đã qua ngày hẹn mà chưa xử lý — job nền lúc 7h sáng mới
+ * tự động chuyển sang "no_show", nên giữa lúc đó vẫn cần admin nhìn thấy ngay để chủ động gọi khách. */
+function laQuaHen(r) {
+  if (!r.ngayHen || !['pending', 'accepted'].includes(r.requestStatus)) return false;
+  return new Date(r.ngayHen + 'T00:00:00') < new Date(new Date().toDateString());
 }
 
 const wLabels = { active: 'Còn hạn', expired: 'Hết hạn', void: 'Vô hiệu' };
@@ -273,6 +327,7 @@ async function openRequestDetail(id) {
   requestDetail.value = await getAdminWarrantyRequestDetail(id);
   reqStatusDraft.value = requestDetail.value.requestStatus;
   reqNoteDraft.value = '';
+  schedNgayHen.value = requestDetail.value.ngayHen || '';
 }
 async function saveRequestStatus() {
   saving.value = true;
@@ -281,6 +336,16 @@ async function saveRequestStatus() {
     await loadRequests();
   } finally {
     saving.value = false;
+  }
+}
+
+async function saveRequestSchedule() {
+  savingSched.value = true;
+  try {
+    requestDetail.value = await updateWarrantyRequestSchedule(requestDetail.value.id, schedNgayHen.value || null);
+    await loadRequests();
+  } finally {
+    savingSched.value = false;
   }
 }
 
@@ -294,5 +359,22 @@ onMounted(() => {
 .badge {
   display: inline-flex;
   align-items: center;
+}
+.btn-copy {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  border: 1px solid var(--line2);
+  background: var(--card);
+  color: var(--muted2);
+  cursor: pointer;
+  font-size: 12px;
+}
+.btn-copy:hover {
+  border-color: var(--acc);
+  color: var(--acc);
 }
 </style>

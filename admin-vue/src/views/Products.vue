@@ -236,6 +236,25 @@
           <i class="bi bi-box-arrow-in-down"></i> Nhập kho
         </button>
         <button
+          @click="importModalOpen = true"
+          style="
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            height: 34px;
+            padding: 0 14px;
+            border-radius: 9px;
+            border: 1px solid var(--line2);
+            background: var(--card);
+            color: var(--text);
+            font-size: 12.5px;
+            font-weight: 700;
+            cursor: pointer;
+          "
+        >
+          <i class="bi bi-file-earmark-spreadsheet"></i> Nhập từ Excel
+        </button>
+        <button
           @click="openCreate"
           style="
             display: flex;
@@ -451,6 +470,12 @@
       @close="stockModalOpen = false"
       @saved="refreshAdminProducts"
     />
+
+    <ProductImportModal
+      v-if="importModalOpen"
+      @close="importModalOpen = false"
+      @imported="refreshAdminProducts"
+    />
   </div>
 </template>
 
@@ -462,6 +487,7 @@ import { createCategory } from '../api/admin';
 import ProductFormModal from '../components/ProductFormModal.vue';
 import ProductDetailModal from '../components/ProductDetailModal.vue';
 import StockMovementModal from '../components/StockMovementModal.vue';
+import ProductImportModal from '../components/ProductImportModal.vue';
 
 const cat = ref('all');
 const brandFilter = ref('all');
@@ -471,6 +497,7 @@ const detailProductId = ref(null);
 const formOpen = ref(false);
 const formProductId = ref(null);
 const stockModalOpen = ref(false);
+const importModalOpen = ref(false);
 
 const brandOptions = computed(() =>
   [...new Set(PRODUCTS.map((p) => p.brand))].sort((a, b) => a.localeCompare(b)),
