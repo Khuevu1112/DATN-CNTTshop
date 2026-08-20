@@ -28,6 +28,13 @@
             <artifactId>spring-boot-starter-webmvc</artifactId>
         </dependency>
 
+        <!-- spring-boot-starter-webmvc (Spring Boot 4) không tự kèm Jackson như starter-web cũ —
+             cần khai báo tường minh để dùng ObjectMapper/JsonNode (AnthropicClient.java). -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-thymeleaf</artifactId>

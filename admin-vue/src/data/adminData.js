@@ -275,6 +275,7 @@ export const NAV_GROUPS = [
       ['dashboard', 'Bảng điều khiển', 'bi-grid-1x2-fill'],
       ['analytics', 'Phân tích', 'bi-graph-up-arrow'],
       ['cashflow', 'Dòng tiền', 'bi-cash-stack'],
+      ['ai-insights', 'AI Phân tích', 'bi-stars'],
     ],
   },
   {

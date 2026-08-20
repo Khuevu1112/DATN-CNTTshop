@@ -15,6 +15,8 @@
   </div>
 
   <div v-else style="animation: fadeUp 0.35s ease">
+    <AiInsightWidget />
+
     <div
       style="
         display: grid;
@@ -528,6 +530,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { getDashboard } from '../api/admin';
 import StockMovementModal from '../components/StockMovementModal.vue';
+import AiInsightWidget from '../components/AiInsightWidget.vue';
 import {
   money as fmtMoney,
   short,

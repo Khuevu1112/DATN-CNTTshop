@@ -39,6 +39,7 @@ import com.fpoly.dto.ContactDtos.ContactStatusRequest;
 import com.fpoly.dto.ContactDtos.ContactSummaryDto;
 import com.fpoly.dto.OrderDtos.AddressDto;
 import com.fpoly.dto.ProductImportDtos.ImportResultDto;
+import com.fpoly.dto.AiInsightDtos.AiAlertsDto;
 import com.fpoly.dto.WarrantyDtos.UpdateRequestAppointmentBody;
 import com.fpoly.dto.WarrantyDtos.UpdateRequestStatusBody;
 import com.fpoly.dto.WarrantyDtos.UpdateWarrantyStatusBody;
@@ -71,6 +72,7 @@ import com.fpoly.service.CouponService;
 import com.fpoly.service.MailService;
 import com.fpoly.service.NotificationService;
 import com.fpoly.service.OrderService;
+import com.fpoly.service.AiInsightService;
 import com.fpoly.service.CashFlowService;
 import com.fpoly.service.ProductImportService;
 import com.fpoly.service.WarrantyService;
@@ -118,6 +120,9 @@ public class AdminApiController {
 
     @Autowired
     private CashFlowService cashFlowService;
+
+    @Autowired
+    private AiInsightService aiInsightService;
 
     @Autowired
     private NguoiDungRepository nguoiDungRepo;
@@ -1004,6 +1009,13 @@ public class AdminApiController {
         } catch (Exception e) {
             throw new RuntimeException("Ngày không hợp lệ (định dạng cần yyyy-MM-dd)");
         }
+    }
+
+    /** Cảnh báo bất thường — phát hiện bằng ngưỡng số (Java), không gọi AI/API trả phí. */
+    @GetMapping("/ai/alerts")
+    @RequirePermission(feature = "analytics", action = PermissionType.VIEW)
+    public AiAlertsDto aiAlerts() {
+        return aiInsightService.getAnomalyAlerts();
     }
 
     /** Doanh thu bán tại quầy theo từng tháng, khớp đúng 9 mốc tháng của totalSeries. */

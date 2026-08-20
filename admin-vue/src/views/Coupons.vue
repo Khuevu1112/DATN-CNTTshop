@@ -216,6 +216,8 @@ const form = reactive({
   exp: '',
   maxUses: '',
   xuCost: '',
+  stackable: false,
+  exclusiveGroup: '',
 });
 const error = ref('');
 const saving = ref(false);
@@ -258,6 +260,8 @@ async function submit() {
       maxUses: form.maxUses ? Number(form.maxUses) : null,
       expiresAt: form.exp || null,
       xuCost: form.xuCost ? Number(form.xuCost) : null,
+      stackable: !!form.stackable,
+      exclusiveGroup: form.stackable && form.exclusiveGroup ? form.exclusiveGroup.trim() : null,
     });
     await refreshAdminCoupons();
     form.code = '';
@@ -267,6 +271,8 @@ async function submit() {
     form.exp = '';
     form.maxUses = '';
     form.xuCost = '';
+    form.stackable = false;
+    form.exclusiveGroup = '';
   } catch (e) {
     error.value = e.response?.data?.message || 'Có lỗi khi tạo mã';
   } finally {

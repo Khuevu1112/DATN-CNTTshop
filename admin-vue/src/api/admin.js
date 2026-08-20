@@ -111,6 +111,7 @@ export const getCashFlowDetail = (from, to) =>
   http.get('/admin/cashflow/detail', { params: { from, to } }).then(r => r.data)
 export const exportCashFlow = (from, to, groupBy) =>
   http.get('/admin/cashflow/export', { params: { from, to, groupBy }, responseType: 'blob' }).then(r => r.data)
+export const getAiAlerts = () => http.get('/admin/ai/alerts').then(r => r.data)
 
 export const getAdminWarranties = (status) => http.get('/admin/warranties', { params: status ? { status } : {} }).then(r => r.data)
 export const getAdminWarrantyDetail = (id) => http.get(`/admin/warranties/${id}`).then(r => r.data)

@@ -46,6 +46,16 @@ const routes = [
         },
       },
       {
+        path: 'ai-insights',
+        name: 'ai-insights',
+        component: () => import('../views/AiInsights.vue'),
+        meta: {
+          title: 'AI Phân tích',
+          sub: 'Phân tích tự động, cảnh báo bất thường dựa trên số liệu kinh doanh (miễn phí)',
+          feature: 'analytics',
+        },
+      },
+      {
         path: 'orders',
         name: 'orders',
         component: () => import('../views/Orders.vue'),
